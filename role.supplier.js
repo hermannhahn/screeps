@@ -96,7 +96,22 @@ const roleSupplier = {
           delete creep.memory.deliveryTargetId;
         }
       } else {
-        // Se absolutamente tudo estiver cheio, faz o upgrade pessoalmente
+        // Se absolutamente tudo estiver cheio e não houver alvo para transferência
+        
+        // Prioridade 4: Construir (se houver construction sites)
+        const constructionSites = creep.room.find(FIND_CONSTRUCTION_SITES);
+        if (constructionSites.length > 0) {
+          // Find the closest construction site to build
+          const closestSite = creep.pos.findClosestByRange(constructionSites);
+          if (closestSite) {
+            if (creep.build(closestSite) == ERR_NOT_IN_RANGE) {
+              creep.moveTo(closestSite, { visualizePathStyle: { stroke: '#ffffff' } });
+            }
+            return; // Action taken, exit run function
+          }
+        }
+
+        // Prioridade 5: Ajudar no upgrade (se não houver construções)
         if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
           creep.moveTo(creep.room.controller);
         }
