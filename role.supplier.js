@@ -1,5 +1,9 @@
 /**
- * Role: Supplier (Logística com entrega para Upgraders)
+ * Role: Supplier (Logística com entrega para Upgraders e Builders)
+ * Prioridades de entrega de energia:
+ * 1. Spawns e Extensions (garante a criação de novos creeps)
+ * 2. Upgraders e Builders (mantém o controle de sala e construção ativos)
+ * 3. Towers (defesa da base)
  */
 const roleSupplier = {
   /** @param {Creep} creep **/
@@ -39,10 +43,10 @@ const roleSupplier = {
                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
       });
 
-      // 2. Prioridade Secundária: Upgraders (Se a base estiver abastecida)
+      // 2. Prioridade Secundária: Upgraders e Builders (Se a base estiver abastecida)
       if (!target) {
         target = creep.pos.findClosestByRange(FIND_CREEPS, {
-          filter: (c) => c.memory.role == 'upgrader' && c.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+          filter: (c) => (c.memory.role == 'upgrader' || c.memory.role == 'builder') && c.store.getFreeCapacity(RESOURCE_ENERGY) > 0
         });
       }
 
