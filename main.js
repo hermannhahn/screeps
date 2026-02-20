@@ -60,7 +60,7 @@ module.exports.loop = function () {
                 else if (room.find(FIND_CONSTRUCTION_SITES).length > 0 && builders.length < 2) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
                 }
-                else if (upgraders.length < Math.max(1, 5 - rcl)) {
+                else if (upgraders.length < Math.max(1, 4 - rcl) || upgraders.length === 0) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
                 }
             }
