@@ -11,6 +11,7 @@ const roleSupplier = {
   /** @param {Creep} creep **/
   run: function(creep) {
     if (creep.store.getUsedCapacity() == 0) {
+      const sources = creep.room.find(FIND_SOURCES);
         // Tenta usar o alvo de energia armazenado na memória, se existir e for válido
         let targetEnergy = null;
         if (creep.memory.targetEnergyId) {
