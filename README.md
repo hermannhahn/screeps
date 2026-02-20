@@ -17,12 +17,18 @@ O script agora analisa o estado da sala para decidir quantos creeps criar:
 ### 2. Roles (Papéis)
 
 #### 🔋 Harvester (`role.harvester.js`)
-- **Objetivo:** Manter a sala energizada.
-- **Prioridade:** 
-  1. Abastecer o **Spawn1**.
-  2. Abastecer as **Extensions**.
-  3. Abastecer **Towers** (se existirem).
-  4. Se tudo estiver cheio, ele ajudará no upgrade do Controller.
+- **Objetivo:** Mineração de fontes.
+- **Nova Cadeia de Logística (Prioridades):**
+  1. **Container:** Se houver um Supplier vivo, deposita no container mais próximo da fonte.
+  2. **Transferência Direta:** Entrega para o `Supplier` mais próximo.
+  3. **Abastecimento Direto:** Se a logística falhar, abastece o Spawn/Extensions manualmente.
+
+#### 🚚 Supplier (`role.supplier.js`) - **NOVO**
+- **Objetivo:** Transporte e logística de energia.
+- **Lógica:**
+  - Coleta energia caídano chão ou de containers em um raio de 3 blocos das fontes.
+  - Abastece prioritariamente o **Spawn**, **Extensions** e **Towers**.
+  - Garante que os Harvesters não precisem sair de perto das fontes, maximizando a produção.
 
 #### ⬆️ Upgrader (`role.upgrader.js`)
 - **Objetivo:** Aumentar o nível da sala (GCL/RCL).
