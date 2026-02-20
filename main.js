@@ -54,13 +54,13 @@ module.exports.loop = function () {
                 }
             }
             if (!spawned) {
-                if (suppliers.length < sources.length || (harvesters.length > 0 && suppliers.length === 0)) {
+                if (suppliers.length < sources.length * 2 || (harvesters.length > 0 && suppliers.length === 0)) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
                 }
                 else if (upgraders.length < Math.max(1, 4 - rcl) || upgraders.length === 0) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
                 }
-                else if (room.find(FIND_CONSTRUCTION_SITES).length > 0 && builders.length < 2) {
+                else if (room.find(FIND_CONSTRUCTION_SITES).length > 0 && builders.length < 1) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
                 }
             }
