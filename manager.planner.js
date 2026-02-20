@@ -41,52 +41,126 @@ const managerPlanner = {
     
     // BLUEPRINT 0: Roads around the Spawn (Distance 2 to keep 1 free block)
     if (room.memory.blueprintStage === 0) {
-      this.planRoadRing(room, spawn.pos, 2);
-      // Check if blueprint 0 is completed (no construction sites left)
-      if (constructionSites.length === 0) {
-        console.log(`Blueprint 0 (${BLUEPRINT_NAMES[0]}) completed in room ${room.name}. Advancing to Blueprint 1 (${BLUEPRINT_NAMES[1]}).`);
-        room.memory.blueprintStage = 1;
+      const sitesCreatedByBlueprint0 = this.planRoadRing(room, spawn.pos, 2);
+      // Check for completion only if no new sites were created in this tick
+      if (sitesCreatedByBlueprint0 === 0) {
+        // Now, check if there are any *existing* road construction sites in the blueprint area
+        const roadConstructionSitesInRing = room.find(FIND_CONSTRUCTION_SITES, {
+          filter: (cs) => cs.structureType === STRUCTURE_ROAD && cs.pos.getRangeTo(spawn.pos) <= 2
+        }).length;
+
+        // If no new sites were created AND no construction sites are pending for this blueprint, then it's complete.
+        if (roadConstructionSitesInRing === 0) {
+          console.log(`Blueprint 0 (${BLUEPRINT_NAMES[0]}) completed in room ${room.name}. Advancing to Blueprint 1 (${BLUEPRINT_NAMES[1]}).`);
+          room.memory.blueprintStage = 1;
+        } else {
+            // Still has pending road construction sites from this blueprint. Don't advance yet.
+            console.log(`Blueprint 0 (${BLUEPRINT_NAMES[0]}) has ${roadConstructionSitesInRing} road construction sites pending.`);
+        }
+      } else {
+          console.log(`Blueprint 0 (${BLUEPRINT_NAMES[0]}) created ${sitesCreatedByBlueprint0} new road construction sites.`);
       }
     }
 
     // BLUEPRINT 1: Extensions (5 extensions near spawn, min 3 distance)
     if (room.memory.blueprintStage === 1) {
-      this.planExtensions(room, spawn.pos, 5, 3);
-      // Check if blueprint 1 is completed (no construction sites left)
-      if (constructionSites.length === 0) {
-        console.log(`Blueprint 1 (${BLUEPRINT_NAMES[1]}) completed in room ${room.name}. Advancing to Blueprint 2 (${BLUEPRINT_NAMES[2]}).`);
-        room.memory.blueprintStage = 2;
+      const sitesCreatedByBlueprint1 = this.planExtensions(room, spawn.pos, 5, 3);
+
+      if (sitesCreatedByBlueprint1 === 0) { // No new sites were created this tick
+        const extensionConstructionSites = room.find(FIND_CONSTRUCTION_SITES, {
+          filter: (cs) => cs.structureType === STRUCTURE_EXTENSION
+        }).length;
+        const builtExtensions = room.find(FIND_MY_STRUCTURES, {
+          filter: (s) => s.structureType === STRUCTURE_EXTENSION
+        }).length;
+
+        const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level];
+        const targetExtensions = Math.min(5, maxExtensionsForRCL); // Plan up to 5, but not more than RCL allows
+
+        // If no new sites were created AND no extension construction sites are pending,
+        // AND the number of built extensions plus pending construction sites equals the target
+        if (extensionConstructionSites === 0 && (builtExtensions >= targetExtensions)) {
+          console.log(`Blueprint 1 (${BLUEPRINT_NAMES[1]}) completed in room ${room.name}. Advancing to Blueprint 2 (${BLUEPRINT_NAMES[2]}).`);
+          room.memory.blueprintStage = 2;
+        } else if (extensionConstructionSites > 0) {
+            console.log(`Blueprint 1 (${BLUEPRINT_NAMES[1]}) has ${extensionConstructionSites} extension construction sites pending.`);
+        } else if (builtExtensions < targetExtensions) {
+            console.log(`Blueprint 1 (${BLUEPRINT_NAMES[1]}) has ${builtExtensions}/${targetExtensions} built extensions. No more sites created this tick.`);
+        }
+      } else {
+          console.log(`Blueprint 1 (${BLUEPRINT_NAMES[1]}) created ${sitesCreatedByBlueprint1} new extension construction sites.`);
       }
     }
 
     // BLUEPRINT 2: Roads from each Source to the nearest existing road around the spawn
     if (room.memory.blueprintStage === 2) {
-      this.planSourceRoads(room, spawn.pos);
-      // Check if blueprint 2 is completed (no construction sites left)
-      if (constructionSites.length === 0) {
-        console.log(`Blueprint 2 (${BLUEPRINT_NAMES[2]}) completed in room ${room.name}. Advancing to Blueprint 3 (${BLUEPRINT_NAMES[3]}).`);
-        room.memory.blueprintStage = 3;
+      const sitesCreatedByBlueprint2 = this.planSourceRoads(room, spawn.pos);
+
+      if (sitesCreatedByBlueprint2 === 0) { // No new sites were created this tick
+        // Count road construction sites specifically from sources
+        const sourceRoadConstructionSites = room.find(FIND_SOURCES).some(source => {
+          return source.pos.findInRange(FIND_CONSTRUCTION_SITES, 5, { // Check in a radius around sources
+            filter: (cs) => cs.structureType === STRUCTURE_ROAD
+          }).length > 0;
+        });
+
+        // If no new sites were created AND no source-related road construction sites are pending
+        if (!sourceRoadConstructionSites) {
+          console.log(`Blueprint 2 (${BLUEPRINT_NAMES[2]}) completed in room ${room.name}. Advancing to Blueprint 3 (${BLUEPRINT_NAMES[3]}).`);
+          room.memory.blueprintStage = 3;
+        } else {
+            console.log(`Blueprint 2 (${BLUEPRINT_NAMES[2]}) has pending source-related road construction sites.`);
+        }
+      } else {
+          console.log(`Blueprint 2 (${BLUEPRINT_NAMES[2]}) created ${sitesCreatedByBlueprint2} new source road construction sites.`);
       }
     }
 
     // BLUEPRINT 3: Roads from Controller to nearest existing road
     if (room.memory.blueprintStage === 3) {
-      this.planControllerRoads(room);
-      if (constructionSites.length === 0) { // Assuming all current construction sites are for Blueprint 3
-        console.log(`Blueprint 3 (${BLUEPRINT_NAMES[3]}) completed in room ${room.name}. Advancing to Blueprint 4 (${BLUEPRINT_NAMES[4]}).`);
-        room.memory.blueprintStage = 4;
+      const sitesCreatedByBlueprint3 = this.planControllerRoads(room);
+
+      if (sitesCreatedByBlueprint3 === 0) { // No new sites were created this tick
+        // Count road construction sites specifically near the controller
+        const controllerRoadConstructionSites = room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 5, { // Check in a radius around controller
+            filter: (cs) => cs.structureType === STRUCTURE_ROAD
+        }).length > 0;
+
+        // If no new sites were created AND no controller-related road construction sites are pending
+        if (!controllerRoadConstructionSites) {
+            console.log(`Blueprint 3 (${BLUEPRINT_NAMES[3]}) completed in room ${room.name}. Advancing to Blueprint 4 (${BLUEPRINT_NAMES[4]}).`);
+            room.memory.blueprintStage = 4;
+        } else {
+            console.log(`Blueprint 3 (${BLUEPRINT_NAMES[3]}) has pending controller-related road construction sites.`);
+        }
+      } else {
+          console.log(`Blueprint 3 (${BLUEPRINT_NAMES[3]}) created ${sitesCreatedByBlueprint3} new controller road construction sites.`);
       }
     }
 
     // BLUEPRINT 4: Roads from Mineral to nearest existing road
     if (room.memory.blueprintStage === 4) {
-      this.planMineralRoads(room);
-      if (constructionSites.length === 0) {
-        console.log(`Blueprint 4 (${BLUEPRINT_NAMES[4]}) completed in room ${room.name}. Advancing to Blueprint 5 (Final/Other).`);
-        room.memory.blueprintStage = 5; // For future blueprints
+      const sitesCreatedByBlueprint4 = this.planMineralRoads(room);
+
+      if (sitesCreatedByBlueprint4 === 0) { // No new sites were created this tick
+        // Count road construction sites specifically near minerals
+        const mineralRoadConstructionSites = room.find(FIND_MINERALS).some(mineral => {
+          return mineral.pos.findInRange(FIND_CONSTRUCTION_SITES, 5, { // Check in a radius around minerals
+            filter: (cs) => cs.structureType === STRUCTURE_ROAD
+          }).length > 0;
+        });
+
+        // If no new sites were created AND no mineral-related road construction sites are pending
+        if (!mineralRoadConstructionSites) {
+          console.log(`Blueprint 4 (${BLUEPRINT_NAMES[4]}) completed in room ${room.name}. Advancing to Blueprint 5 (Final/Other).`);
+          room.memory.blueprintStage = 5; // For future blueprints
+        } else {
+            console.log(`Blueprint 4 (${BLUEPRINT_NAMES[4]}) has pending mineral-related road construction sites.`);
+        }
+      } else {
+          console.log(`Blueprint 4 (${BLUEPRINT_NAMES[4]}) created ${sitesCreatedByBlueprint4} new mineral road construction sites.`);
       }
-    }
-  },
+    },
 
   /** 
    * Creates a ring of roads around a position
@@ -95,6 +169,7 @@ const managerPlanner = {
    * @param {number} distance 
    */
   planRoadRing: function(room, centerPos, distance) {
+    let sitesCreated = 0;
     for (let x = centerPos.x - distance; x <= centerPos.x + distance; x++) {
       for (let y = centerPos.y - distance; y <= centerPos.y + distance; y++) {
         // Apenas o perímetro do quadrado
@@ -112,11 +187,14 @@ const managerPlanner = {
           const hasStructure = look.some(obj => obj.type === 'structure' || obj.type === 'constructionSite');
           
           if (!hasStructure) {
-            room.createConstructionSite(x, y, STRUCTURE_ROAD);
+            if (room.createConstructionSite(x, y, STRUCTURE_ROAD) === OK) {
+              sitesCreated++;
+            }
           }
         }
       }
     }
+    return sitesCreated;
   },
 
   /**
@@ -128,10 +206,11 @@ const managerPlanner = {
    */
   planExtensions: function(room, spawnPos, count, minDistance) {
     let plannedCount = 0;
+    let sitesCreated = 0;
     // Iterate through positions around the spawn
     for (let xOffset = -5; xOffset <= 5; xOffset++) { // Search area around spawn
       for (let yOffset = -5; yOffset <= 5; yOffset++) {
-        if (plannedCount >= count) return; // Stop if target count reached
+        if (plannedCount >= count) break; // Stop if target count reached for *planning*
 
         const x = spawnPos.x + xOffset;
         const y = spawnPos.y + yOffset;
@@ -161,9 +240,12 @@ const managerPlanner = {
         // Create construction site
         if (room.createConstructionSite(x, y, STRUCTURE_EXTENSION) === OK) {
           plannedCount++;
+          sitesCreated++; // Count actual new sites created
         }
       }
+      if (plannedCount >= count) break; // Stop if target count reached for *planning*
     }
+    return sitesCreated;
   },
 
   /**
@@ -179,9 +261,10 @@ const managerPlanner = {
 
     if (existingRoadsAroundSpawn.length === 0) {
         console.log("No existing roads around spawn for Blueprint 2 to connect to yet.");
-        return;
+        return 0;
     }
 
+    let sitesCreatedTotal = 0;
     for (const source of sources) {
         // Find the nearest existing road around the spawn to connect to
         const nearestRoadSegment = source.pos.findClosestByPath(existingRoadsAroundSpawn);
@@ -222,11 +305,14 @@ const managerPlanner = {
             if (look.length === 0 && lookCS.length === 0) {
                 // Ensure it's not trying to build a road on itself if already built
                 if (!pos.findInRange(existingRoadsAroundSpawn, 0).length) {
-                    room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD);
+                    if (room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD) === OK) {
+                      sitesCreatedTotal++;
+                    }
                 }
             }
         }
     }
+    return sitesCreatedTotal;
   },
 
   /**
@@ -243,14 +329,14 @@ const managerPlanner = {
 
     if (existingRoads.length === 0) {
       console.log(`No existing roads in room ${room.name} for ${blueprintName} to connect to yet.`);
-      return false;
+      return 0; // Changed to return 0
     }
 
     const nearestRoad = startPos.findClosestByPath(existingRoads);
 
     if (!nearestRoad) {
       console.log(`Could not find a path from ${startPos} for ${blueprintName} to any existing road.`);
-      return false;
+      return 0; // Changed to return 0
     }
 
     const path = room.findPath(startPos, nearestRoad.pos, {
@@ -283,11 +369,8 @@ const managerPlanner = {
         }
       }
     }
-    if (sitesCreated > 0) {
-      console.log(`${blueprintName}: Created ${sitesCreated} construction sites.`);
-      return true;
-    }
-    return false;
+    // Changed to return sitesCreated
+    return sitesCreated;
   },
 
   /**
@@ -295,7 +378,7 @@ const managerPlanner = {
    * @param {Room} room
    */
   planControllerRoads: function(room) {
-    if (!room.controller) return false;
+    if (!room.controller) return 0;
     return this._planRoadsFromToNearestRoad(room, room.controller.pos, "Blueprint 3 (Controller Roads)");
   },
 
@@ -307,11 +390,9 @@ const managerPlanner = {
     const minerals = room.find(FIND_MINERALS);
     let sitesCreatedTotal = 0;
     for (const mineral of minerals) {
-      if (this._planRoadsFromToNearestRoad(room, mineral.pos, `Blueprint 4 (Mineral Roads - ${mineral.id})`)) {
-        sitesCreatedTotal++;
-      }
+      sitesCreatedTotal += this._planRoadsFromToNearestRoad(room, mineral.pos, `Blueprint 4 (Mineral Roads - ${mineral.id})`);
     }
-    return sitesCreatedTotal > 0;
+    return sitesCreatedTotal;
   }
 };
 
