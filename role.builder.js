@@ -16,8 +16,21 @@ const roleBuilder = {
     }
 
     if (creep.memory.building) {
-      // Procura o canteiro de obras mais próximo
-      const target = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+      const targets = creep.room.find(FIND_CONSTRUCTION_SITES);
+      let target = null;
+      if (targets.length > 0) {
+        targets.sort((a, b) => {
+          // Prioriza o mais avançado
+          const progressA = a.progress / a.progressTotal;
+          const progressB = b.progress / b.progressTotal;
+          if (progressA !== progressB) {
+            return progressB - progressA; // Maior progresso primeiro
+          }
+          // Se o progresso for igual, prioriza o mais próximo
+          return creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b);
+        });
+        target = targets[0];
+      }
       if (target) {
         if (creep.build(target) == ERR_NOT_IN_RANGE) {
           creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
