@@ -36,6 +36,13 @@ O script agora analisa o estado da sala para decidir quantos creeps criar:
   - Abastece prioritariamente o **Spawn**, **Extensions** e **Towers**.
   - Garante que os Harvesters não precisem sair de perto das fontes, maximizando a produção.
 
+#### 🚧 Builder (`role.builder.js`) - **NOVO**
+- **Objetivo:** Construção de estruturas.
+- **Lógica:**
+  - Só é invocado se houver canteiros de obras (`construction sites`) na sala.
+  - Segue o mesmo padrão de coleta do **Upgrader**, priorizando receber energia de **Suppliers**.
+  - Se não houver nada para construir, ajuda no upgrade para não ficar ocioso.
+
 #### ⬆️ Upgrader (`role.upgrader.js`)
 - **Objetivo:** Aumentar o nível da sala (GCL/RCL).
 - **Lógica:** Coleta energia das fontes e a utiliza exclusivamente para o `upgradeController`. É essencial para desbloquear novas estruturas e expandir o limite de CPU.

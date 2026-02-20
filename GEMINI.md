@@ -1,0 +1,35 @@
+# GEMINI.md - Contexto de Projeto (Screeps)
+
+Este arquivo fornece contexto e instruções para a IA Gemini atuar neste repositório de automação do jogo **Screeps**.
+
+## 🚀 Visão Geral do Projeto
+Script de automação para o jogo de estratégia MMO **Screeps**. O código é focado em escalabilidade, resiliência e eficiência logística.
+
+### Tecnologias e Arquitetura
+- **Linguagem:** JavaScript (Node.js/CommonJS).
+- **Estrutura:** Modular baseada em Roles (Papéis).
+- **Gerenciamento de Spawn:** Spawner inteligente com balanceamento de carga por fonte de energia (Source Saturation).
+- **Logística:** Sistema de mineração estática onde `Harvesters` extraem e `Suppliers` transportam.
+
+## 📁 Estrutura de Arquivos
+- `main.js`: Loop principal, limpeza de memória e lógica de spawn inteligente.
+- `role.harvester.js`: Lógica de mineração e modo de emergência logística.
+- `role.supplier.js`: Gerenciamento de transporte e abastecimento de estruturas/upgraders.
+- `role.upgrader.js`: Lógica de evolução do controlador da sala.
+- `README.md`: Documentação para o usuário final.
+
+## 🛠️ Comandos e Operações
+- **Deploy:** O código deve ser enviado para o servidor do Screeps.
+- **Ajuste de População:** Alterar as fórmulas de `targetHarvesters`, `targetSuppliers` e `targetUpgraders` no `main.js`.
+- **Emergência:** Se o spawn parar por falta de energia, os `Harvesters` entrarão automaticamente em modo de abastecimento manual.
+
+## 📝 Convenções de Desenvolvimento
+- **Surgical Changes:** Manter a separação de responsabilidades entre as roles.
+- **CPU Efficiency:** Sempre utilizar `reusePath` em operações de movimento.
+- **Memory Safety:** Verificar sempre se o objeto existe em `Game.getObjectById` antes de interagir.
+- **Idiomatic Code:** Seguir o padrão de design do Screeps (ex: usar `_.filter` do lodash que é nativo no jogo).
+
+## 🎯 Próximos Passos (Backlog)
+- [x] Implementar Role: **Builder** para construção automática de estruturas.
+- [ ] Desenvolver o **Construction Planner** para posicionamento inteligente de containers e estradas.
+- [ ] Implementar Role: **Repairer** para manutenção de estradas e muros.
