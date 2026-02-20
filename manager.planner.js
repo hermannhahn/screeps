@@ -44,7 +44,25 @@ const managerPlanner = {
       // Check if blueprint 2 is completed (no construction sites left)
       if (constructionSites.length === 0) {
         console.log(`Blueprint 2 completed in room ${room.name}. Advancing to Blueprint 3.`);
-        room.memory.blueprintStage = 2; // For future blueprints
+        room.memory.blueprintStage = 2;
+      }
+    }
+
+    // BLUEPRINT 3: Roads from Controller to nearest existing road
+    if (room.memory.blueprintStage === 2) {
+      this.planControllerRoads(room);
+      if (constructionSites.length === 0) { // Assuming all current construction sites are for Blueprint 3
+        console.log(`Blueprint 3 completed in room ${room.name}. Advancing to Blueprint 4.`);
+        room.memory.blueprintStage = 3;
+      }
+    }
+
+    // BLUEPRINT 4: Roads from Mineral to nearest existing road
+    if (room.memory.blueprintStage === 3) {
+      this.planMineralRoads(room);
+      if (constructionSites.length === 0) { // Assuming all current construction sites are for Blueprint 4
+        console.log(`Blueprint 4 completed in room ${room.name}. Advancing to Blueprint 5.`);
+        room.memory.blueprintStage = 4; // For future blueprints
       }
     }
   },
@@ -141,6 +159,91 @@ const managerPlanner = {
             }
         }
     }
+  },
+
+  /**
+   * Helper function to plan roads from a specific start position to the nearest existing road.
+   * @param {Room} room
+   * @param {RoomPosition} startPos The starting position for the path.
+   * @param {string} blueprintName For logging purposes.
+   * @returns {boolean} True if construction sites were created, false otherwise.
+   */
+  _planRoadsFromToNearestRoad: function(room, startPos, blueprintName) {
+    const existingRoads = room.find(FIND_STRUCTURES, {
+      filter: (s) => s.structureType === STRUCTURE_ROAD
+    });
+
+    if (existingRoads.length === 0) {
+      console.log(`No existing roads in room ${room.name} for ${blueprintName} to connect to yet.`);
+      return false;
+    }
+
+    const nearestRoad = startPos.findClosestByPath(existingRoads);
+
+    if (!nearestRoad) {
+      console.log(`Could not find a path from ${startPos} for ${blueprintName} to any existing road.`);
+      return false;
+    }
+
+    const path = room.findPath(startPos, nearestRoad.pos, {
+      ignoreCreeps: true,
+      swampCost: 1, // Treat swamps like plain for roads
+      plainCost: 1,
+      costCallback: function(roomName, costMatrix) {
+        if (roomName !== room.name) return;
+
+        room.find(FIND_STRUCTURES).forEach(function(s) {
+          if (s.structureType !== STRUCTURE_ROAD) { // Avoid non-road structures
+            costMatrix.set(s.pos.x, s.pos.y, 255);
+          }
+        });
+        room.find(FIND_CONSTRUCTION_SITES).forEach(function(s) {
+          costMatrix.set(s.pos.x, s.pos.y, 255);
+        });
+      }
+    });
+
+    let sitesCreated = 0;
+    for (const segment of path) {
+      const pos = new RoomPosition(segment.x, segment.y, room.name);
+      const look = pos.lookFor(LOOK_STRUCTURES);
+      const lookCS = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+      
+      if (look.length === 0 && lookCS.length === 0) {
+        if (room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD) === OK) {
+          sitesCreated++;
+        }
+      }
+    }
+    if (sitesCreated > 0) {
+      console.log(`${blueprintName}: Created ${sitesCreated} construction sites.`);
+      return true;
+    }
+    return false;
+  },
+
+  /**
+   * Plans roads from the room controller to the nearest existing road.
+   * @param {Room} room
+   */
+  planControllerRoads: function(room) {
+    if (!room.controller) return false;
+    return this._planRoadsFromToNearestRoad(room, room.controller.pos, "Blueprint 3 (Controller Roads)");
+  },
+
+  /**
+   * Plans roads from each mineral to the nearest existing road.
+   * @param {Room} room
+   */
+  planMineralRoads: function(room) {
+    const minerals = room.find(FIND_MINERALS);
+    let sitesCreatedTotal = 0;
+    for (const mineral of minerals) {
+      if (this._planRoadsFromToNearestRoad(room, mineral.pos, `Blueprint 4 (Mineral Roads - ${mineral.id})`)) {
+        sitesCreatedTotal++;
+      }
+    }
+    return sitesCreatedTotal > 0;
   }
 };
 
