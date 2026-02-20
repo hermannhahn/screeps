@@ -6,17 +6,47 @@ const managerPlanner = require('manager.planner');
 const taskCollectEnergy = require('task.collectEnergy');
 const taskBuild = require('task.build');
 
-function getBestBody(energyLimit) {
-    const parts = [];
-    let currentCost = 0;
-    const bodySet = [WORK, CARRY, MOVE];
-    const setCost = 200;
-    while (currentCost + setCost <= energyLimit && parts.length < 48) {
-        parts.push(...bodySet);
-        currentCost += setCost;
+// Helper to calculate spawn time based on body parts
+function getSpawnTime(bodyParts) {
+    return bodyParts.length * CREEP_SPAWN_TIME; // CREEP_SPAWN_TIME is 3 ticks per body part
+}
+
+// Helper to get estimated travel time. Caches pathfinding results.
+function getTravelTime(spawn, targetPos, room) {
+    const key = `${spawn.id}_${targetPos.x}_${targetPos.y}`;
+    if (!room.memory.travelTimes) room.memory.travelTimes = {};
+    if (room.memory.travelTimes[key]) {
+        return room.memory.travelTimes[key];
     }
-    if (parts.length === 0 && energyLimit >= 200) return [WORK, CARRY, MOVE];
-    return parts;
+
+    // Use PathFinder to find path length
+    const path = PathFinder.search(
+        spawn.pos,
+        { pos: targetPos, range: 1 }, // Range 1 because creeps work adjacent to target
+        {
+            plainCost: 2,
+            swampCost: 10,
+            roomCallback: function(roomName) {
+                let room = Game.rooms[roomName];
+                if (!room) return new PathFinder.CostMatrix(); // No knowledge of room
+
+                let costMatrix = new PathFinder.CostMatrix();
+                room.find(FIND_STRUCTURES).forEach(function(struct) {
+                    if (struct.structureType === STRUCTURE_ROAD) {
+                        costMatrix.set(struct.pos.x, struct.pos.y, 1); // Roads are cheap
+                    } else if (struct.structureType !== STRUCTURE_CONTAINER &&
+                               (struct.structureType !== STRUCTURE_RAMPART || !struct.my)) {
+                        costMatrix.set(struct.pos.x, struct.pos.y, 255); // Avoid impassable structures
+                    }
+                });
+                return costMatrix;
+            },
+        }
+    ).path;
+
+    const travelTime = path.length;
+    room.memory.travelTimes[key] = travelTime; // Cache it
+    return travelTime;
 }
 
 module.exports.loop = function () {
@@ -47,23 +77,88 @@ module.exports.loop = function () {
             let spawned = false;
             for (let s of sources) {
                 const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId == s.id);
-                const workParts = _.sum(harvestersAtSource, (h) => h.getActiveBodyparts(WORK));
-                if (harvestersAtSource.length === 0) {
-                    const body = harvesters.length === 0 ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
+                // Find oldest harvester at this source
+                const oldestHarvester = _.min(harvestersAtSource, 'ticksToLive');
+
+                let spawnNewHarvester = false;
+                if (harvestersAtSource.length === 0) { // Initial spawn
+                    spawnNewHarvester = true;
+                } else if (oldestHarvester && oldestHarvester.ticksToLive !== undefined) {
+                    const body = getBestBody(energyCapacity); // Assume max body for calculating spawn time for replacement
+                    const timeToSpawn = getSpawnTime(body);
+                    const travelTime = getTravelTime(spawn, s.pos, room);
+                    if (oldestHarvester.ticksToLive <= timeToSpawn + travelTime + 5) { // Add a buffer of 5 ticks
+                        spawnNewHarvester = true;
+                    }
+                }
+
+                if (spawnNewHarvester) {
+                    const body = (harvesters.length === 0 || oldestHarvester === Infinity) ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
                     spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
                     spawned = true;
                     break;
                 }
             }
             if (!spawned) {
-                if (suppliers.length < sources.length * 2 || (harvesters.length > 0 && suppliers.length === 0)) {
+                // ... Supplier spawning
+                const oldestSupplier = _.min(suppliers, 'ticksToLive');
+                let spawnNewSupplier = false;
+                if (suppliers.length < sources.length * 2 || (harvesters.length > 0 && suppliers.length === 0)) { // Initial/target count
+                    spawnNewSupplier = true;
+                } else if (oldestSupplier && oldestSupplier.ticksToLive !== undefined) {
+                    const body = getBestBody(energyCapacity);
+                    const timeToSpawn = getSpawnTime(body);
+                    if (oldestSupplier.ticksToLive <= timeToSpawn + 5) { // Add a buffer
+                        spawnNewSupplier = true;
+                    }
+                }
+
+                if (spawnNewSupplier) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
+                    spawned = true;
                 }
-                else if (upgraders.length < Math.max(1, 4 - rcl) || upgraders.length === 0) {
-                    spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+                else if (!spawned) {
+                    // ... Upgrader spawning
+                    const oldestUpgrader = _.min(upgraders, 'ticksToLive');
+                    let spawnNewUpgrader = false;
+                    const targetUpgraders = Math.max(1, 4 - rcl); // Target count
+
+                    if (upgraders.length < targetUpgraders || upgraders.length === 0) { // Initial/target count
+                        spawnNewUpgrader = true;
+                    } else if (oldestUpgrader && oldestUpgrader.ticksToLive !== undefined) {
+                        const body = getBestBody(energyCapacity);
+                        const timeToSpawn = getSpawnTime(body);
+                        const travelTime = getTravelTime(spawn, room.controller.pos, room);
+                        if (oldestUpgrader.ticksToLive <= timeToSpawn + travelTime + 5) { // Add a buffer
+                            spawnNewUpgrader = true;
+                        }
+                    }
+
+                    if (spawnNewUpgrader) {
+                        spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+                        spawned = true;
+                    }
                 }
-                else if (room.find(FIND_CONSTRUCTION_SITES).length > 0 && builders.length < 1) {
-                    spawn.spawnCreep(getBestBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
+                else if (!spawned) {
+                    // ... Builder spawning
+                    const oldestBuilder = _.min(builders, 'ticksToLive');
+                    let spawnNewBuilder = false;
+                    const targetBuilders = room.find(FIND_CONSTRUCTION_SITES).length > 0 ? 1 : 0; // Target count
+
+                    if (builders.length < targetBuilders) { // Initial/target count
+                        spawnNewBuilder = true;
+                    } else if (oldestBuilder && oldestBuilder.ticksToLive !== undefined) {
+                        const body = getBestBody(energyCapacity);
+                        const timeToSpawn = getSpawnTime(body);
+                        if (oldestBuilder.ticksToLive <= timeToSpawn + 5) { // Add a buffer
+                            spawnNewBuilder = true;
+                        }
+                    }
+
+                    if (spawnNewBuilder) {
+                        spawn.spawnCreep(getBestBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
+                        spawned = true;
+                    }
                 }
             }
         }

@@ -24,13 +24,13 @@ const managerPlanner = {
         4: "Mineral Roads"
     };
 
-    const nextBlueprintStage = room.memory.blueprintStage;
-    const nextBlueprintName = BLUEPRINT_NAMES[nextBlueprintStage] || `Unknown Blueprint (${nextBlueprintStage})`;
+    const nextBlueprintToPlanStage = room.memory.blueprintStage;
+    const nextBlueprintToPlanName = BLUEPRINT_NAMES[nextBlueprintToPlanStage] || `Unknown Blueprint (${nextBlueprintToPlanStage})`;
 
     // Only executes planning if there aren't too many active construction sites (limit 5 to avoid overwhelming)
     const constructionSites = room.find(FIND_CONSTRUCTION_SITES);
     if (constructionSites.length > 5) {
-      console.log(`Room ${room.name} has ${constructionSites.length} construction sites. Next: ${nextBlueprintName}. Suspending planning.`);
+      console.log(`Room ${room.name} has ${constructionSites.length} construction sites. Current blueprint being planned: ${nextBlueprintToPlanName}. Suspending planning.`);
       return;
     }
 
