@@ -48,7 +48,7 @@ module.exports.loop = function () {
             for (let s of sources) {
                 const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId == s.id);
                 const workParts = _.sum(harvestersAtSource, (h) => h.getActiveBodyparts(WORK));
-                if (harvestersAtSource.length === 0 || (workParts < 5 && harvestersAtSource.length < 2)) {
+                if (harvestersAtSource.length === 0) {
                     const body = harvesters.length === 0 ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
                     spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
                     spawned = true;
