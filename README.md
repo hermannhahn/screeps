@@ -4,13 +4,15 @@ Este repositório contém um script básico e escalável para o jogo **Screeps**
 
 ## 🚀 Como Funciona
 
-### 1. Módulo Principal (`main.js`)
-O coração do script gerencia:
-- **Limpeza de Memória:** Remove dados de creeps mortos para economizar CPU.
-- **Spawner Inteligente:** Calcula dinamicamente o corpo (body parts) dos creeps com base na energia total da sala (`energyCapacityAvailable`).
-  - **Lógica de Emergência:** Se você não tiver nenhum Harvester, o spawner cria um básico com a energia atual disponível para evitar o colapso da sala.
-  - **Escalabilidade:** Conforme você adiciona **Extensions**, os novos creeps serão criados com mais partes de `WORK`, `CARRY` e `MOVE`, tornando-os muito mais eficientes.
-- **Loop de Execução:** Itera sobre todos os creeps e delega a lógica para suas respectivas roles.
+### 1. Autogestão de População (`main.js`)
+O script agora analisa o estado da sala para decidir quantos creeps criar:
+- **Harvesters Dinâmicos:**
+  - Nível baixo (RCL < 3): Mantém 2 creeps por fonte de energia para garantir fluxo constante.
+  - Nível alto (RCL >= 3): Reduz para 1 creep por fonte, pois os corpos maiores (`WORK` parts extras) são mais eficientes e economizam CPU.
+- **Upgraders Adaptáveis:**
+  - Prioriza o crescimento inicial (até 6 upgraders no RCL 1).
+  - Escala conforme a reserva: Se a sala estiver com energia no limite máximo (`energyAvailable == energyCapacity`), o script cria **Upgraders extras** automaticamente para acelerar o progresso global.
+- **Prioridade de Sobrevivência:** A criação de Upgraders é interrompida se o número de Harvesters estiver abaixo da meta, garantindo que a base nunca fique sem energia.
 
 ### 2. Roles (Papéis)
 
