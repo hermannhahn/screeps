@@ -12,10 +12,9 @@ Script de automação para o jogo de estratégia MMO **Screeps**. O código é f
 - **Logística:** Sistema de mineração estática onde `Harvesters` extraem e `Suppliers` transportam.
 
 ## 📁 Estrutura de Arquivos
-- `main.js`: Loop principal, limpeza de memória e lógica de spawn inteligente.
-- `role.harvester.js`: Lógica de mineração e modo de emergência logística.
-- `role.supplier.js`: Gerenciamento de transporte e abastecimento de estruturas/upgraders.
-- `role.upgrader.js`: Lógica de evolução do controlador da sala.
+- `main.js`: Loop principal e orquestração global.
+- `manager.planner.js`: Inteligência de planejamento de construções e blueprints.
+- `role.*.js`: Definições de comportamento para cada tipo de creep (Harvester, Supplier, Upgrader, Builder).
 - `README.md`: Documentação para o usuário final.
 
 ## 🛠️ Comandos e Operações
@@ -30,6 +29,8 @@ Script de automação para o jogo de estratégia MMO **Screeps**. O código é f
 - **Idiomatic Code:** Seguir o padrão de design do Screeps (ex: usar `_.filter` do lodash que é nativo no jogo).
 
 ## 🎯 Próximos Passos (Backlog)
-- [x] Implementar Role: **Builder** para construção automática de estruturas.
-- [ ] Desenvolver o **Construction Planner** para posicionamento inteligente de containers e estradas.
-- [ ] Implementar Role: **Repairer** para manutenção de estradas e muros.
+- [x] Implementar Role: **Builder**.
+- [x] Desenvolver o **Construction Planner** (Blueprint 1: Anel de estradas no Spawn).
+- [ ] Blueprint 2: Estradas conectando Spawn às Fontes e Controller.
+- [ ] Blueprint 3: Posicionamento automático de Containers perto das fontes.
+- [ ] Implementar Role: **Repairer** para manutenção.

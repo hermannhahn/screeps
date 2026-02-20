@@ -2,6 +2,7 @@ const roleHarvester = require('role.harvester');
 const roleUpgrader = require('role.upgrader');
 const roleSupplier = require('role.supplier');
 const roleBuilder = require('role.builder');
+const managerPlanner = require('manager.planner');
 
 function getBestBody(energyLimit) {
     const parts = [];
@@ -23,6 +24,10 @@ module.exports.loop = function () {
 
     for (const roomName in Game.rooms) {
         const room = Game.rooms[roomName];
+        
+        // --- PLANEJAMENTO DE CONSTRUÇÃO ---
+        managerPlanner.run(room);
+
         const spawn = room.find(FIND_MY_SPAWNS)[0];
         if (!spawn) continue;
 
@@ -38,12 +43,9 @@ module.exports.loop = function () {
 
         if (!spawn.spawning) {
             let spawned = false;
-            
-            // 1. Harvesters (Distribuição por fonte)
             for (let s of sources) {
                 const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId == s.id);
                 const workParts = _.sum(harvestersAtSource, (h) => h.getActiveBodyparts(WORK));
-                
                 if (harvestersAtSource.length === 0 || (workParts < 5 && harvestersAtSource.length < 2)) {
                     const body = harvesters.length === 0 ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
                     spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
@@ -51,17 +53,13 @@ module.exports.loop = function () {
                     break;
                 }
             }
-
             if (!spawned) {
-                // 2. Suppliers (Logística)
                 if (suppliers.length < sources.length || (harvesters.length > 0 && suppliers.length === 0)) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
                 }
-                // 3. Builders (Apenas se houver construções)
                 else if (room.find(FIND_CONSTRUCTION_SITES).length > 0 && builders.length < 2) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
                 }
-                // 4. Upgraders (Evolução)
                 else if (upgraders.length < Math.max(1, 5 - rcl)) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
                 }
