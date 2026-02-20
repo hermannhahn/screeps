@@ -159,12 +159,13 @@ const managerPlanner = {
         }
       } else {
           console.log(`Blueprint 4 (${BLUEPRINT_NAMES[4]}) created ${sitesCreatedByBlueprint4} new mineral road construction sites.`);
-            }
-          },
-      
-        /**
-         * Creates a ring of roads around a position
-         * @param {Room} room   * @param {RoomPosition} centerPos 
+      }
+    }
+  },
+
+  /**
+   * Creates a ring of roads around a position
+   * @param {Room} room   * @param {RoomPosition} centerPos 
    * @param {number} distance 
    */
   planRoadRing: function(room, centerPos, distance) {
