@@ -1,17 +1,14 @@
 /**
- * Role: Supplier (Logística)
- * Responsabilidade: Coletar energia do chão ou containers perto das fontes e abastecer a base.
+ * Role: Supplier (Logística com entrega para Upgraders)
  */
 const roleSupplier = {
   /** @param {Creep} creep **/
   run: function(creep) {
     if (creep.store.getUsedCapacity() == 0) {
-      // 1. Procurar energia no chão ou containers perto das fontes (raio de 3 blocos)
       const sources = creep.room.find(FIND_SOURCES);
       let targetEnergy = null;
 
       for (const source of sources) {
-        // Recursos caídos no chão
         const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
           filter: (r) => r.resourceType == RESOURCE_ENERGY
         });
@@ -20,7 +17,6 @@ const roleSupplier = {
           break;
         }
 
-        // Containers ou Tombstones
         const structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
           filter: (s) => (s.structureType == STRUCTURE_CONTAINER || s.structureType == STRUCTURE_STORAGE) && 
                          s.store.getUsedCapacity(RESOURCE_ENERGY) > 0
@@ -37,22 +33,32 @@ const roleSupplier = {
         }
       }
     } else {
-      // 2. Entrega: Prioridade Spawn -> Extensions -> Towers
-      const targets = creep.room.find(FIND_STRUCTURES, {
-        filter: (structure) => {
-          return (structure.structureType == STRUCTURE_EXTENSION ||
-                  structure.structureType == STRUCTURE_SPAWN ||
-                  structure.structureType == STRUCTURE_TOWER) &&
-                  structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-        }
+      // 1. Prioridade Máxima: Spawn e Extensions
+      let target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+        filter: (s) => (s.structureType == STRUCTURE_SPAWN || s.structureType == STRUCTURE_EXTENSION) &&
+                       s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
       });
 
-      if (targets.length > 0) {
-        if (creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-          creep.moveTo(targets[0], { visualizePathStyle: { stroke: '#ffffff' } });
+      // 2. Prioridade Secundária: Upgraders (Se a base estiver abastecida)
+      if (!target) {
+        target = creep.pos.findClosestByRange(FIND_CREEPS, {
+          filter: (c) => c.memory.role == 'upgrader' && c.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        });
+      }
+
+      // 3. Prioridade Terciária: Towers
+      if (!target) {
+        target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+          filter: (s) => s.structureType == STRUCTURE_TOWER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        });
+      }
+
+      if (target) {
+        if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+          creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
         }
       } else {
-        // Se tudo cheio, ajuda no upgrade para não ficar parado
+        // Se absolutamente tudo estiver cheio, faz o upgrade pessoalmente
         if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
           creep.moveTo(creep.room.controller);
         }
