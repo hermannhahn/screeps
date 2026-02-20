@@ -25,8 +25,4 @@ const roleUpgrader = {
   }
 };
 
-module.exports = roleUpgrader; // This brace closes the 'run' function
-  }
-};
-
 module.exports = roleUpgrader;

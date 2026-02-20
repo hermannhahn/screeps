@@ -49,8 +49,4 @@ const roleBuilder = {
   }
 };
 
-module.exports = roleBuilder; // This brace closes the 'run' function
-  }
-};
-
 module.exports = roleBuilder;
