@@ -5,6 +5,7 @@ const roleSupplier = require('role.supplier');
 function getBestBody(energyLimit) {
     const parts = [];
     let currentCost = 0;
+    // Priorizamos WORK e MOVE para mineradores, CARRY é menos vital se houver supplier
     const bodySet = [WORK, CARRY, MOVE];
     const setCost = 200;
     while (currentCost + setCost <= energyLimit && parts.length < 48) {
@@ -31,43 +32,45 @@ module.exports.loop = function () {
         const energyCapacity = room.energyCapacityAvailable;
         
         const harvesters = _.filter(Game.creeps, (c) => c.memory.role == 'harvester' && c.room.name == roomName);
-        const upgraders = _.filter(Game.creeps, (c) => c.memory.role == 'upgrader' && c.room.name == roomName);
         const suppliers = _.filter(Game.creeps, (c) => c.memory.role == 'supplier' && c.room.name == roomName);
-
-        // --- LÓGICA DE POPULAÇÃO AJUSTADA ---
-        
-        let targetHarvesters = sources.length * (rcl < 3 ? 2 : 1);
-        let targetSuppliers = sources.length * (rcl < 3 ? 1 : 2);
-        
-        // FÓRMULA: 5 - RCL (mínimo 1)
-        // RCL 1 = 4 | RCL 2 = 3 | RCL 3 = 2 | RCL 4+ = 1
-        let targetUpgraders = Math.max(1, 5 - rcl);
-
-        // Se a energia estiver sobrando muito, adicionamos um upgrader temporário
-        if (energyAvailable == energyCapacity && rcl < 8) {
-            targetUpgraders += 1;
-        }
+        const upgraders = _.filter(Game.creeps, (c) => c.memory.role == 'upgrader' && c.room.name == roomName);
 
         if (!spawn.spawning) {
-            if (harvesters.length < targetHarvesters) {
-                let bestSource = sources[0];
-                let minCount = 99;
-                for (let s of sources) {
-                    let count = _.filter(harvesters, (h) => h.memory.sourceId == s.id).length;
-                    if (count < minCount) { minCount = count; bestSource = s; }
+            // --- NOVA LÓGICA: VERIFICAÇÃO POR FONTE ---
+            let spawned = false;
+            
+            for (let s of sources) {
+                const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId == s.id);
+                // Calculamos o poder de mineração total naquela fonte
+                const workParts = _.sum(harvestersAtSource, (h) => h.getActiveBodyparts(WORK));
+                
+                // Uma fonte regenera 10 de energia por tick (3000 a cada 300 ticks).
+                // Cada WORK part extrai 2 por tick. Precisamos de 5 WORK parts para saturar.
+                // Se a fonte tem 0 harvesters OU menos de 5 WORK parts (e menos de 2 creeps), spawnamos.
+                if (harvestersAtSource.length === 0 || (workParts < 5 && harvestersAtSource.length < 2)) {
+                    const body = harvesters.length === 0 ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
+                    spawn.spawnCreep(body, 'Harvester' + Game.time, { 
+                        memory: { role: 'harvester', sourceId: s.id } 
+                    });
+                    spawned = true;
+                    break;
                 }
-                const body = harvesters.length === 0 ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
-                spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: bestSource.id } });
-            } 
-            else if (suppliers.length < targetSuppliers) {
-                spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
             }
-            else if (upgraders.length < targetUpgraders) {
-                spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+
+            if (!spawned) {
+                // Prioridade 2: Suppliers (Garantir 1 por fonte ou pelo menos 1 se houver harvesters)
+                if (suppliers.length < sources.length || (harvesters.length > 0 && suppliers.length === 0)) {
+                    spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
+                }
+                // Prioridade 3: Upgraders
+                else if (upgraders.length < Math.max(1, 5 - rcl)) {
+                    spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+                }
             }
         }
     }
 
+    // Execução
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
         if (creep.memory.role == 'harvester') roleHarvester.run(creep);
