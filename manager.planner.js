@@ -1,7 +1,6 @@
 const managerPlanner = {
   /** @param {Room} room **/
   run: function(room) {
-    console.log('Manager Planner Run Initiated.');
     // Periodic check to save CPU
     if (Game.time % 100 !== 0) return; // Check every 100 ticks
 
