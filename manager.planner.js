@@ -40,14 +40,14 @@ const managerPlanner = {
 
     const spawn = spawns[0];
     
-    // BLUEPRINT 0: Roads around the Spawn (Distance 2 to keep 1 free block)
+    // BLUEPRINT 0: Roads around the Spawn (Distance 1)
     if (room.memory.blueprintStage === 0) {
-      const sitesCreatedByBlueprint0 = this.planRoadRing(room, spawn.pos, 2);
+      const sitesCreatedByBlueprint0 = this.planRoadRing(room, spawn.pos, 1);
       // Check for completion only if no new sites were created in this tick
       if (sitesCreatedByBlueprint0 === 0) {
         // Now, check if there are any *existing* road construction sites in the blueprint area
         const roadConstructionSitesInRing = room.find(FIND_CONSTRUCTION_SITES, {
-          filter: (cs) => cs.structureType === STRUCTURE_ROAD && cs.pos.getRangeTo(spawn.pos) <= 2
+          filter: (cs) => cs.structureType === STRUCTURE_ROAD && cs.pos.getRangeTo(spawn.pos) <= 1
         }).length;
 
         // If no new sites were created AND no construction sites are pending for this blueprint, then it's complete.
@@ -63,9 +63,9 @@ const managerPlanner = {
       }
     }
 
-    // BLUEPRINT 1: Extensions (5 extensions near spawn, min 3 distance)
+    // BLUEPRINT 1: Extensions (5 extensions near spawn, min 2 distance)
     if (room.memory.blueprintStage === 1 && room.controller.level >= 2) {
-      const sitesCreatedByBlueprint1 = this.planExtensions(room, spawn.pos, 5, 3);
+      const sitesCreatedByBlueprint1 = this.planExtensions(room, spawn.pos, 5, 2);
 
       if (sitesCreatedByBlueprint1 === 0) { // No new sites were created this tick
         const extensionConstructionSites = room.find(FIND_CONSTRUCTION_SITES, {
@@ -256,64 +256,11 @@ const managerPlanner = {
    * @param {Room} room
    * @param {RoomPosition} spawnPos The position of the primary spawn.
    */
-  planSourceRoads: function(room, spawnPos) {
+  planSourceRoads: function(room) {
     const sources = room.find(FIND_SOURCES);
-    const existingRoadsAroundSpawn = room.find(FIND_STRUCTURES, {
-        filter: (s) => s.structureType === STRUCTURE_ROAD && s.pos.getRangeTo(spawnPos) <= 3
-    });
-
-    if (existingRoadsAroundSpawn.length === 0) {
-        console.log("No existing roads around spawn for Blueprint 2 to connect to yet.");
-        return 0;
-    }
-
     let sitesCreatedTotal = 0;
     for (const source of sources) {
-        // Find the nearest existing road around the spawn to connect to
-        const nearestRoadSegment = source.pos.findClosestByPath(existingRoadsAroundSpawn);
-        
-        if (!nearestRoadSegment) {
-            console.log(`Could not find a path from source ${source.id} to any road around spawn.`);
-            continue;
-        }
-
-        // Plan path from source to the nearest road segment
-        const path = room.findPath(source.pos, nearestRoadSegment.pos, {
-            ignoreCreeps: true,
-            swampCost: 1, // Treat swamps like plain for roads
-            plainCost: 1,
-            // Cost callback to avoid existing structures (except roads themselves) and other construction sites
-            costCallback: function(roomName, costMatrix) {
-                if (roomName !== room.name) return; // Only interested in current room
-
-                room.find(FIND_STRUCTURES).forEach(function(s) {
-                    // Avoid non-road structures
-                    if (s.structureType !== STRUCTURE_ROAD) {
-                        costMatrix.set(s.pos.x, s.pos.y, 255);
-                    }
-                });
-                room.find(FIND_CONSTRUCTION_SITES).forEach(function(s) {
-                    costMatrix.set(s.pos.x, s.pos.y, 255);
-                });
-            }
-        });
-
-        // Create construction sites along the path
-        for (const segment of path) {
-            const pos = new RoomPosition(segment.x, segment.y, room.name);
-            const look = pos.lookFor(LOOK_STRUCTURES);
-            const lookCS = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-            
-            // Only create if there's no existing structure or construction site
-            if (look.length === 0 && lookCS.length === 0) {
-                // Ensure it's not trying to build a road on itself if already built
-                if (!pos.findInRange(existingRoadsAroundSpawn, 0).length) {
-                    if (room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD) === OK) {
-                      sitesCreatedTotal++;
-                    }
-                }
-            }
-        }
+      sitesCreatedTotal += this._planRoadsFromToNearestRoad(room, source.pos, `Blueprint 2 (Source Roads - ${source.id})`);
     }
     return sitesCreatedTotal;
   },
@@ -326,16 +273,18 @@ const managerPlanner = {
    * @returns {boolean} True if construction sites were created, false otherwise.
    */
   _planRoadsFromToNearestRoad: function(room, startPos, blueprintName) {
-    const existingRoads = room.find(FIND_STRUCTURES, {
+    const existingRoadElements = room.find(FIND_STRUCTURES, {
       filter: (s) => s.structureType === STRUCTURE_ROAD
-    });
+    }).concat(room.find(FIND_CONSTRUCTION_SITES, {
+      filter: (cs) => cs.structureType === STRUCTURE_ROAD
+    }));
 
-    if (existingRoads.length === 0) {
-      console.log(`No existing roads in room ${room.name} for ${blueprintName} to connect to yet.`);
+    if (existingRoadElements.length === 0) {
+      console.log(`No existing roads or road construction sites in room ${room.name} for ${blueprintName} to connect to yet.`);
       return 0; // Changed to return 0
     }
 
-    const nearestRoad = startPos.findClosestByPath(existingRoads);
+    const nearestRoad = startPos.findClosestByPath(existingRoadElements);
 
     if (!nearestRoad) {
       console.log(`Could not find a path from ${startPos} for ${blueprintName} to any existing road.`);
@@ -349,13 +298,29 @@ const managerPlanner = {
       costCallback: function(roomName, costMatrix) {
         if (roomName !== room.name) return;
 
+        // Avoid walls
+        room.getTerrain().getRawBuffer().forEach((val, index) => {
+            const x = index % 50;
+            const y = Math.floor(index / 50);
+            if (val === TERRAIN_MASK_WALL) {
+                costMatrix.set(x, y, 255);
+            }
+        });
+
         room.find(FIND_STRUCTURES).forEach(function(s) {
-          if (s.structureType !== STRUCTURE_ROAD) { // Avoid non-road structures
+          if (s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_RAMPART) { // Avoid non-road structures
             costMatrix.set(s.pos.x, s.pos.y, 255);
+          } else if (s.structureType === STRUCTURE_RAMPART) {
+            // Allow pathing through friendly ramparts, but with a slight cost
+            costMatrix.set(s.pos.x, s.pos.y, 1);
           }
+          // Roads are allowed with default cost
         });
         room.find(FIND_CONSTRUCTION_SITES).forEach(function(s) {
-          costMatrix.set(s.pos.x, s.pos.y, 255);
+          if (s.structureType !== STRUCTURE_ROAD) { // Avoid non-road construction sites
+            costMatrix.set(s.pos.x, s.pos.y, 255);
+          }
+          // Road construction sites are allowed with default cost
         });
       }
     });
