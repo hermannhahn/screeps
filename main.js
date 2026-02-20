@@ -71,6 +71,24 @@ module.exports.loop = function () {
 
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
+        const spawn = creep.room.find(FIND_MY_SPAWNS)[0]; // Assuming one spawn per room for simplicity here
+
+        // Stuck at edge detection and reset
+        if ((creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49) && spawn) {
+            console.log(`Creep ${creep.name} stuck at edge (${creep.pos.x},${creep.pos.y}), resetting and moving to spawn.`);
+            // Clear current memory/tasks to force a fresh start
+            delete creep.memory.deliveryTargetId;
+            if (creep.memory.assignedSupplier && Game.getObjectById(creep.memory.assignedSupplier)) {
+                delete Game.getObjectById(creep.memory.assignedSupplier).memory.deliveryTargetId;
+            }
+            delete creep.memory.assignedSupplier;
+            delete creep.memory.sourceId; // Harvesters might need this reset
+
+            // Force move to spawn
+            creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ff0000' } });
+            continue; // Skip normal role logic for this tick
+        }
+        
         if (creep.memory.role == 'harvester') roleHarvester.run(creep);
         if (creep.memory.role == 'upgrader') roleUpgrader.run(creep);
         if (creep.memory.role == 'supplier') roleSupplier.run(creep);
