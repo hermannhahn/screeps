@@ -102,7 +102,12 @@ module.exports.loop = function () {
                 const oldestHarvester = _.min(harvestersAtSource, 'ticksToLive');
 
                 let spawnNewHarvester = false;
-                const targetHarvesters = 2; // New target: 2 harvesters per source
+                let targetHarvesters;
+                if (sources.length >= 3) {
+                    targetHarvesters = 1; // 1 harvester per source if 3 or more sources
+                } else {
+                    targetHarvesters = 2; // 2 harvesters per source otherwise
+                }
 
                 if (harvestersAtSource.length < targetHarvesters) { // Spawn if below target count
                     spawnNewHarvester = true;
@@ -127,7 +132,13 @@ module.exports.loop = function () {
                 // ... Supplier spawning
                 const oldestSupplier = _.min(suppliers, 'ticksToLive');
                 let spawnNewSupplier = false;
-                if (suppliers.length < sources.length * 2 || (harvesters.length > 0 && suppliers.length === 0)) { // Initial/target count
+                let targetSuppliers;
+                if (sources.length >= 3) {
+                    targetSuppliers = sources.length * 1; // 1 supplier per source if 3 or more sources
+                } else {
+                    targetSuppliers = sources.length * 2; // 2 suppliers per source otherwise
+                }
+                if (suppliers.length < targetSuppliers || (harvesters.length > 0 && suppliers.length === 0)) { // Initial/target count
                     spawnNewSupplier = true;
                 } else if (oldestSupplier && oldestSupplier.ticksToLive !== undefined) {
                     const body = getBestBody(energyCapacity);

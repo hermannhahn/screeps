@@ -11,31 +11,64 @@ const roleSupplier = {
   /** @param {Creep} creep **/
   run: function(creep) {
     if (creep.store.getUsedCapacity() == 0) {
-      const sources = creep.room.find(FIND_SOURCES);
-      let targetEnergy = null;
-
-      for (const source of sources) {
-        const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-          filter: (r) => r.resourceType == RESOURCE_ENERGY
-        });
-        if (dropped.length > 0) {
-          targetEnergy = dropped[0];
-          break;
+        // Tenta usar o alvo de energia armazenado na memória, se existir e for válido
+        let targetEnergy = null;
+        if (creep.memory.targetEnergyId) {
+          const storedTarget = Game.getObjectById(creep.memory.targetEnergyId);
+          if (storedTarget && 
+             ((storedTarget.resourceType == RESOURCE_ENERGY && storedTarget.amount > 0) || 
+              (storedTarget.store && storedTarget.store.getUsedCapacity(RESOURCE_ENERGY) > 0))) {
+            targetEnergy = storedTarget;
+          } else {
+            // Se o alvo armazenado não é mais válido, limpa a memória
+            delete creep.memory.targetEnergyId;
+          }
         }
 
-        const structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
-          filter: (s) => (s.structureType == STRUCTURE_CONTAINER || s.structureType == STRUCTURE_STORAGE) && 
-                         s.store.getUsedCapacity(RESOURCE_ENERGY) > 0
-        });
-        if (structures.length > 0) {
-          targetEnergy = structures[0];
-          break;
+        // Se não houver um alvo válido na memória, procura um novo
+        if (!targetEnergy) {
+          for (const source of sources) {
+            const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
+              filter: (r) => r.resourceType == RESOURCE_ENERGY && r.amount > 0
+            });
+            if (dropped.length > 0) {
+              targetEnergy = dropped[0];
+              creep.memory.targetEnergyId = targetEnergy.id; // Armazena o ID
+              break;
+            }
+
+            const structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
+              filter: (s) => (s.structureType == STRUCTURE_CONTAINER || s.structureType == STRUCTURE_STORAGE) && 
+                             s.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+            });
+            if (structures.length > 0) {
+              targetEnergy = structures[0];
+              creep.memory.targetEnergyId = targetEnergy.id; // Armazena o ID
+              break;
+            }
+          }
         }
-      }
 
       if (targetEnergy) {
-        if (creep.pickup(targetEnergy) == ERR_NOT_IN_RANGE || creep.withdraw(targetEnergy, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+        let collectResult;
+        if (targetEnergy.resourceType == RESOURCE_ENERGY) { // dropped resource
+          collectResult = creep.pickup(targetEnergy);
+        } else { // structure (container/storage)
+          collectResult = creep.withdraw(targetEnergy, RESOURCE_ENERGY);
+        }
+
+        if (collectResult == ERR_NOT_IN_RANGE) {
           creep.moveTo(targetEnergy, { visualizePathStyle: { stroke: '#ffaa00' } });
+        } else if (collectResult == OK) {
+          // Se o creep estiver cheio ou o alvo ficar vazio, limpa o targetEnergyId
+          if (creep.store.getFreeCapacity() === 0 || 
+             (targetEnergy.resourceType == RESOURCE_ENERGY && targetEnergy.amount === 0) || 
+             (targetEnergy.store && targetEnergy.store.getUsedCapacity(RESOURCE_ENERGY) === 0)) {
+            delete creep.memory.targetEnergyId;
+          }
+        } else if (collectResult == ERR_NOT_ENOUGH_RESOURCES) {
+          // Se não houver mais recursos, limpa o targetEnergyId
+          delete creep.memory.targetEnergyId;
         }
       }
     } else {
