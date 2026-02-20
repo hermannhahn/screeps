@@ -1,11 +1,9 @@
 /**
- * Role: Upgrader
- * Responsabilidade: Coletar energia das fontes e realizar o upgrade do Controller da sala.
+ * Role: Upgrader (Otimizado com distribuição de fontes)
  */
 const roleUpgrader = {
   /** @param {Creep} creep **/
   run: function(creep) {
-    // Alterna o estado de coleta/upgrade
     if (creep.memory.upgrading && creep.store[RESOURCE_ENERGY] == 0) {
       creep.memory.upgrading = false;
       creep.say('🔄 harvest');
@@ -16,15 +14,14 @@ const roleUpgrader = {
     }
 
     if (creep.memory.upgrading) {
-      // Realiza o upgrade do Controller
       if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
         creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: '#ffffff' } });
       }
     } else {
-      // Procura a fonte de energia mais próxima
-      const sources = creep.room.find(FIND_SOURCES);
-      if (creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(sources[0], { visualizePathStyle: { stroke: '#ffaa00' } });
+      // Busca a fonte MAIS PRÓXIMA em vez de sempre a primeira
+      const source = creep.pos.findClosestByRange(FIND_SOURCES);
+      if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
+        creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
       }
     }
   }

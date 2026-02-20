@@ -34,28 +34,34 @@ module.exports.loop = function () {
         const upgraders = _.filter(Game.creeps, (c) => c.memory.role == 'upgrader' && c.room.name == roomName);
         const suppliers = _.filter(Game.creeps, (c) => c.memory.role == 'supplier' && c.room.name == roomName);
 
-        // --- LÓGICA DE POPULAÇÃO ---
-        let targetHarvesters = sources.length * (rcl < 3 ? 2 : 1);
-        let targetSuppliers = sources.length; // 1 Supplier por fonte
-        let targetUpgraders = rcl === 1 ? 4 : 2;
-
-        if (energyAvailable == energyCapacity) targetUpgraders += 1;
-
+        // --- LÓGICA DE SPAWN COM BALANCEAMENTO ---
         if (!spawn.spawning) {
-            // Prioridade 1: Harvesters (Mínimo 1 para começar)
-            if (harvesters.length < targetHarvesters) {
+            // Prioridade 1: Harvesters
+            if (harvesters.length < sources.length * (rcl < 3 ? 2 : 1)) {
+                // Descobre qual fonte tem menos harvesters designados
+                let bestSource = sources[0];
+                let minCount = 99;
+                
+                for (let s of sources) {
+                    let count = _.filter(harvesters, (h) => h.memory.sourceId == s.id).length;
+                    if (count < minCount) {
+                        minCount = count;
+                        bestSource = s;
+                    }
+                }
+
                 const body = harvesters.length === 0 ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
-                spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester' } });
+                spawn.spawnCreep(body, 'Harvester' + Game.time, { 
+                    memory: { role: 'harvester', sourceId: bestSource.id } 
+                });
             } 
-            // Prioridade 2: Suppliers (Essenciais para o fluxo)
-            else if (suppliers.length < targetSuppliers) {
-                const body = getBestBody(energyCapacity);
-                spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } });
+            // Prioridade 2: Suppliers
+            else if (suppliers.length < sources.length) {
+                spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
             }
             // Prioridade 3: Upgraders
-            else if (upgraders.length < targetUpgraders) {
-                const body = getBestBody(energyCapacity);
-                spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+            else if (upgraders.length < (rcl === 1 ? 4 : 2)) {
+                spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
             }
         }
     }
