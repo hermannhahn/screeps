@@ -397,4 +397,3 @@ const managerPlanner = {
 };
 
 module.exports = managerPlanner;
-module.exports = managerPlanner;
