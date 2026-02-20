@@ -6,6 +6,19 @@ const managerPlanner = require('manager.planner');
 const taskCollectEnergy = require('task.collectEnergy');
 const taskBuild = require('task.build');
 
+function getBestBody(energyLimit) {
+    const parts = [];
+    let currentCost = 0;
+    const bodySet = [WORK, CARRY, MOVE];
+    const setCost = 200;
+    while (currentCost + setCost <= energyLimit && parts.length < 48) {
+        parts.push(...bodySet);
+        currentCost += setCost;
+    }
+    if (parts.length === 0 && energyLimit >= 200) return [WORK, CARRY, MOVE];
+    return parts;
+}
+
 // Helper to calculate spawn time based on body parts
 function getSpawnTime(bodyParts) {
     return bodyParts.length * CREEP_SPAWN_TIME; // CREEP_SPAWN_TIME is 3 ticks per body part
@@ -28,15 +41,23 @@ function getTravelTime(spawn, targetPos, room) {
             swampCost: 10,
             roomCallback: function(roomName) {
                 let room = Game.rooms[roomName];
-                if (!room) return new PathFinder.CostMatrix(); // No knowledge of room
+                if (!room) return new PathFinder.CostMatrix();
 
                 let costMatrix = new PathFinder.CostMatrix();
+
                 room.find(FIND_STRUCTURES).forEach(function(struct) {
                     if (struct.structureType === STRUCTURE_ROAD) {
-                        costMatrix.set(struct.pos.x, struct.pos.y, 1); // Roads are cheap
-                    } else if (struct.structureType !== STRUCTURE_CONTAINER &&
-                               (struct.structureType !== STRUCTURE_RAMPART || !struct.my)) {
-                        costMatrix.set(struct.pos.x, struct.pos.y, 255); // Avoid impassable structures
+                        costMatrix.set(struct.pos.x, struct.pos.y, 1);
+                    } else if (OBSTACLE_OBJECT_TYPES.includes(struct.structureType) && (struct.structureType !== STRUCTURE_RAMPART || !struct.my)) {
+                        // Avoid all obstacles, except friendly ramparts
+                        costMatrix.set(struct.pos.x, struct.pos.y, 255);
+                    }
+                });
+
+                // Avoid construction sites that block movement
+                room.find(FIND_CONSTRUCTION_SITES).forEach(function(site) {
+                    if (OBSTACLE_OBJECT_TYPES.includes(site.structureType)) {
+                        costMatrix.set(site.pos.x, site.pos.y, 255);
                     }
                 });
                 return costMatrix;
