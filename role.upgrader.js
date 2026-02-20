@@ -1,4 +1,5 @@
 const taskCollectEnergy = require('task.collectEnergy');
+const taskUpgrade = require('task.upgrade');
 
 /**
  * Role: Upgrader (Prioriza receber energia de Suppliers)
@@ -16,9 +17,7 @@ const roleUpgrader = {
     }
 
     if (creep.memory.upgrading) {
-      if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: '#ffffff' } });
-      }
+      taskUpgrade.run(creep);
     } else { // Creep needs energy
       taskCollectEnergy.run(creep);
     }

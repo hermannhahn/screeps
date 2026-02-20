@@ -1,4 +1,5 @@
 const taskBuild = require('task.build');
+const taskUpgrade = require('task.upgrade');
 
 /**
  * Role: Supplier (Logística com entrega para Upgraders e Builders)
@@ -137,9 +138,7 @@ const roleSupplier = {
         // Prioridade 4: Construir (se houver construction sites)
         if (!taskBuild.run(creep)) { // If no building task was assigned
           // Prioridade 5: Ajudar no upgrade (se não houver construções)
-          if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(creep.room.controller);
-          }
+          taskUpgrade.run(creep);
         }
       }
     }

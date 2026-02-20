@@ -1,5 +1,6 @@
 const taskCollectEnergy = require('task.collectEnergy');
 const taskBuild = require('task.build');
+const taskUpgrade = require('task.upgrade');
 
 /**
  * Role: Builder
@@ -21,9 +22,7 @@ const roleBuilder = {
     if (creep.memory.building) {
       if (!taskBuild.run(creep)) { // If no building task was assigned
         // Fallback to upgrading if nothing to build
-        if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-          creep.moveTo(creep.room.controller);
-        }
+        taskUpgrade.run(creep);
       }
     } else { // Creep needs energy
       taskCollectEnergy.run(creep);
