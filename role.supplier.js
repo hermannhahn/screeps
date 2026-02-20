@@ -1,3 +1,5 @@
+const taskBuild = require('task.build');
+
 /**
  * Role: Supplier (Logística com entrega para Upgraders e Builders)
  * Prioridades de entrega de energia:
@@ -99,21 +101,11 @@ const roleSupplier = {
         // Se absolutamente tudo estiver cheio e não houver alvo para transferência
         
         // Prioridade 4: Construir (se houver construction sites)
-        const constructionSites = creep.room.find(FIND_CONSTRUCTION_SITES);
-        if (constructionSites.length > 0) {
-          // Find the closest construction site to build
-          const closestSite = creep.pos.findClosestByRange(constructionSites);
-          if (closestSite) {
-            if (creep.build(closestSite) == ERR_NOT_IN_RANGE) {
-              creep.moveTo(closestSite, { visualizePathStyle: { stroke: '#ffffff' } });
-            }
-            return; // Action taken, exit run function
+        if (!taskBuild.run(creep)) { // If no building task was assigned
+          // Prioridade 5: Ajudar no upgrade (se não houver construções)
+          if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(creep.room.controller);
           }
-        }
-
-        // Prioridade 5: Ajudar no upgrade (se não houver construções)
-        if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-          creep.moveTo(creep.room.controller);
         }
       }
     }

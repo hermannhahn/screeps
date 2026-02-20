@@ -1,4 +1,5 @@
 const taskCollectEnergy = require('task.collectEnergy');
+const taskBuild = require('task.build');
 
 /**
  * Role: Builder
@@ -18,27 +19,8 @@ const roleBuilder = {
     }
 
     if (creep.memory.building) {
-      const targets = creep.room.find(FIND_CONSTRUCTION_SITES);
-      let target = null;
-      if (targets.length > 0) {
-        targets.sort((a, b) => {
-          // Prioriza o mais avançado
-          const progressA = a.progress / a.progressTotal;
-          const progressB = b.progress / b.progressTotal;
-          if (progressA !== progressB) {
-            return progressB - progressA; // Maior progresso primeiro
-          }
-          // Se o progresso for igual, prioriza o mais próximo
-          return creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b);
-        });
-        target = targets[0];
-      }
-      if (target) {
-        if (creep.build(target) == ERR_NOT_IN_RANGE) {
-          creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
-        }
-      } else {
-        // Se não houver nada para construir, ajuda no upgrade para não ficar ocioso
+      if (!taskBuild.run(creep)) { // If no building task was assigned
+        // Fallback to upgrading if nothing to build
         if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
           creep.moveTo(creep.room.controller);
         }

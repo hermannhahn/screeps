@@ -4,6 +4,7 @@ const roleSupplier = require('role.supplier');
 const roleBuilder = require('role.builder');
 const managerPlanner = require('manager.planner');
 const taskCollectEnergy = require('task.collectEnergy');
+const taskBuild = require('task.build');
 
 function getBestBody(energyLimit) {
     const parts = [];
