@@ -1,6 +1,7 @@
 const managerPlanner = {
   /** @param {Room} room **/
   run: function(room) {
+    console.log('Manager Planner Run Initiated.');
     // Periodic check to save CPU
     if (Game.time % 100 !== 0) return; // Check every 100 ticks
 
@@ -15,6 +16,7 @@ const managerPlanner = {
     if (room.memory.blueprintStage === undefined) {
       room.memory.blueprintStage = 0; // 0: Spawn Roads, 1: Extensions, 2: Source Roads, 3: Controller Roads, 4: Mineral Roads
     }
+    console.log('Current Blueprint Stage:', room.memory.blueprintStage);
 
     const BLUEPRINT_NAMES = {
         0: "Spawn Roads",
