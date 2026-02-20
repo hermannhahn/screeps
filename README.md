@@ -10,8 +10,12 @@ O script agora analisa o estado da sala para decidir quantos creeps criar:
   - Nível baixo (RCL < 3): Mantém 2 creeps por fonte de energia para garantir fluxo constante.
   - Nível alto (RCL >= 3): Reduz para 1 creep por fonte, pois os corpos maiores (`WORK` parts extras) são mais eficientes e economizam CPU.
 - **Upgraders Adaptáveis:**
-  - Prioriza o crescimento inicial (até 6 upgraders no RCL 1).
-  - Escala conforme a reserva: Se a sala estiver com energia no limite máximo (`energyAvailable == energyCapacity`), o script cria **Upgraders extras** automaticamente para acelerar o progresso global.
+  - Segue a fórmula `Math.max(1, 5 - RCL)`.
+  - **RCL 1:** 4 Upgraders (foco total em sair do nível inicial).
+  - **RCL 2:** 3 Upgraders.
+  - **RCL 3:** 2 Upgraders.
+  - **RCL 4+:** 1 Upgrader (manutenção e evolução constante com baixo custo).
+  - **Bônus:** Se a sala estiver com energia 100% cheia, um Upgrader extra é criado temporariamente para aproveitar o excedente.
 - **Prioridade de Sobrevivência:** A criação de Upgraders é interrompida se o número de Harvesters estiver abaixo da meta, garantindo que a base nunca fique sem energia.
 
 ### 2. Roles (Papéis)

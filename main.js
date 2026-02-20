@@ -36,17 +36,19 @@ module.exports.loop = function () {
 
         // --- LÓGICA DE POPULAÇÃO AJUSTADA ---
         
-        // Mantém harvesters eficientes
         let targetHarvesters = sources.length * (rcl < 3 ? 2 : 1);
-        
-        // Aumentando a logística: 1 por fonte no início, 2 por fonte em RCL 3+
         let targetSuppliers = sources.length * (rcl < 3 ? 1 : 2);
         
-        let targetUpgraders = (rcl === 1 ? 4 : 2);
-        if (energyAvailable == energyCapacity) targetUpgraders += 1;
+        // FÓRMULA: 5 - RCL (mínimo 1)
+        // RCL 1 = 4 | RCL 2 = 3 | RCL 3 = 2 | RCL 4+ = 1
+        let targetUpgraders = Math.max(1, 5 - rcl);
+
+        // Se a energia estiver sobrando muito, adicionamos um upgrader temporário
+        if (energyAvailable == energyCapacity && rcl < 8) {
+            targetUpgraders += 1;
+        }
 
         if (!spawn.spawning) {
-            // Prioridade 1: Harvesters (Vital)
             if (harvesters.length < targetHarvesters) {
                 let bestSource = sources[0];
                 let minCount = 99;
@@ -57,11 +59,9 @@ module.exports.loop = function () {
                 const body = harvesters.length === 0 ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
                 spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: bestSource.id } });
             } 
-            // Prioridade 2: Suppliers (Essencial para o Harvester não ter que andar)
             else if (suppliers.length < targetSuppliers) {
                 spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
             }
-            // Prioridade 3: Upgraders
             else if (upgraders.length < targetUpgraders) {
                 spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
             }
