@@ -100,7 +100,6 @@ const roleBuilder = {
             creep.moveTo(creep.room.controller);
           }
         }
-      } // This brace correctly closes the initial 'else' block (for when creep needs energy)
     } // This brace closes the 'run' function
   }
 };
