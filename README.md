@@ -17,11 +17,13 @@ O script agora analisa o estado da sala para decidir quantos creeps criar:
 ### 2. Roles (Papéis)
 
 #### 🔋 Harvester (`role.harvester.js`)
-- **Objetivo:** Mineração de fontes.
-- **Nova Cadeia de Logística (Prioridades):**
-  1. **Container:** Se houver um Supplier vivo, deposita no container mais próximo da fonte.
-  2. **Transferência Direta:** Entrega para o `Supplier` mais próximo.
-  3. **Abastecimento Direto:** Se a logística falhar, abastece o Spawn/Extensions manualmente.
+- **Objetivo:** Mineração otimizada e estática.
+- **Comportamento Inteligente:**
+  - **Com Logística (Suppliers vivos):**
+    1. Procura um **Container** em um raio de 3 blocos para depositar a energia.
+    2. Se não houver container, **dropa a energia no chão** (`drop`) para que os Suppliers a coletem. Isso maximiza o tempo de mineração ativa.
+  - **Modo de Emergência (Sem Suppliers vivos):**
+    - Assume o papel de transporte, levando a energia pessoalmente até o **Spawn** e **Extensions** para evitar que a sala fique sem energia.
 
 #### 🚚 Supplier (`role.supplier.js`) - **NOVO**
 - **Objetivo:** Transporte e logística de energia.
