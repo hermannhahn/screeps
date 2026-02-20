@@ -102,9 +102,12 @@ module.exports.loop = function () {
                 const oldestHarvester = _.min(harvestersAtSource, 'ticksToLive');
 
                 let spawnNewHarvester = false;
-                if (harvestersAtSource.length === 0) { // Initial spawn
+                const targetHarvesters = 2; // New target: 2 harvesters per source
+
+                if (harvestersAtSource.length < targetHarvesters) { // Spawn if below target count
                     spawnNewHarvester = true;
-                } else if (oldestHarvester && oldestHarvester.ticksToLive !== undefined) {
+                } else if (harvestersAtSource.length === targetHarvesters && oldestHarvester && oldestHarvester.ticksToLive !== undefined) {
+                    // Only consider pre-spawning if we already have the target number of harvesters
                     const body = getBestBody(energyCapacity); // Assume max body for calculating spawn time for replacement
                     const timeToSpawn = getSpawnTime(body);
                     const travelTime = getTravelTime(spawn, s.pos, room);
