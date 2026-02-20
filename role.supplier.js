@@ -46,7 +46,7 @@ const roleSupplier = {
       // 2. Prioridade Secundária: Upgraders e Builders (Se a base estiver abastecida)
       if (!target) {
         target = creep.pos.findClosestByRange(FIND_CREEPS, {
-          filter: (c) => (c.memory.role == 'upgrader' || c.memory.role == 'builder') && c.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+          filter: (c) => (c.memory.role == 'upgrader' || c.memory.role == 'builder') && c.store[RESOURCE_ENERGY] === 0
         });
       }
 
