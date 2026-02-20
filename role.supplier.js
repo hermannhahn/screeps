@@ -37,29 +37,63 @@ const roleSupplier = {
         }
       }
     } else {
-      // 1. Prioridade Máxima: Spawn e Extensions
-      let target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-        filter: (s) => (s.structureType == STRUCTURE_SPAWN || s.structureType == STRUCTURE_EXTENSION) &&
-                       s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-      });
-
-      // 2. Prioridade Secundária: Upgraders e Builders (Se a base estiver abastecida)
-      if (!target) {
-        target = creep.pos.findClosestByRange(FIND_CREEPS, {
-          filter: (c) => (c.memory.role == 'upgrader' || c.memory.role == 'builder') && c.store[RESOURCE_ENERGY] === 0
-        });
+      // 1. Tenta continuar a entrega para um alvo já atribuído
+      let target = null;
+      if (creep.memory.deliveryTargetId) {
+        const assignedTarget = Game.getObjectById(creep.memory.deliveryTargetId);
+        if (assignedTarget && assignedTarget.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+          target = assignedTarget;
+        } else {
+          // Limpa a atribuição se o alvo não é mais válido
+          if (assignedTarget && assignedTarget.memory.assignedSupplier === creep.id) {
+            delete assignedTarget.memory.assignedSupplier;
+          }
+          delete creep.memory.deliveryTargetId;
+        }
       }
 
-      // 3. Prioridade Terciária: Towers
+      // Se não houver alvo atribuído ou o alvo anterior for inválido, procura novos
       if (!target) {
+        // Prioridade Máxima: Spawn e Extensions
         target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-          filter: (s) => s.structureType == STRUCTURE_TOWER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+          filter: (s) => (s.structureType == STRUCTURE_SPAWN || s.structureType == STRUCTURE_EXTENSION) &&
+                         s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
         });
-      }
 
+        // Prioridade Secundária: Upgraders e Builders (Se a base estiver abastecida e não estiverem atribuídos)
+        if (!target) {
+          target = creep.pos.findClosestByRange(FIND_CREEPS, {
+            filter: (c) => (c.memory.role == 'upgrader' || c.memory.role == 'builder') && 
+                           c.store[RESOURCE_ENERGY] === 0 &&
+                           !c.memory.assignedSupplier // Não atribua se já tiver um supplier a caminho
+          });
+
+          // Se um upgrader/builder for alvo, marca-o
+          if (target) {
+            target.memory.assignedSupplier = creep.id;
+            creep.memory.deliveryTargetId = target.id;
+          }
+        }
+
+        // Prioridade Terciária: Towers
+        if (!target) {
+          target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: (s) => s.structureType == STRUCTURE_TOWER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+          });
+        }
+      }
+      
+      // Lógica de transferência
       if (target) {
-        if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+        const transferResult = creep.transfer(target, RESOURCE_ENERGY);
+        if (transferResult == ERR_NOT_IN_RANGE) {
           creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+        } else if (transferResult === OK || transferResult === ERR_FULL) {
+          // Limpa a atribuição se a transferência for bem-sucedida ou o alvo estiver cheio
+          if (creep.memory.deliveryTargetId && Game.getObjectById(creep.memory.deliveryTargetId) && Game.getObjectById(creep.memory.deliveryTargetId).memory.assignedSupplier === creep.id) {
+            delete Game.getObjectById(creep.memory.deliveryTargetId).memory.assignedSupplier;
+          }
+          delete creep.memory.deliveryTargetId;
         }
       } else {
         // Se absolutamente tudo estiver cheio, faz o upgrade pessoalmente
