@@ -17,8 +17,7 @@ const roleUpgrader = {
       if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
         creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: '#ffffff' } });
       }
-    } else {
-      } else { // Creep needs energy
+    } else { // Creep needs energy
         let energyTarget = null;
 
         // Priority 1: Targeted by a Supplier
