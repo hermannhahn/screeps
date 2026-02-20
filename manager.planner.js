@@ -65,7 +65,7 @@ const managerPlanner = {
     }
 
     // BLUEPRINT 1: Extensions (5 extensions near spawn, min 3 distance)
-    if (room.memory.blueprintStage === 1) {
+    if (room.memory.blueprintStage === 1 && room.controller.level >= 2) {
       const sitesCreatedByBlueprint1 = this.planExtensions(room, spawn.pos, 5, 3);
 
       if (sitesCreatedByBlueprint1 === 0) { // No new sites were created this tick
@@ -92,6 +92,8 @@ const managerPlanner = {
       } else {
           console.log(`Blueprint 1 (${BLUEPRINT_NAMES[1]}) created ${sitesCreatedByBlueprint1} new extension construction sites.`);
       }
+    } else if (room.memory.blueprintStage === 1 && room.controller.level < 2) {
+      console.log(`Blueprint 1 (${BLUEPRINT_NAMES[1]}) skipped in room ${room.name}. RCL too low (${room.controller.level}). Requires RCL 2.`);
     }
 
     // BLUEPRINT 2: Roads from each Source to the nearest existing road around the spawn
