@@ -250,12 +250,7 @@ module.exports.loop = function () {
             if (!spawned && !isUnderAttack) { // Only spawn suppliers if not under attack
                 const oldestSupplier = _.min(suppliers, 'ticksToLive');
                 let spawnNewSupplier = false;
-                let targetSuppliers;
-                if (sources.length >= 3) {
-                    targetSuppliers = sources.length * 1; // 1 supplier per source if 3 or more sources
-                } else {
-                    targetSuppliers = sources.length * 2; // 2 suppliers per source otherwise
-                }
+                let targetSuppliers = sources.length * 2; // Always 2 suppliers per source (consistent with harvesters)
                 if (suppliers.length < targetSuppliers || (harvesters.length > 0 && suppliers.length === 0)) { // Initial/target count
                     spawnNewSupplier = true;
                 } else if (oldestSupplier && oldestSupplier.ticksToLive !== undefined) {
