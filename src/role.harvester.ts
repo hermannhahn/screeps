@@ -48,8 +48,14 @@ const roleHarvester = {
         if (creep.store.getFreeCapacity() > 0) {
             const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
             if (source) {
-                if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10, ignoreCreeps: true });
+                creep.say('⚡ Harvest');
+                const harvestResult = creep.harvest(source);
+                if (harvestResult === ERR_NOT_IN_RANGE) {
+                    creep.say('🚶 ToSource');
+                    const moveResult = creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10, ignoreCreeps: true });
+                    creep.say(`M:${moveResult}`);
+                } else {
+                    creep.say(`H:${harvestResult}`);
                 }
             } else { // Source was null/undefined, meaning sourceId is invalid or source is gone.
                 creep.say('❓ NoSource');
@@ -97,8 +103,13 @@ const roleHarvester = {
                 });
 
                 if (container) {
-                    if (creep.transfer(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(container, { reusePath: 10, ignoreCreeps: true });
+                    const transferResult = creep.transfer(container, RESOURCE_ENERGY);
+                    if (transferResult === ERR_NOT_IN_RANGE) {
+                        creep.say('🚶 ToCont');
+                        const moveResult = creep.moveTo(container, { reusePath: 10, ignoreCreeps: true });
+                        creep.say(`M:${moveResult}`);
+                    } else {
+                        creep.say(`T:${transferResult}`);
                     }
                 } else {
                     creep.drop(RESOURCE_ENERGY);
@@ -109,8 +120,13 @@ const roleHarvester = {
                         s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
                 });
                 if (target) {
-                    if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(target, { reusePath: 10, ignoreCreeps: true });
+                    const transferResult = creep.transfer(target, RESOURCE_ENERGY);
+                    if (transferResult === ERR_NOT_IN_RANGE) {
+                        creep.say('🚶 ToSpawn');
+                        const moveResult = creep.moveTo(target, { reusePath: 10, ignoreCreeps: true });
+                        creep.say(`M:${moveResult}`);
+                    } else {
+                        creep.say(`T:${transferResult}`);
                     }
                 }
             }
