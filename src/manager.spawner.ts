@@ -220,45 +220,55 @@ const managerSpawner = {
         const isUnderAttack = hostileCreeps.length > 0 && extensions.length >= 5;
         const rcl = room.controller?.level || 1;
 
-
+        // --- Spawning Logic ---
+        
+        // Priority 1: Harvesters (Most critical for energy production)
         const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
         const totalTargetHarvesters = targetHarvestersPerSource * sources.length;
-
-        // Harvester spawning logic
         if (harvesters.length < totalTargetHarvesters) {
             for (let s of sources) {
                 const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId === s.id);
                 if (harvestersAtSource.length < targetHarvestersPerSource) {
                     const body = harvesters.length === 0 ? getHarvesterBody(energyAvailable, rcl) : getHarvesterBody(energyCapacity, rcl);
                     if (body.length > 0 && spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } }) === OK) {
-                        break;
-                                
-                    // Defender spawning logic
-                    if (isUnderAttack && defenders.length < 3) {                const body = defenders.length === 0 ? getDefenderBody(energyAvailable) : getDefenderBody(energyCapacity);
-                if (body.length > 0 && spawn.spawnCreep(body, 'Defender' + Game.time, { memory: { role: 'defender' } }) === OK) {
+                        return; // Spawned a harvester, stop for this tick
+                    }
                 }
             }
+        }
+        
+        // Priority 2: Defenders (If under attack)
+        if (isUnderAttack && defenders.length < 3) {
+            const body = defenders.length === 0 ? getDefenderBody(energyAvailable) : getDefenderBody(energyCapacity);
+            if (body.length > 0 && spawn.spawnCreep(body, 'Defender' + Game.time, { memory: { role: 'defender' } }) === OK) {
+                return; // Spawned a defender, stop for this tick
+            }
+        }
 
-                            // Other roles (Supplier, Upgrader, Builder)
-                            if (!isUnderAttack) {                        // Check Suppliers (Priority 1)
-                        if (suppliers.length < sources.length) {
-                            const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
-                                            if (body.length > 0 && spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } }) === OK) {
-                                            }                        }
-                        
-                                    // Check Upgraders (Priority 2, if no supplier was just spawned)
-                                    {                            const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
-                            if (upgraders.length < targetUpgraders) {
-                                const body = upgraders.length === 0 ? getUpgraderBody(energyAvailable) : getUpgraderBody(energyCapacity);
-                                                            if (body.length > 0 && spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } }) === OK) {
-                                                            }                            }
-                        }
-            
-                                    // Check Builders (Priority 3, if no upgrader was just spawned)
-                                    if (builders.length < 1) {                            const body = builders.length === 0 ? getBuilderBody(energyAvailable) : getBuilderBody(energyCapacity);
-                                                    if (body.length > 0 && spawn.spawnCreep(body, 'Builder' + Game.time, { memory: { role: 'builder' } }) === OK) {
-                                                    }                        }
-                    }        } // Missing closing brace for run function
+        // Priority 3: Suppliers (Critical for energy distribution)
+        if (suppliers.length < sources.length) {
+            const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
+            if (body.length > 0 && spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } }) === OK) {
+                return; // Spawned a supplier, stop for this tick
+            }
+        }
+        
+        // Priority 4: Upgraders
+        const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
+        if (upgraders.length < targetUpgraders) {
+            const body = upgraders.length === 0 ? getUpgraderBody(energyAvailable) : getUpgraderBody(energyCapacity);
+            if (body.length > 0 && spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } }) === OK) {
+                return; // Spawned an upgrader, stop for this tick
+            }
+        }
+
+        // Priority 5: Builders
+        if (builders.length < 1) { // Builders target is 1
+            const body = builders.length === 0 ? getBuilderBody(energyAvailable) : getBuilderBody(energyCapacity);
+            if (body.length > 0 && spawn.spawnCreep(body, 'Builder' + Game.time, { memory: { role: 'builder' } }) === OK) {
+                return; // Spawned a builder, stop for this tick
+            }
+        }
     }
 };
 
