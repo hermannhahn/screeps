@@ -25,29 +25,50 @@ O código fonte reside na pasta `src/` e é compilado para a pasta `dist/`.
 ## 🛠️ Funcionalidades do Script
 
 ### 1. Gestão de População (`main.ts`)
-- **Spawn Inteligente:** Cálculo de tempo de spawn e viagem para reposição antecipada de creeps.
+- **Spawn Inteligente:** Cálculo de tempo de spawn e viagem para reposição antecipada de creeps (pre-spawning).
 - **Configuração de Roles:**
-  - **Harvesters:** 2 por fonte (mineração estática/drop mining).
-  - **Suppliers:** 2 por fonte (logística e abastecimento).
+  - **Harvesters:** 2 por fonte. Prioridade máxima.
+  - **Defenders:** 3 defensores ativos quando a sala está sob ataque e possui pelo menos 5 extensões.
+  - **Suppliers:** 2 por fonte (logística).
   - **Upgraders:** Dinâmico com base no RCL (`Math.max(1, 4 - RCL)`).
   - **Builders:** 1 ativo quando há construções pendentes.
-  - **Defenders:** 3 defensores ativos quando a sala está sob ataque e possui extensões suficientes.
 
 ### 2. Comportamentos (Roles)
 
-- **Harvester (`role.harvester.ts`):** Mineração dedicada com lógica de fuga de hostis.
-- **Supplier (`role.supplier.ts`):** Logística central. Abastece Spawns, Extensions, Towers e creeps (Upgraders/Builders).
-- **Upgrader (`role.upgrader.ts`):** Focado no progresso da sala (RCL/GCL).
-- **Builder (`role.builder.ts`):** Focado em construções, priorizando as mais avançadas.
-- **Defender (`role.defender.ts`):** Lógica de combate em grupo (Rally point e ataque coordenado).
+- **Harvester (`role.harvester.ts`):** 
+  - Foca na mineração estática. 
+  - **Fuga:** Se houver hostis por perto e a sala tiver defesa (5+ extensões), ele foge.
+  - **Entrega:** Se houver Suppliers, deposita em containers próximos (raio 2) ou dropa no chão. Se não houver Suppliers, abastece Spawn/Extensions diretamente.
+  
+- **Supplier (`role.supplier.ts`):** 
+  - **Coleta:** Prioriza energia dropada (acima de 2x sua capacidade) perto das fontes, então containers/storage próximos às fontes.
+  - **Entrega:** 
+    1. Spawn e Extensions.
+    2. Upgraders e Builders sem energia (atribuição 1-para-1 via `assignedSupplier`).
+    3. Towers.
+  - **Fallback:** Se nada precisar de energia, ajuda na construção ou upgrade.
+
+- **Upgrader (`role.upgrader.ts`):** 
+  - Focado exclusivamente no Controlador. 
+  - **Coleta:** Usa a tarefa centralizada `task.collectEnergy`, priorizando receber de um Supplier atribuído, então energia dropada, containers perto de fontes e storage.
+
+- **Builder (`role.builder.ts`):** 
+  - Focado em construções (`Construction Sites`).
+  - **Prioridade de Construção:** Sites mais avançados (maior % de progresso) primeiro; em empate, o mais próximo.
+  - **Fallback:** Se não houver construções, ajuda no upgrade.
+  - **Coleta:** Mesma lógica do Upgrader via `task.collectEnergy`.
+
+- **Defender (`role.defender.ts`):** 
+  - **Estratégia:** Agrupa-se (Rally Point) até atingir 3 unidades antes de atacar coordenadamente o alvo hostil mais próximo do Spawn.
+  - **Ataque:** Utiliza ataque à distância (`Ranged Attack`).
 
 ### 3. Planejamento de Construção (`manager.planner.ts`)
-Planejamento automático em estágios (Blueprints):
-- **Estágio 0:** Estradas ao redor do Spawn.
-- **Estágio 1:** Extensões (até o limite do RCL 2).
-- **Estágio 2:** Estradas conectando Fontes.
-- **Estágio 3:** Estradas conectando o Controller.
-- **Estágio 4:** Estradas conectando Minerais.
+Executa a cada 100 ticks. Suspende se houver hostis e defesa pronta.
+- **Blueprint 0:** Estradas em anel ao redor do Spawn (distância 1).
+- **Blueprint 1:** 5 Extensões próximas ao Spawn (mín. distância 2).
+- **Blueprint 2:** Estradas conectando Fontes à rede existente.
+- **Blueprint 3:** Estradas conectando o Controller.
+- **Blueprint 4:** Estradas conectando Minerais.
 
 ## 📁 Estrutura do Projeto
 
