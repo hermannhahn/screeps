@@ -5,8 +5,14 @@ const roleHarvester = {
   /** @param {Creep} creep **/
   run: function(creep) {
     // Localized hostile detection and flee logic
-    const threateningHostiles = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3); // Check within 3 tiles (attack range)
-    if (threateningHostiles.length > 0) {
+    const hostileCreepsInRoom = creep.room.find(FIND_HOSTILE_CREEPS);
+    const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
+    const hasEnoughExtensions = extensions.length >= 5;
+
+    // Harvesters only flee if directly threatened AND the room is considered "under attack"
+    // (i.e., has enough extensions to mount a defense)
+    const threateningHostiles = creep.pos.findInRange(hostileCreepsInRoom, 3); // Check within 3 tiles (attack range)
+    if (threateningHostiles.length > 0 && hasEnoughExtensions) {
       const closestHostile = creep.pos.findClosestByRange(threateningHostiles); // Find closest *threatening* hostile
       if (closestHostile) {
         // Move away from the hostile

@@ -4,10 +4,13 @@ const managerPlanner = {
     // Periodic check to save CPU
     if (Game.time % 100 !== 0) return; // Check every 100 ticks
 
-    // Do not plan if under attack
+    // Do not plan if under attack AND has enough extensions
     const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
-    if (hostileCreeps.length > 0) {
-      console.log(`Room ${room.name} under attack, suspending planning.`);
+    const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
+    const hasEnoughExtensions = extensions.length >= 5;
+
+    if (hostileCreeps.length > 0 && hasEnoughExtensions) {
+      console.log(`Room ${room.name} under attack with enough extensions, suspending planning.`);
       return;
     }
 
