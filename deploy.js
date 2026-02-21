@@ -23,13 +23,13 @@ async function run() {
     // Lê o conteúdo do arquivo dist/main.js
     const code = fs.readFileSync(path.join(__dirname, 'dist', 'main.js'), 'utf8');
 
-    // Envia o código para o servidor
-    const result = await api.setScript({ main: code }, options.branch);
+    // Envia o código para o servidor utilizando a estrutura correta da API v1.x
+    const result = await api.code.set(options.branch, { main: code });
     
     if (result.ok) {
         console.log(`🚀 Código enviado com sucesso para o branch: ${options.branch}`);
     } else {
-        console.error('❌ Erro no envio:', result.error || result);
+        console.error('❌ Erro no envio:', JSON.stringify(result));
     }
   } catch (err) {
     console.error('❌ Falha na autenticação ou envio:', err.message || err);
