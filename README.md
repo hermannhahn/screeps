@@ -1,86 +1,68 @@
-# Screeps Bot - Estrutura Inicial (Avançada)
+# Screeps Bot - Automação em TypeScript
 
-Este repositório contém um script robusto e escalável para o jogo **Screeps**, focado em automação eficiente e auto-suficiência. Ele foi projetado para otimizar o uso de recursos e o progresso da sala.
+Este repositório contém um script robusto e escalável para o jogo **Screeps**, desenvolvido em **TypeScript** e compilado com **Webpack**. O projeto foca em eficiência logística, progressão de sala automatizada e código tipado para maior segurança.
 
-## 🚀 Visão Geral das Funcionalidades
+## 🚀 Tecnologias e Arquitetura
 
-### 1. Autogestão de População (`main.js`)
-O script agora analisa o estado da sala para decidir quantos creeps criar, com otimização contínua:
-- **Spawn Inteligente:** Creeps são spawnados *antes* da morte de seus predecessores, minimizando o tempo de inatividade. O cálculo considera o tempo de spawn do creep e, para roles estáticas (Harvesters, Upgraders), o tempo de viagem até o ponto de trabalho.
-- **Harvesters Dedicados:** Exatamente **1 Harvester por fonte** de energia.
-- **Suppliers Reforçados:** **2 Suppliers por fonte** de energia, garantindo uma logística eficiente.
-- **Upgraders Adaptáveis:**
-  - Segue a fórmula `Math.max(1, 4 - RCL)`.
-  - Prioriza a evolução do controlador, com um limite mínimo de 1 upgrader.
-- **Builders Focados:** Máximo de **1 Builder** ativo, otimizando a construção.
-- **Detecção de Creeps Presos:** Creeps que ficam presos nas bordas da sala são detectados, têm suas tarefas resetadas e são forçados a retornar ao spawn.
+- **Linguagem:** TypeScript (ES2018).
+- **Build System:** Webpack (Minificação e empacotamento em arquivo único).
+- **Deploy:** Sistema de deploy automatizado com contagem de versões e push para o GitHub.
+- **Tipagem:** Utiliza `@types/screeps` para suporte completo à API do jogo.
 
-### 2. Roles (Papéis)
+## 📦 Fluxo de Desenvolvimento
 
-#### 🔋 Harvester (`role.harvester.js`)
-- **Objetivo:** Mineração otimizada e estática.
-- **Comportamento Inteligente:**
-  - **Com Logística (Suppliers vivos):**
-    1. Procura um **Container** em um raio de 2 blocos da fonte para depositar a energia.
-    2. Se não houver container, **dropa a energia no chão** (`drop`) para que os Suppliers a coletem. Isso maximiza o tempo de mineração ativa.
-  - **Modo de Emergência (Sem Suppliers vivos):**
-    - Assume o papel de transporte, levando a energia pessoalmente até o **Spawn** e **Extensions** para evitar que a sala fique sem energia.
+O código fonte reside na pasta `src/` e é compilado para a pasta `dist/`.
 
-#### 🚚 Supplier (`role.supplier.js`)
-- **Objetivo:** Transporte e logística de energia.
-- **Lógica de Entrega Otimizada:**
-  - **Prioridade 1:** Abastece **Spawns** e **Extensions** com capacidade livre.
-  - **Prioridade 2:** Abastece **Upgraders** e **Builders** que estejam completamente sem energia (`store[RESOURCE_ENERGY] === 0`) e que *não* estejam sendo atendidos por outro Supplier. Suppliers se atribuem a um creep, evitando duplicação de esforço.
-  - **Prioridade 3:** Abastece **Towers** com capacidade livre.
-  - **Fallback Produtivo:** Se não houver alvos de transferência:
-    1. Prioriza **construir** canteiros de obras (priorizando o mais avançado e depois o mais próximo, via `task.build.js`).
-    2. Se não houver construção, ajuda no **upgrade do controlador**.
-- **Coleta de Energia:** Coleta energia do chão (`dropped`) ou de containers/storage próximos às fontes.
+### Comandos Disponíveis
 
-#### 🚧 Builder (`role.builder.js`)
-- **Objetivo:** Construção de estruturas.
-- **Lógica de Coleta Inteligente:** Utiliza um módulo centralizado (`task.collectEnergy.js`) para buscar energia com a seguinte prioridade:
-  1. De um **Supplier** que o marcou como alvo (`creep.memory.assignedSupplier`). O Builder move-se ativamente em direção ao Supplier.
-  2. De **energia dropada** com a maior quantidade na sala.
-  3. De **Containers** próximos às fontes (até 3 blocos).
-  4. Do **Storage** da sala.
-- **Lógica de Construção Otimizada:** Utiliza um módulo centralizado (`task.build.js`) para:
-  - Priorizar o canteiro de obras **mais avançado** (maior `progress / progressTotal`).
-  - Em caso de empate, prioriza o canteiro de obras **mais próximo**.
-  - Se não houver nada para construir, ajuda no upgrade do controlador.
+- `npm run save`: O comando principal de desenvolvimento. Ele realiza as seguintes ações:
+  1. Limpa a pasta `dist/`.
+  2. Compila todos os arquivos `.ts` em um único `main.js` minificado.
+  3. Incrementa o contador de deploy no arquivo `.deploy_count`.
+  4. Realiza um `git commit` automático com a mensagem `"Deploy N. X"`.
+  5. Faz o `git push` para o repositório remoto.
 
-#### ⬆️ Upgrader (`role.upgrader.js`)
-- **Objetivo:** Aumentar o nível da sala (GCL/RCL).
-- **Lógica de Coleta Inteligente:** Compartilha a mesma lógica de coleta inteligente do Builder (`task.collectEnergy.js`), buscando energia nas prioridades listadas acima.
-- **Comportamento:** Utiliza a energia para o `upgradeController`, essencial para o progresso da sala.
+## 🛠️ Funcionalidades do Script
 
-## 🏗️ Planejamento de Construções (`manager.planner.js`)
-Este módulo planeja automaticamente a construção de estruturas em fases (`Blueprints`), otimizando o layout da sala e minimizando o consumo de CPU:
-- **Verificação Periódica:** Executa a cada 100 ticks (`Game.time % 100 !== 0`).
-- **Verificação de Ataque:** Suspende o planejamento se a sala estiver sob ataque (`FIND_HOSTILE_CREEPS`).
-- **Limite de CS:** Não cria mais de 5 canteiros de obras ativos para evitar sobrecarga.
-- **Estágios de Blueprint (`room.memory.blueprintStage`):**
-  - **Blueprint 0: `Spawn Roads`**
-    - Cria um anel de estradas ao redor do spawn.
-  - **Blueprint 1: `Extensions`**
-    - Cria as 5 primeiras extensões, garantindo que estejam a pelo menos 3 blocos de distância do spawn.
-  - **Blueprint 2: `Source Roads`**
-    - Conecta cada fonte de energia à estrada mais próxima ao redor do spawn.
-  - **Blueprint 3: `Controller Roads`**
-    - Conecta o controlador da sala à estrada mais próxima.
-  - **Blueprint 4: `Mineral Roads`**
-    - Conecta cada depósito de mineral à estrada mais próxima.
-- **Logging Aprimorado:** Mensagens de console indicam o blueprint *atual* sendo planejado e o *próximo* estágio após a conclusão.
+### 1. Gestão de População (`main.ts`)
+- **Spawn Inteligente:** Cálculo de tempo de spawn e viagem para reposição antecipada de creeps.
+- **Configuração de Roles:**
+  - **Harvesters:** 2 por fonte (mineração estática/drop mining).
+  - **Suppliers:** 2 por fonte (logística e abastecimento).
+  - **Upgraders:** Dinâmico com base no RCL (`Math.max(1, 4 - RCL)`).
+  - **Builders:** 1 ativo quando há construções pendentes.
+  - **Defenders:** 3 defensores ativos quando a sala está sob ataque e possui extensões suficientes.
 
-## 📁 Estrutura de Arquivos
-- `main.js`: Loop principal, lógica de spawn e detecção de creeps presos.
-- `role.harvester.js`: Lógica do Harvester.
-- `role.upgrader.js`: Lógica do Upgrader.
-- `role.supplier.js`: Lógica do Supplier.
-- `role.builder.js`: Lógica do Builder.
-- `manager.planner.js`: Lógica de planejamento de construções em estágios.
-- `task.collectEnergy.js`: Módulo com a lógica centralizada de coleta de energia (usado por Builder e Upgrader).
-- `task.build.js`: Módulo com a lógica centralizada de construção (usado por Builder e Supplier).
+### 2. Comportamentos (Roles)
+
+- **Harvester (`role.harvester.ts`):** Mineração dedicada com lógica de fuga de hostis.
+- **Supplier (`role.supplier.ts`):** Logística central. Abastece Spawns, Extensions, Towers e creeps (Upgraders/Builders).
+- **Upgrader (`role.upgrader.ts`):** Focado no progresso da sala (RCL/GCL).
+- **Builder (`role.builder.ts`):** Focado em construções, priorizando as mais avançadas.
+- **Defender (`role.defender.ts`):** Lógica de combate em grupo (Rally point e ataque coordenado).
+
+### 3. Planejamento de Construção (`manager.planner.ts`)
+Planejamento automático em estágios (Blueprints):
+- **Estágio 0:** Estradas ao redor do Spawn.
+- **Estágio 1:** Extensões (até o limite do RCL 2).
+- **Estágio 2:** Estradas conectando Fontes.
+- **Estágio 3:** Estradas conectando o Controller.
+- **Estágio 4:** Estradas conectando Minerais.
+
+## 📁 Estrutura do Projeto
+
+```
+/
+├── src/                # Código fonte TypeScript
+│   ├── main.ts         # Loop principal e lógica de Spawn
+│   ├── role.*.ts       # Comportamentos dos Creeps
+│   ├── manager.*.ts    # Inteligência de gerenciamento (Planner)
+│   └── task.*.ts       # Tarefas modulares (Build, Upgrade, etc.)
+├── dist/               # Código compilado (main.js final)
+├── package.json        # Dependências e scripts de build
+├── tsconfig.json       # Configurações do compilador TypeScript
+└── webpack.config.js   # Configurações de empacotamento
+```
 
 ---
-*Dica: Certifique-se de que o nome do seu spawner no jogo é `Spawn1`, caso contrário, ajuste a linha `room.find(FIND_MY_SPAWNS)[0]` no `main.js`.*
+*Nota: Para utilizar este script, configure o seu cliente Steam para ler o arquivo `dist/main.js` ou utilize o comando `npm run save` para enviar as mudanças para o seu repositório sincronizado com o jogo.*
