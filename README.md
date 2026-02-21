@@ -21,6 +21,23 @@ O código fonte reside na pasta `src/` e é compilado para a pasta `dist/`.
   3. Incrementa o contador de deploy no arquivo `.deploy_count`.
   4. Realiza um `git commit` automático com a mensagem `"Deploy N. X"`.
   5. Faz o `git push` para o repositório remoto.
+  6. **NOVO**: Envia o código automaticamente para o servidor privado configurado no `screeps.json` via `screeps-api`.
+
+## ⚙️ Configuração do Servidor Privado
+
+Para que o deploy automático funcione, crie um arquivo `screeps.json` na raiz do projeto baseado no `screeps.json.example`:
+
+```json
+{
+  "email": "seu-email@exemplo.com",
+  "password": "sua-senha",
+  "hostname": "screeps.gohorse.dev",
+  "port": 21025,
+  "protocol": "http",
+  "branch": "default"
+}
+```
+Este arquivo é ignorado pelo Git por segurança.
 
 ## 🛠️ Funcionalidades do Script
 
