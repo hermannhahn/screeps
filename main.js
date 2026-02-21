@@ -7,6 +7,60 @@ const managerPlanner = require('manager.planner');
 const taskCollectEnergy = require('task.collectEnergy');
 const taskBuild = require('task.build');
 
+// Define OBSTACLE_OBJECT_TYPES if not already defined globally
+if (typeof OBSTACLE_OBJECT_TYPES === 'undefined') {
+    global.OBSTACLE_OBJECT_TYPES = [
+        STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_ROAD, STRUCTURE_WALL,
+        STRUCTURE_RAMPART, STRUCTURE_KEEPER_LAIR, STRUCTURE_PORTAL, STRUCTURE_CONTROLLER,
+        STRUCTURE_LINK, STRUCTURE_STORAGE, STRUCTURE_TOWER, STRUCTURE_OBSERVER,
+        STRUCTURE_POWER_SPAWN, STRUCTURE_EXTRACTOR, STRUCTURE_LAB, STRUCTURE_TERMINAL,
+        STRUCTURE_NUKER, STRUCTURE_FACTORY, STRUCTURE_CONTAINER, STRUCTURE_POWER_BANK
+    ];
+}
+
+// RoomPosition prototype extensions for common checks
+RoomPosition.prototype.isWalkable = function(creepLooking) {
+    const terrain = this.lookFor(LOOK_TERRAIN)[0];
+    if (terrain === 'wall') return false;
+
+    const structures = this.lookFor(LOOK_STRUCTURES);
+    if (_.some(structures, (s) => OBSTACLE_OBJECT_TYPES.includes(s.structureType) && (s.structureType !== STRUCTURE_RAMPART || !s.my))) {
+        return false;
+    }
+
+    const constructionSites = this.lookFor(LOOK_CONSTRUCTION_SITES);
+    if (_.some(constructionSites, (cs) => OBSTACLE_OBJECT_TYPES.includes(cs.structureType) && (cs.structureType !== STRUCTURE_RAMPART || !cs.my))) {
+        return false;
+    }
+    
+    // Check for creeps blocking the path (unless it's the creep itself)
+    const creeps = this.lookFor(LOOK_CREEPS);
+    if (creeps.length > 0 && (!creepLooking || creeps[0].id !== creepLooking.id)) { 
+        return false;
+    }
+
+    return true;
+};
+
+RoomPosition.prototype.getAdjacentPositions = function() {
+    const positions = [];
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const x = this.x + dx;
+            const y = this.y + dy;
+            if (x >= 0 && x <= 49 && y >= 0 && y <= 49) {
+                positions.push(new RoomPosition(x, y, this.roomName));
+            }
+        }
+    }
+    return positions;
+};
+
+RoomPosition.prototype.hasCreep = function() {
+    return this.lookFor(LOOK_CREEPS).length > 0;
+};
+
 function getBestBody(energyLimit) {
     const parts = [];
     let currentCost = 0;
