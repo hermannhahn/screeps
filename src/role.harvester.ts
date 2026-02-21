@@ -53,7 +53,7 @@ const roleHarvester = {
                 if (harvestResult !== OK) { // If not successfully harvested
                     if (harvestResult === ERR_NOT_IN_RANGE) { // If out of range, move
                         creep.say('🚶 ToSource');
-                        const moveResult = creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10, ignoreCreeps: true });
+                        const moveResult = creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
                         creep.say(`M:${moveResult}`);
                     } else { // In range, but cannot harvest (e.g., source empty, ERR_NOT_ENOUGH_RESOURCES)
                         creep.say(`H:${harvestResult}`); // Display the error (e.g., H:-6)
@@ -114,7 +114,7 @@ const roleHarvester = {
                     const transferResult = creep.transfer(container, RESOURCE_ENERGY);
                     if (transferResult === ERR_NOT_IN_RANGE) {
                         creep.say('🚶 ToCont');
-                        const moveResult = creep.moveTo(container, { reusePath: 10, ignoreCreeps: true });
+                        const moveResult = creep.moveTo(container);
                         creep.say(`M:${moveResult}`);
                     } else {
                         creep.say(`T:${transferResult}`);
@@ -131,7 +131,7 @@ const roleHarvester = {
                     const transferResult = creep.transfer(target, RESOURCE_ENERGY);
                     if (transferResult === ERR_NOT_IN_RANGE) {
                         creep.say('🚶 ToSpawn');
-                        const moveResult = creep.moveTo(target, { reusePath: 10, ignoreCreeps: true });
+                        const moveResult = creep.moveTo(target);
                         creep.say(`M:${moveResult}`);
                     } else {
                         creep.say(`T:${transferResult}`);
