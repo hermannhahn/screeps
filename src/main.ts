@@ -77,17 +77,132 @@ RoomPosition.prototype.hasCreep = function(): boolean {
     return this.lookFor(LOOK_CREEPS).length > 0;
 };
 
-function getBestBody(energyLimit: number): BodyPartConstant[] {
+
+
+function getHarvesterBody(energyLimit: number): BodyPartConstant[] {
     const parts: BodyPartConstant[] = [];
     let currentCost = 0;
-    const bodySet: BodyPartConstant[] = [WORK, CARRY, MOVE];
-    const setCost = 200;
-    while (currentCost + setCost <= energyLimit && parts.length < 48) {
-        parts.push(...bodySet);
-        currentCost += setCost;
+
+    // Prioritize WORK parts
+    while (currentCost + BODYPART_COST[WORK] <= energyLimit && parts.filter(p => p === WORK).length < 6 && parts.length < 48) {
+        parts.push(WORK);
+        currentCost += BODYPART_COST[WORK];
     }
-    if (parts.length === 0 && energyLimit >= 200) return [WORK, CARRY, MOVE];
-    return parts;
+
+    // Add CARRY and MOVE parts based on remaining energy, ensuring a 1:1 ratio if possible
+    const pairCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    while (currentCost + pairCost <= energyLimit && parts.length < 48) {
+        parts.push(CARRY, MOVE);
+        currentCost += pairCost;
+    }
+
+    // Ensure at least one MOVE part
+    if (parts.filter(p => p === MOVE).length === 0 && currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.length < 48) {
+        parts.push(MOVE);
+        currentCost += BODYPART_COST[MOVE];
+    }
+    
+    // Ensure at least one CARRY part if not enough to form a pair
+    if (parts.filter(p => p === CARRY).length === 0 && currentCost + BODYPART_COST[CARRY] <= energyLimit && parts.length < 48) {
+        parts.push(CARRY);
+        currentCost += BODYPART_COST[CARRY];
+    }
+
+    return parts.length > 0 ? parts : [WORK, MOVE, CARRY]; // Fallback
+}
+
+function getBuilderBody(energyLimit: number): BodyPartConstant[] {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // Prioritize CARRY and WORK parts in a 1:1 ratio
+    const workCarryCost = BODYPART_COST[WORK] + BODYPART_COST[CARRY];
+    while (currentCost + workCarryCost <= energyLimit && parts.length < 48 && parts.filter(p => p === WORK).length < 8) {
+        parts.push(WORK, CARRY);
+        currentCost += workCarryCost;
+    }
+
+    // Add MOVE parts
+    while (currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.length < 48) {
+        parts.push(MOVE);
+        currentCost += BODYPART_COST[MOVE];
+    }
+    
+    // Ensure at least one WORK, CARRY and MOVE part if not enough to form pairs
+    if (parts.filter(p => p === WORK).length === 0 && currentCost + BODYPART_COST[WORK] <= energyLimit && parts.length < 48) {
+        parts.push(WORK);
+        currentCost += BODYPART_COST[WORK];
+    }
+    if (parts.filter(p => p === CARRY).length === 0 && currentCost + BODYPART_COST[CARRY] <= energyLimit && parts.length < 48) {
+        parts.push(CARRY);
+        currentCost += BODYPART_COST[CARRY];
+    }
+    if (parts.filter(p => p === MOVE).length === 0 && currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.length < 48) {
+        parts.push(MOVE);
+        currentCost += BODYPART_COST[MOVE];
+    }
+
+    return parts.length > 0 ? parts : [WORK, CARRY, MOVE]; // Fallback
+}
+
+function getUpgraderBody(energyLimit: number): BodyPartConstant[] {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // Prioritize WORK parts
+    while (currentCost + BODYPART_COST[WORK] <= energyLimit && parts.filter(p => p === WORK).length < 8 && parts.length < 48) {
+        parts.push(WORK);
+        currentCost += BODYPART_COST[WORK];
+    }
+
+    // Add CARRY and MOVE parts in a 1:1 ratio
+    const pairCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    while (currentCost + pairCost <= energyLimit && parts.length < 48) {
+        parts.push(CARRY, MOVE);
+        currentCost += pairCost;
+    }
+    
+    // Ensure at least one CARRY and one MOVE part if not enough to form a pair
+    if (parts.filter(p => p === CARRY).length === 0 && currentCost + BODYPART_COST[CARRY] <= energyLimit && parts.length < 48) {
+        parts.push(CARRY);
+        currentCost += BODYPART_COST[CARRY];
+    }
+    if (parts.filter(p => p === MOVE).length === 0 && currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.length < 48) {
+        parts.push(MOVE);
+        currentCost += BODYPART_COST[MOVE];
+    }
+
+    return parts.length > 0 ? parts : [WORK, CARRY, MOVE]; // Fallback
+}
+
+function getSupplierBody(energyLimit: number): BodyPartConstant[] {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // Add 1 WORK part if energy limit allows
+    if (energyLimit >= BODYPART_COST[WORK] && parts.length < 48) {
+        parts.push(WORK);
+        currentCost += BODYPART_COST[WORK];
+    }
+
+    // Add CARRY and MOVE parts in a 1:1 ratio
+    const pairCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE]; // 50 + 50 = 100
+    while (currentCost + pairCost <= energyLimit && parts.length < 48) {
+        parts.push(CARRY, MOVE);
+        currentCost += pairCost;
+    }
+
+    // Ensure at least one CARRY and one MOVE if energy limit permits
+    if (parts.filter(p => p === CARRY).length === 0 && currentCost + BODYPART_COST[CARRY] <= energyLimit && parts.length < 48) {
+        parts.push(CARRY);
+        currentCost += BODYPART_COST[CARRY];
+    }
+    if (parts.filter(p => p === MOVE).length === 0 && currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.length < 48) {
+        parts.push(MOVE);
+        currentCost += BODYPART_COST[MOVE];
+    }
+
+    return parts.length > 0 ? parts : [CARRY, MOVE]; // Fallback for very low energy, just CARRY and MOVE
 }
 
 function getDefenderBody(energyLimit: number): BodyPartConstant[] {
@@ -165,7 +280,7 @@ export const loop = () => {
             for (let s of sources) {
                 const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId === s.id);
                 if (harvestersAtSource.length < targetHarvestersPerSource) {
-                    const body = harvesters.length === 0 ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
+                    const body = harvesters.length === 0 ? getHarvesterBody(energyAvailable) : getHarvesterBody(energyCapacity);
                     spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
                     spawned = true; break;
                 }
@@ -176,16 +291,16 @@ export const loop = () => {
             }
             if (!spawned && !isUnderAttack) {
                 if (suppliers.length < sources.length) {
-                    spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
+                    spawn.spawnCreep(getSupplierBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
                     spawned = true;
                 } else {
                     const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
                     
                     if (upgraders.length < targetUpgraders) {
-                        spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+                        spawn.spawnCreep(getUpgraderBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
                         spawned = true;
                     } else if (builders.length < 1) {
-                        spawn.spawnCreep(getBestBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
+                        spawn.spawnCreep(getBuilderBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
                         spawned = true;
                     }
                 }
