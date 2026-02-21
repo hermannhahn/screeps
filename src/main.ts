@@ -286,21 +286,25 @@ export const loop = () => {
                 }
             }
             if (!spawned && isUnderAttack && defenders.length < 3) {
-                spawn.spawnCreep(getDefenderBody(energyCapacity), 'Defender' + Game.time, { memory: { role: 'defender' } });
+                const body = defenders.length === 0 ? getDefenderBody(energyAvailable) : getDefenderBody(energyCapacity);
+                spawn.spawnCreep(body, 'Defender' + Game.time, { memory: { role: 'defender' } });
                 spawned = true;
             }
             if (!spawned && !isUnderAttack) {
                 if (suppliers.length < sources.length) {
-                    spawn.spawnCreep(getSupplierBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
+                    const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
+                    spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } });
                     spawned = true;
                 } else {
                     const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
                     
                     if (upgraders.length < targetUpgraders) {
-                        spawn.spawnCreep(getUpgraderBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+                        const body = upgraders.length === 0 ? getUpgraderBody(energyAvailable) : getUpgraderBody(energyCapacity);
+                        spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
                         spawned = true;
                     } else if (builders.length < 1) {
-                        spawn.spawnCreep(getBuilderBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
+                        const body = builders.length === 0 ? getBuilderBody(energyAvailable) : getBuilderBody(energyCapacity);
+                        spawn.spawnCreep(body, 'Builder' + Game.time, { memory: { role: 'builder' } });
                         spawned = true;
                     }
                 }
