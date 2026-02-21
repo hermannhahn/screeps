@@ -1,3 +1,7 @@
+import _ from 'lodash';
+import taskBuild from './task.build';
+import taskUpgrade from './task.upgrade';
+
 const roleHarvester = {
     run: function(creep: Creep) {
         const hostileCreepsInRoom = creep.room.find(FIND_HOSTILE_CREEPS);
