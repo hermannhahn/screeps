@@ -175,12 +175,17 @@ export const loop = () => {
                 if (suppliers.length < sources.length) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
                     spawned = true;
-                } else if (upgraders.length < Math.max(1, 4 - (room.controller?.level || 1))) {
-                    spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
-                    spawned = true;
-                } else if (builders.length < 1) {
-                    spawn.spawnCreep(getBestBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
-                    spawned = true;
+                } else {
+                    const rcl = room.controller?.level || 1;
+                    const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
+                    
+                    if (upgraders.length < targetUpgraders) {
+                        spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+                        spawned = true;
+                    } else if (builders.length < 1) {
+                        spawn.spawnCreep(getBestBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
+                        spawned = true;
+                    }
                 }
             }
         }
