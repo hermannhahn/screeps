@@ -9,7 +9,7 @@ const roleSupplier = {
             if (creep.memory.targetEnergyId) {
                 const storedTarget = Game.getObjectById(creep.memory.targetEnergyId as Id<any>);
                 if (storedTarget &&
-                    ((storedTarget.resourceType === RESOURCE_ENERGY && storedTarget.amount > 0) ||
+                    ((storedTarget.resourceType === RESOURCE_ENERGY && (storedTarget.amount > 0)) ||
                         (storedTarget.store && storedTarget.store.getUsedCapacity(RESOURCE_ENERGY) > 0))) {
                     targetEnergy = storedTarget;
                 } else {
@@ -18,9 +18,16 @@ const roleSupplier = {
             }
 
             if (!targetEnergy) {
+                const targetedByOthers = _.filter(Game.creeps, (c) => 
+                    c.id !== creep.id && 
+                    c.room.name === creep.room.name && 
+                    c.memory.targetEnergyId
+                ).map(c => c.memory.targetEnergyId);
+
                 for (const source of sources) {
                     const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-                        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= creep.store.getCapacity() * 2
+                        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= creep.store.getCapacity() * 2 &&
+                            (!targetedByOthers.includes(r.id) || r.amount >= creep.store.getCapacity() * 4)
                     });
                     if (dropped.length > 0) {
                         targetEnergy = dropped[0];
@@ -30,7 +37,8 @@ const roleSupplier = {
 
                     const structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
                         filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_STORAGE) &&
-                            s.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity(RESOURCE_ENERGY)
+                            s.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity(RESOURCE_ENERGY) &&
+                            (!targetedByOthers.includes(s.id) || s.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4)
                     }) as (StructureContainer | StructureStorage)[];
                     if (structures.length > 0) {
                         targetEnergy = structures[0];
@@ -50,19 +58,15 @@ const roleSupplier = {
 
                 if (collectResult === ERR_NOT_IN_RANGE) {
                     creep.moveTo(targetEnergy, { visualizePathStyle: { stroke: '#ffaa00' } });
-                } else if (collectResult === OK) {
-                    if (creep.store.getFreeCapacity() === 0 ||
-                        (targetEnergy.resourceType === RESOURCE_ENERGY && targetEnergy.amount === 0) ||
-                        (targetEnergy.store && targetEnergy.store.getUsedCapacity(RESOURCE_ENERGY) === 0)) {
-                        delete creep.memory.targetEnergyId;
-                    }
+                } else if (collectResult === OK || collectResult === ERR_FULL) {
+                    delete creep.memory.targetEnergyId;
                 }
             }
         } else {
             let target = null;
             if (creep.memory.deliveryTargetId) {
                 target = Game.getObjectById(creep.memory.deliveryTargetId as Id<any>);
-                if (!target || target.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+                if (!target || (target.store && target.store.getFreeCapacity(RESOURCE_ENERGY) === 0)) {
                     delete creep.memory.deliveryTargetId;
                     target = null;
                 }
