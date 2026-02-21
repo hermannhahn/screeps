@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
 
@@ -18,7 +19,7 @@ const roleSupplier = {
             }
 
             if (!targetEnergy) {
-                const targetedByOthers = _.filter(Game.creeps, (c) => 
+                const targetedByOthers = _.filter(Object.values(Game.creeps), (c) => 
                     c.id !== creep.id && 
                     c.room.name === creep.room.name && 
                     c.memory.targetEnergyId
@@ -37,8 +38,8 @@ const roleSupplier = {
 
                     const structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
                         filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_STORAGE) &&
-                            s.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity(RESOURCE_ENERGY) &&
-                            (!targetedByOthers.includes(s.id) || s.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4)
+                            (s as any).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity(RESOURCE_ENERGY) &&
+                            (!targetedByOthers.includes(s.id) || (s as any).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4)
                     }) as (StructureContainer | StructureStorage)[];
                     if (structures.length > 0) {
                         targetEnergy = structures[0];

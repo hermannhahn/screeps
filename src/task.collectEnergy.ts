@@ -1,3 +1,5 @@
+import _ from 'lodash';
+
 const taskCollectEnergy = {
     run: function(creep: Creep) {
         if (creep.memory.assignedSupplier) {
@@ -17,13 +19,13 @@ const taskCollectEnergy = {
             const target = Game.getObjectById(creep.memory.targetEnergyId as Id<any>);
             if (!target || 
                 (target instanceof Resource && target.amount === 0) || 
-                (target instanceof Structure && target.store[RESOURCE_ENERGY] === 0)) {
+                (target instanceof Structure && (target as any).store && (target as any).store[RESOURCE_ENERGY] === 0)) {
                 delete creep.memory.targetEnergyId;
             }
         }
 
         if (!creep.memory.targetEnergyId) {
-            const targetedByOthers = _.filter(Game.creeps, (c) => 
+            const targetedByOthers = _.filter(Object.values(Game.creeps), (c) => 
                 c.id !== creep.id && 
                 c.room.name === creep.room.name && 
                 c.memory.targetEnergyId
@@ -43,8 +45,8 @@ const taskCollectEnergy = {
             if (!creep.memory.targetEnergyId) {
                 const containers = creep.room.find(FIND_STRUCTURES, {
                     filter: (s) => (s.structureType === STRUCTURE_CONTAINER) &&
-                        s.store[RESOURCE_ENERGY] > 0 &&
-                        (!targetedByOthers.includes(s.id) || s.store[RESOURCE_ENERGY] >= creep.store.getCapacity() * 4)
+                        s.store.getUsedCapacity(RESOURCE_ENERGY) > 0 &&
+                        (!targetedByOthers.includes(s.id) || s.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4)
                 }) as StructureContainer[];
 
                 const containersNearSources = containers.filter(container => {
