@@ -2,6 +2,7 @@ const roleHarvester = require('role.harvester');
 const roleUpgrader = require('role.upgrader');
 const roleSupplier = require('role.supplier');
 const roleBuilder = require('role.builder');
+const roleDefender = require('role.defender');
 const managerPlanner = require('manager.planner');
 const taskCollectEnergy = require('task.collectEnergy');
 const taskBuild = require('task.build');
@@ -16,6 +17,51 @@ function getBestBody(energyLimit) {
         currentCost += setCost;
     }
     if (parts.length === 0 && energyLimit >= 200) return [WORK, CARRY, MOVE];
+    return parts;
+}
+
+function getDefenderBody(energyLimit) {
+    const parts = [];
+    let currentCost = 0;
+
+    // Start with some TOUGH parts for survivability
+    const toughCost = BODYPART_COST[TOUGH];
+    while (currentCost + toughCost <= energyLimit && parts.length < 48 && parts.filter(p => p === TOUGH).length < 2) {
+        parts.push(TOUGH);
+        currentCost += toughCost;
+    }
+
+    // Add ATTACK and MOVE in pairs, ensuring MOVE >= ATTACK
+    const attackCost = BODYPART_COST[ATTACK];
+    const moveCost = BODYPART_COST[MOVE];
+    const pairCost = attackCost + moveCost;
+
+    while (currentCost + pairCost <= energyLimit && parts.length < 48) {
+        parts.push(ATTACK, MOVE);
+        currentCost += pairCost;
+    }
+
+    // Add remaining MOVE parts if possible to maintain speed
+    while (currentCost + moveCost <= energyLimit && parts.length < 48 && parts.filter(p => p === MOVE).length < parts.filter(p => p === ATTACK).length + parts.filter(p => p === TOUGH).length) {
+        parts.push(MOVE);
+        currentCost += moveCost;
+    }
+    
+    // Ensure at least one ATTACK and one MOVE if possible
+    if (parts.filter(p => p === ATTACK).length === 0 && currentCost + pairCost <= energyLimit) {
+        parts.push(ATTACK, MOVE);
+        currentCost += pairCost;
+    } else if (parts.filter(p => p === MOVE).length === 0 && currentCost + moveCost <= energyLimit) {
+        parts.push(MOVE);
+        currentCost += moveCost;
+    }
+    
+    if (parts.length === 0 && energyLimit >= (BODYPART_COST[ATTACK] + BODYPART_COST[MOVE])) {
+        return [ATTACK, MOVE]; // Minimum combat creep
+    } else if (parts.length === 0 && energyLimit >= BODYPART_COST[MOVE]) {
+        return [MOVE]; // Failsafe
+    }
+    
     return parts;
 }
 
@@ -93,39 +139,58 @@ module.exports.loop = function () {
         const suppliers = _.filter(Game.creeps, (c) => c.memory.role == 'supplier' && c.room.name == roomName);
         const upgraders = _.filter(Game.creeps, (c) => c.memory.role == 'upgrader' && c.room.name == roomName);
         const builders = _.filter(Game.creeps, (c) => c.memory.role == 'builder' && c.room.name == roomName);
+        const defenders = _.filter(Game.creeps, (c) => c.memory.role == 'defender' && c.room.name == roomName);
+
+        const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
+        const isUnderAttack = hostileCreeps.length > 0;
+        const targetDefenders = isUnderAttack ? 3 : 0;
 
         if (!spawn.spawning) {
             let spawned = false;
-            for (let s of sources) {
-                const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId == s.id);
-                // Find oldest harvester at this source
-                const oldestHarvester = _.min(harvestersAtSource, 'ticksToLive');
 
-                let spawnNewHarvester = false;
-                let targetHarvesters;
-                if (sources.length >= 3) {
-                    targetHarvesters = 1; // 1 harvester per source if 3 or more sources
-                } else {
-                    targetHarvesters = 2; // 2 harvesters per source otherwise
-                }
-
-                if (harvestersAtSource.length < targetHarvesters) { // Spawn if below target count
-                    spawnNewHarvester = true;
-                } else if (harvestersAtSource.length === targetHarvesters && oldestHarvester && oldestHarvester.ticksToLive !== undefined) {
-                    // Only consider pre-spawning if we already have the target number of harvesters
-                    const body = getBestBody(energyCapacity); // Assume max body for calculating spawn time for replacement
-                    const timeToSpawn = getSpawnTime(body);
-                    const travelTime = getTravelTime(spawn, s.pos, room);
-                    if (oldestHarvester.ticksToLive <= timeToSpawn + travelTime + 5) { // Add a buffer of 5 ticks
-                        spawnNewHarvester = true;
-                    }
-                }
-
-                if (spawnNewHarvester) {
-                    const body = (harvesters.length === 0 || oldestHarvester === Infinity) ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
-                    spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
+            // Defender spawning - High priority when under attack
+            if (isUnderAttack && defenders.length < targetDefenders) {
+                const body = getDefenderBody(energyCapacity);
+                if (body.length > 0) {
+                    spawn.spawnCreep(body, 'Defender' + Game.time, { memory: { role: 'defender' } });
                     spawned = true;
-                    break;
+                } else {
+                    console.log(`Not enough energy to spawn a defender. Energy: ${energyCapacity}`);
+                }
+            }
+            
+            if (!spawned) {
+                for (let s of sources) {
+                    const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId == s.id);
+                    // Find oldest harvester at this source
+                    const oldestHarvester = _.min(harvestersAtSource, 'ticksToLive');
+    
+                    let spawnNewHarvester = false;
+                    let targetHarvesters;
+                    if (sources.length >= 3) {
+                        targetHarvesters = 1; // 1 harvester per source if 3 or more sources
+                    } else {
+                        targetHarvesters = 2; // 2 harvesters per source otherwise
+                    }
+    
+                    if (harvestersAtSource.length < targetHarvesters) { // Spawn if below target count
+                        spawnNewHarvester = true;
+                    } else if (harvestersAtSource.length === targetHarvesters && oldestHarvester && oldestHarvester.ticksToLive !== undefined) {
+                        // Only consider pre-spawning if we already have the target number of harvesters
+                        const body = getBestBody(energyCapacity); // Assume max body for calculating spawn time for replacement
+                        const timeToSpawn = getSpawnTime(body);
+                        const travelTime = getTravelTime(spawn, s.pos, room);
+                        if (oldestHarvester.ticksToLive <= timeToSpawn + travelTime + 5) { // Add a buffer of 5 ticks
+                            spawnNewHarvester = true;
+                        }
+                    }
+    
+                    if (spawnNewHarvester) {
+                        const body = (harvesters.length === 0 || oldestHarvester === Infinity) ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
+                        spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
+                        spawned = true;
+                        break;
+                    }
                 }
             }
             if (!spawned) {
@@ -223,5 +288,6 @@ module.exports.loop = function () {
         if (creep.memory.role == 'upgrader') roleUpgrader.run(creep);
         if (creep.memory.role == 'supplier') roleSupplier.run(creep);
         if (creep.memory.role == 'builder') roleBuilder.run(creep);
+        if (creep.memory.role == 'defender') roleDefender.run(creep);
     }
 }
