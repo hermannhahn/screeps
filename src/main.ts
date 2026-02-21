@@ -94,9 +94,9 @@ export const loop = () => {
     for (const roomName in Game.rooms) {
         const room = Game.rooms[roomName];
         managerPlanner.run(room);
-        managerSpawner.run(room, spawn);
         const spawn = room.find(FIND_MY_SPAWNS)[0];
         if (!spawn) continue;
+        managerSpawner.run(room, spawn);
 
         const sources = room.find(FIND_SOURCES);
         const energyAvailable = room.energyAvailable;
