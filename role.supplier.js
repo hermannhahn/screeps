@@ -31,7 +31,7 @@ const roleSupplier = {
         if (!targetEnergy) {
           for (const source of sources) {
             const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-              filter: (r) => r.resourceType == RESOURCE_ENERGY && r.amount > 0
+              filter: (r) => r.resourceType == RESOURCE_ENERGY && r.amount >= creep.store.getCapacity()
             });
             if (dropped.length > 0) {
               targetEnergy = dropped[0];
@@ -41,7 +41,7 @@ const roleSupplier = {
 
             const structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
               filter: (s) => (s.structureType == STRUCTURE_CONTAINER || s.structureType == STRUCTURE_STORAGE) && 
-                             s.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+                             s.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity(RESOURCE_ENERGY)
             });
             if (structures.length > 0) {
               targetEnergy = structures[0];
