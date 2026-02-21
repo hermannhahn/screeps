@@ -50,12 +50,20 @@ const roleHarvester = {
             if (source) {
                 creep.say('⚡ Harvest');
                 const harvestResult = creep.harvest(source);
-                if (harvestResult === ERR_NOT_IN_RANGE) {
-                    creep.say('🚶 ToSource');
-                    const moveResult = creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10, ignoreCreeps: true });
-                    creep.say(`M:${moveResult}`);
+                if (harvestResult !== OK) { // If not successfully harvested
+                    if (harvestResult === ERR_NOT_IN_RANGE) { // If out of range, move
+                        creep.say('🚶 ToSource');
+                        const moveResult = creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10, ignoreCreeps: true });
+                        creep.say(`M:${moveResult}`);
+                    } else { // In range, but cannot harvest (e.g., source empty, ERR_NOT_ENOUGH_RESOURCES)
+                        creep.say(`H:${harvestResult}`); // Display the error (e.g., H:-6)
+                        // Creep is in range, but the source is empty or other non-movement error.
+                        // Clear sourceId to trigger re-assignment or fallback tasks.
+                        creep.memory.sourceId = undefined; // Clear sourceId to trigger re-assignment
+                        creep.say('🔄 Re-eval'); // Indicate it's re-evaluating
+                    }
                 } else {
-                    creep.say(`H:${harvestResult}`);
+                    creep.say(`H:${harvestResult}`); // Harvested OK
                 }
             } else { // Source was null/undefined, meaning sourceId is invalid or source is gone.
                 creep.say('❓ NoSource');

@@ -283,13 +283,16 @@ export const loop = () => {
         if (!spawn.spawning) {
             let spawned = false;
             const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
+            const totalTargetHarvesters = targetHarvestersPerSource * sources.length;
 
-            for (let s of sources) {
-                const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId === s.id);
-                if (harvestersAtSource.length < targetHarvestersPerSource) {
-                    const body = harvesters.length === 0 ? getHarvesterBody(energyAvailable) : getHarvesterBody(energyCapacity);
-                    spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
-                    spawned = true; break;
+            if (harvesters.length < totalTargetHarvesters) {
+                for (let s of sources) {
+                    const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId === s.id);
+                    if (harvestersAtSource.length < targetHarvestersPerSource) {
+                        const body = harvesters.length === 0 ? getHarvesterBody(energyAvailable) : getHarvesterBody(energyCapacity);
+                        spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
+                        spawned = true; break;
+                    }
                 }
             }
             if (!spawned && isUnderAttack && defenders.length < 3) {
