@@ -48,25 +48,18 @@ const roleHarvester = {
         if (creep.store.getFreeCapacity() > 0) {
             const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
             if (source) {
-                creep.say('⚡ Harvest');
                 const harvestResult = creep.harvest(source);
                 if (harvestResult !== OK) { // If not successfully harvested
                     if (harvestResult === ERR_NOT_IN_RANGE) { // If out of range, move
-                        creep.say('🚶 ToSource');
                         const moveResult = creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
-                        creep.say(`M:${moveResult}`);
                     } else { // In range, but cannot harvest (e.g., source empty, ERR_NOT_ENOUGH_RESOURCES)
-                        creep.say(`H:${harvestResult}`); // Display the error (e.g., H:-6)
                         // Creep is in range, but the source is empty or other non-movement error.
                         // Clear sourceId to trigger re-assignment or fallback tasks.
                         creep.memory.sourceId = undefined; // Clear sourceId to trigger re-assignment
-                        creep.say('🔄 Re-eval'); // Indicate it's re-evaluating
                     }
                 } else {
-                    creep.say(`H:${harvestResult}`); // Harvested OK
                 }
             } else { // Source was null/undefined, meaning sourceId is invalid or source is gone.
-                creep.say('❓ NoSource');
                 const allSources = creep.room.find(FIND_SOURCES);
                 // Determine target harvesters per source based on RCL, consistent with main.ts
                 const targetHarvestersPerSource = creep.room.controller && creep.room.controller.level < 4 ? 2 : 1;
@@ -89,9 +82,7 @@ const roleHarvester = {
 
                 if (bestSource) {
                     creep.memory.sourceId = bestSource.id;
-                    creep.say(`🔄 To ${bestSource.id.substring(bestSource.id.length - 4)}`);
                 } else {
-                    creep.say('💤 Idle');
                     // All sources are full or assigned. Harvester should now assist with other tasks.
                     if (!taskBuild.run(creep)) {
                         taskUpgrade.run(creep);
@@ -113,11 +104,7 @@ const roleHarvester = {
                 if (container) {
                     const transferResult = creep.transfer(container, RESOURCE_ENERGY);
                     if (transferResult === ERR_NOT_IN_RANGE) {
-                        creep.say('🚶 ToCont');
-                        const moveResult = creep.moveTo(container);
-                        creep.say(`M:${moveResult}`);
-                    } else {
-                        creep.say(`T:${transferResult}`);
+                        creep.moveTo(container);
                     }
                 } else {
                     creep.drop(RESOURCE_ENERGY);
@@ -130,11 +117,7 @@ const roleHarvester = {
                 if (target) {
                     const transferResult = creep.transfer(target, RESOURCE_ENERGY);
                     if (transferResult === ERR_NOT_IN_RANGE) {
-                        creep.say('🚶 ToSpawn');
-                        const moveResult = creep.moveTo(target);
-                        creep.say(`M:${moveResult}`);
-                    } else {
-                        creep.say(`T:${transferResult}`);
+                        creep.moveTo(target);
                     }
                 }
             }
