@@ -18,25 +18,6 @@ const roleDefender = {
     if (hostiles.length > 0) {
       // Find all defenders in the room
       const allDefenders = _.filter(Game.creeps, (c) => c.memory && c.memory.role == 'defender' && c.room.name == creep.room.name);
-              // Count defenders near the rally point
-              const defendersAtRallyPoint = _.filter(allDefenders, (d) => d.pos.getRangeTo(rallyPoint) <= 2).length;
-      
-              if (creep.memory.state === 'GATHERING') {
-                // Only engage if there are 3 defenders total AND all 3 are at the rally point
-                if (allDefenders.length === 3 && defendersAtRallyPoint === 3) {
-                  creep.memory.state = 'ENGAGING';
-                  creep.say('ENGAGE');
-                } else if (!creep.pos.isEqualTo(rallyPoint)) {
-                  // Move to rally point
-                  creep.moveTo(rallyPoint, { visualizePathStyle: { stroke: '#ffff00' }, reusePath: 50 });
-                  creep.say('GATHER');
-                } else {
-                  creep.say('WAIT');
-                }
-              }       
-    if (hostiles.length > 0) {
-      // Find all defenders in the room
-      const allDefenders = _.filter(Game.creeps, (c) => c.memory && c.memory.role == 'defender' && c.room.name == creep.room.name);
       // Count defenders near the rally point
       const defendersAtRallyPoint = _.filter(allDefenders, (d) => d.pos.getRangeTo(rallyPoint) <= 2).length;
 
@@ -124,7 +105,7 @@ const roleDefender = {
       // No hostiles, return to rally point or guard post
       creep.memory.state = 'GATHERING'; // Reset state
       if (!creep.pos.isEqualTo(rallyPoint)) {
-        creep.moveTo(rallyPoint, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 50 });
+        creep.moveTo(rallyPoint, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 5 }); // Lower reusePath
         creep.say('IDLE');
       }
     }
