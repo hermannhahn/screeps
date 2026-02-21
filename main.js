@@ -271,7 +271,7 @@ module.exports.loop = function () {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
                     spawned = true;
                 }
-                else if (!spawned) {
+                else if (!spawned && !isUnderAttack) {
                     // ... Upgrader spawning
                     const oldestUpgrader = _.min(upgraders, 'ticksToLive');
                     let spawnNewUpgrader = false;
@@ -293,7 +293,7 @@ module.exports.loop = function () {
                         spawned = true;
                     }
                 }
-                else if (!spawned) {
+                else if (!spawned && !isUnderAttack) {
                     // ... Builder spawning
                     const oldestBuilder = _.min(builders, 'ticksToLive');
                     let spawnNewBuilder = false;
