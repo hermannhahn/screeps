@@ -35,16 +35,12 @@ const roleDefender = {
             // Check if anyone was attacked in the last tick
             const eventLog = creep.room.getEventLog();
             const wasAttacked = _.some(eventLog, (event) => {
-                if (event.event === EVENT_ATTACK) {
-                    const target = Game.getObjectById(event.data.targetId as Id<any>);
+                if (event.event === 1) { // EVENT_ATTACK
+                    const data = event.data as any;
+                    const target = Game.getObjectById(data.targetId as Id<any>);
                     return !!(target && (target as any).my);
                 }
-                if (event.event === EVENT_RANGED_ATTACK) {
-                    const target = Game.getObjectById(event.data.targetId as Id<any>);
-                    return !!(target && (target as any).my);
-                }
-                if (event.event === EVENT_RANGED_MASS_ATTACK) {
-                    // If a hostile is present and mass attack happened, we engage
+                if (event.event === 3) { // EVENT_ATTACK_CONTROLLER
                     return true;
                 }
                 return false;
