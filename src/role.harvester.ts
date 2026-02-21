@@ -81,7 +81,7 @@ const roleHarvester = {
                         );
                         if (pathResult.path.length > 0) {
                             creep.say(`P: ${pathResult.path.length}, I:${pathResult.incomplete}`);
-                            const moveResult = creep.move(pathResult.path[0]); // Use creep.move for one step
+                            const moveResult = creep.move(creep.pos.getDirectionTo(pathResult.path[0])); // Use creep.move for one step
                             creep.say(`M:${moveResult}`);
                         } else {
                             creep.say(`M:NO_PATH`);
@@ -172,7 +172,7 @@ const roleHarvester = {
                         );
                         if (pathResult.path.length > 0) {
                             creep.say(`P: ${pathResult.path.length}, I:${pathResult.incomplete}`);
-                            const moveResult = creep.move(pathResult.path[0]);
+                            const moveResult = creep.move(creep.pos.getDirectionTo(pathResult.path[0]));
                             creep.say(`M:${moveResult}`);
                         } else {
                             creep.say(`M:NO_PATH`);
@@ -219,7 +219,7 @@ const roleHarvester = {
                         );
                         if (pathResult.path.length > 0) {
                             creep.say(`P: ${pathResult.path.length}, I:${pathResult.incomplete}`);
-                            const moveResult = creep.move(pathResult.path[0]);
+                            const moveResult = creep.move(creep.pos.getDirectionTo(pathResult.path[0]));
                             creep.say(`M:${moveResult}`);
                         } else {
                             creep.say(`M:NO_PATH`);
