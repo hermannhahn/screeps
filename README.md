@@ -23,6 +23,21 @@ O código fonte reside na pasta `src/` e é compilado para a pasta `dist/`.
   5. Faz o `git push` para o repositório remoto.
   6. **NOVO**: Envia o código automaticamente para o servidor privado configurado no `screeps.json` via `screeps-api`.
 
+- `npm run ssc`: Inicia o Screeps Steamless Client em segundo plano. Este comando é crucial para interagir com o ambiente de desenvolvimento do Screeps fora do cliente oficial Steam.
+  **Importante:** Este comando espera encontrar o arquivo `package.nw` na seguinte localização: `/home/hermann/.steam/steam/steamapps/common/Screeps/package.nw`.
+  Se o seu cliente Steamless não iniciar corretamente, é provável que o caminho para `package.nw` esteja diferente em sua máquina. Para corrigir isso:
+  1. Localize o arquivo `package.nw` (ou `app.nw`) na instalação do seu Screeps.
+     - Geralmente, está dentro da pasta de instalação do jogo Screeps na sua biblioteca Steam (ex: `~/.steam/steam/steamapps/common/Screeps/`).
+  2. Edite o arquivo `package.json` na raiz deste projeto.
+  3. Altere o valor do script `ssc` para refletir o caminho correto:
+     ```json
+     "scripts": {
+       "ssc": "npx screeps-steamless-client --package /caminho/correto/para/seu/package.nw"
+     }
+     ```
+     Lembre-se de que o comando global `npx screeps-steamless-client` deve estar acessível (instalado via `npm install -g screeps-steamless-client`).
+
+
 ## ⚙️ Configuração do Servidor Privado
 
 Para que o deploy automático funcione, crie um arquivo `screeps.json` na raiz do projeto baseado no `screeps.json.example`:
