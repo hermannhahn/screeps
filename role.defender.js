@@ -34,24 +34,47 @@ const roleDefender = {
                   creep.say('WAIT');
                 }
               }       
+    if (hostiles.length > 0) {
+      // Find all defenders in the room
+      const allDefenders = _.filter(Game.creeps, (c) => c.memory && c.memory.role == 'defender' && c.room.name == creep.room.name);
+      // Count defenders near the rally point
+      const defendersAtRallyPoint = _.filter(allDefenders, (d) => d.pos.getRangeTo(rallyPoint) <= 2).length;
+
+      // Debugging: Log state transition conditions
+      // console.log(`Defender ${creep.name} - State: ${creep.memory.state}, Hostiles: ${hostiles.length}, AllDefenders: ${allDefenders.length}, AtRally: ${defendersAtRallyPoint}`);
+
+      if (creep.memory.state === 'GATHERING') {
+        // Only engage if there are 3 defenders total AND all 3 are at the rally point
+        if (allDefenders.length === 3 && defendersAtRallyPoint === 3) {
+          creep.memory.state = 'ENGAGING';
+          creep.say('ENGAGE');
+        } else if (!creep.pos.isEqualTo(rallyPoint)) {
+          // Move to rally point
+          creep.moveTo(rallyPoint, { visualizePathStyle: { stroke: '#ffff00' }, reusePath: 5 }); // Lower reusePath
+          creep.say('GATHER');
+        } else {
+          creep.say('WAIT');
+        }
+      } 
+      
       if (creep.memory.state === 'ENGAGING') {
-        const closestHostile = creep.pos.findClosestByPath(hostiles);
-        if (closestHostile) {
-          const allDefenders = _.filter(Game.creeps, (c) => c.memory && c.memory.role == 'defender' && c.room.name == creep.room.name);
-          
-          // Determine the lead defender (e.g., based on ID - lowest ID for consistency)
-          const leader = _.min(allDefenders, 'id'); 
+        // Determine a consistent hostile target for all defenders
+        const mainHostileTarget = _.sortBy(hostiles, h => creep.pos.getRangeTo(h))[0]; // Closest hostile for all defenders
+
+        if (mainHostileTarget) {
+          // Determine the lead defender (closest to the mainHostileTarget)
+          const leader = _.min(allDefenders, (d) => d.pos.getRangeTo(mainHostileTarget));
 
           if (creep.id === leader.id) {
             // This is the leader, move directly to hostile
-            if (creep.attack(closestHostile) === ERR_NOT_IN_RANGE) {
-              creep.moveTo(closestHostile, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 50 });
+            if (creep.attack(mainHostileTarget) === ERR_NOT_IN_RANGE) {
+              creep.moveTo(mainHostileTarget, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5 }); // Lower reusePath
             }
             creep.say('LEADER');
           } else {
             // This is a follower
             // Try to move to a position adjacent to the leader that is also closer to the hostile.
-            let targetPos = closestHostile.pos; // Default to hostile's position
+            let targetPos = mainHostileTarget.pos; // Default to hostile's position
 
             if (leader) {
                 // Find a position adjacent to the leader that is passable and not occupied by another creep
@@ -60,7 +83,9 @@ const roleDefender = {
                     for (let dy = -1; dy <= 1; dy++) {
                         if (dx === 0 && dy === 0) continue;
                         const pos = new RoomPosition(leader.pos.x + dx, leader.pos.y + dy, leader.pos.roomName);
-                        if (pos.isWalkable(creep) && !pos.hasCreep()) {
+                        // Using the isWalkable prototype that accounts for structures and other creeps
+                        // And ensuring the position is not further from the target than the leader's position
+                        if (pos.isWalkable(creep) && pos.getRangeTo(mainHostileTarget) <= leader.pos.getRangeTo(mainHostileTarget)) {
                             adjacentToLeader.push(pos);
                         }
                     }
@@ -68,7 +93,7 @@ const roleDefender = {
                 
                 // Prioritize positions that are closer to the hostile
                 if (adjacentToLeader.length > 0) {
-                    const closestAdjacentToHostile = _.min(adjacentToLeader, (p) => p.getRangeTo(closestHostile));
+                    const closestAdjacentToHostile = _.min(adjacentToLeader, (p) => p.getRangeTo(mainHostileTarget));
                     if (closestAdjacentToHostile) {
                         targetPos = closestAdjacentToHostile;
                     }
@@ -78,19 +103,20 @@ const roleDefender = {
                 }
             }
 
-            if (creep.attack(closestHostile) === ERR_NOT_IN_RANGE || creep.rangedAttack(closestHostile) === ERR_NOT_IN_RANGE) {
+            if (creep.attack(mainHostileTarget) === ERR_NOT_IN_RANGE || creep.rangedAttack(mainHostileTarget) === ERR_NOT_IN_RANGE) {
                 if (!creep.pos.isEqualTo(targetPos)) {
-                    creep.moveTo(targetPos, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 50 });
+                    creep.moveTo(targetPos, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5 }); // Lower reusePath
                 }
             }
             creep.say('FOLLOW');
           }
 
-          // If in range, attack (this is redundant but keeps behavior consistent if move fails)
-          if (creep.attack(closestHostile) === OK) { /* attack should happen here */ }
-          if (creep.rangedAttack(closestHostile) === OK) { /* ranged attack if applicable */ }
+          // If in range, attack 
+          if (creep.attack(mainHostileTarget) === OK) { /* attack should happen here */ }
+          if (creep.rangedAttack(mainHostileTarget) === OK) { /* ranged attack if applicable */ }
         } else {
-          creep.memory.state = 'GATHERING';
+          // No mainHostileTarget found (hostiles might have disappeared)
+          creep.memory.state = 'GATHERING'; // Revert to gathering if target disappeared
           creep.say('NO TARGET');
         }
       }
