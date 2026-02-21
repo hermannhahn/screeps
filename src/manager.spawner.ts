@@ -244,30 +244,36 @@ const managerSpawner = {
                 }
             }
 
-            // Other roles (Supplier, Upgrader, Builder)
-            if (!spawned && !isUnderAttack) {
-                if (suppliers.length < sources.length) {
-                    const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
-                    if (body.length > 0 && spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } }) === OK) {
-                        spawned = true;
-                    }
-                } else {
-                    const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
-                    
-                    if (upgraders.length < targetUpgraders) {
-                        const body = upgraders.length === 0 ? getUpgraderBody(energyAvailable) : getUpgraderBody(energyCapacity);
-                        if (body.length > 0 && spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } }) === OK) {
-                            spawned = true;
+                    // Other roles (Supplier, Upgrader, Builder)
+                    // Check these roles if nothing else was spawned and no attack
+                    if (!spawned && !isUnderAttack) {
+                        // Check Suppliers (Priority 1)
+                        if (suppliers.length < sources.length) {
+                            const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
+                            if (body.length > 0 && spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } }) === OK) {
+                                spawned = true;
+                            }
                         }
-                    } else if (builders.length < 1) {
-                        const body = builders.length === 0 ? getBuilderBody(energyAvailable) : getBuilderBody(energyCapacity);
-                        if (body.length > 0 && spawn.spawnCreep(body, 'Builder' + Game.time, { memory: { role: 'builder' } }) === OK) {
-                            spawned = true;
+                        
+                        // Check Upgraders (Priority 2, if no supplier was just spawned)
+                        if (!spawned) {
+                            const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
+                            if (upgraders.length < targetUpgraders) {
+                                const body = upgraders.length === 0 ? getUpgraderBody(energyAvailable) : getUpgraderBody(energyCapacity);
+                                if (body.length > 0 && spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } }) === OK) {
+                                    spawned = true;
+                                }
+                            }
                         }
-                    }
-                }
-            }
-        } // Missing closing brace for run function
+            
+                        // Check Builders (Priority 3, if no upgrader was just spawned)
+                        if (!spawned && builders.length < 1) {
+                            const body = builders.length === 0 ? getBuilderBody(energyAvailable) : getBuilderBody(energyCapacity);
+                            if (body.length > 0 && spawn.spawnCreep(body, 'Builder' + Game.time, { memory: { role: 'builder' } }) === OK) {
+                                spawned = true;
+                            }
+                        }
+                    }        } // Missing closing brace for run function
     }
 };
 
