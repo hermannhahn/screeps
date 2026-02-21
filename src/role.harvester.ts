@@ -47,11 +47,37 @@ const roleHarvester = {
                 if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10, ignoreCreeps: true });
                 }
-            } else {
+            } else { // Source was null/undefined, meaning sourceId is invalid or source is gone.
                 creep.say('❓ NoSource');
-                const sources = creep.room.find(FIND_SOURCES);
-                if (sources.length > 0) {
-                    creep.memory.sourceId = sources[0].id;
+                const allSources = creep.room.find(FIND_SOURCES);
+                // Determine target harvesters per source based on RCL, consistent with main.ts
+                const targetHarvestersPerSource = creep.room.controller && creep.room.controller.level < 4 ? 2 : 1;
+
+                let bestSource: Source | null = null;
+                let minHarvesters = Infinity;
+
+                for (const s of allSources) {
+                    const harvestersAssignedToSource = _.filter(Game.creeps, (c) => 
+                        c.memory.role === 'harvester' && c.memory.sourceId === s.id && c.room.name === creep.room.name
+                    ).length;
+
+                    if (harvestersAssignedToSource < targetHarvestersPerSource) {
+                        if (harvestersAssignedToSource < minHarvesters) {
+                            minHarvesters = harvestersAssignedToSource;
+                            bestSource = s;
+                        }
+                    }
+                }
+
+                if (bestSource) {
+                    creep.memory.sourceId = bestSource.id;
+                    creep.say(`🔄 To ${bestSource.id.substring(bestSource.id.length - 4)}`);
+                } else {
+                    creep.say('💤 Idle');
+                    // All sources are full or assigned. Harvester should now assist with other tasks.
+                    if (!taskBuild.run(creep)) {
+                        taskUpgrade.run(creep);
+                    }
                 }
             }
         } else {
