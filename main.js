@@ -193,8 +193,8 @@ module.exports.loop = function () {
                 }
             }
             
-            if (!spawned) {
-                // ... Supplier spawning
+            // Supplier spawning
+            if (!spawned && !isUnderAttack) { // Only spawn suppliers if not under attack
                 const oldestSupplier = _.min(suppliers, 'ticksToLive');
                 let spawnNewSupplier = false;
                 let targetSuppliers;
