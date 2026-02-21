@@ -83,32 +83,39 @@ function getHarvesterBody(energyLimit: number): BodyPartConstant[] {
     const parts: BodyPartConstant[] = [];
     let currentCost = 0;
 
-    // Prioritize WORK parts
+    // Phase 1: Add WORK parts
     while (currentCost + BODYPART_COST[WORK] <= energyLimit && parts.filter(p => p === WORK).length < 6 && parts.length < 48) {
         parts.push(WORK);
         currentCost += BODYPART_COST[WORK];
     }
 
-    // Add CARRY and MOVE parts based on remaining energy, ensuring a 1:1 ratio if possible
-    const pairCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
-    while (currentCost + pairCost <= energyLimit && parts.length < 48) {
-        parts.push(CARRY, MOVE);
-        currentCost += pairCost;
-    }
-
-    // Ensure at least one MOVE part
-    if (parts.filter(p => p === MOVE).length === 0 && currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.length < 48) {
-        parts.push(MOVE);
-        currentCost += BODYPART_COST[MOVE];
-    }
-    
-    // Ensure at least one CARRY part if not enough to form a pair
+    // Phase 2: Ensure at least one CARRY part if not already present and energy allows
     if (parts.filter(p => p === CARRY).length === 0 && currentCost + BODYPART_COST[CARRY] <= energyLimit && parts.length < 48) {
         parts.push(CARRY);
         currentCost += BODYPART_COST[CARRY];
     }
+    
+    // Phase 3: Add MOVE parts to maintain speed, aiming for 1 MOVE per 2 non-MOVE parts
+    let nonMoveParts = parts.filter(p => p === WORK || p === CARRY).length;
+    let targetMoveParts = Math.ceil(nonMoveParts / 2); // Roughly 1 MOVE for every 2 parts
+    let currentMoveParts = parts.filter(p => p === MOVE).length;
 
-    return parts.length > 0 ? parts : [WORK, MOVE, CARRY]; // Fallback
+    while (currentMoveParts < targetMoveParts && currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.length < 48) {
+        parts.push(MOVE);
+        currentCost += BODYPART_COST[MOVE];
+        currentMoveParts++;
+    }
+
+    // Fallback: If no parts could be added (very low energy), return a basic functional unit
+    if (parts.length === 0 && energyLimit >= BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE]) {
+        return [WORK, CARRY, MOVE];
+    }
+    // If still no CARRY or MOVE, and some WORK was added, revert to a basic functional unit
+    if (parts.filter(p => p === CARRY).length === 0 && parts.filter(p => p === MOVE).length === 0 && parts.filter(p => p === WORK).length > 0 && energyLimit >= BODYPART_COST[CARRY] + BODYPART_COST[MOVE]) {
+        return [WORK, CARRY, MOVE];
+    }
+
+    return parts.length > 0 ? parts : [WORK, CARRY, MOVE]; // Final fallback
 }
 
 function getBuilderBody(energyLimit: number): BodyPartConstant[] {
