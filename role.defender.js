@@ -4,11 +4,31 @@ const roleDefender = {
     const hostiles = creep.room.find(FIND_HOSTILE_CREEPS);
     const spawn = creep.room.find(FIND_MY_SPAWNS)[0];
 
-    // Define rally point (e.g., 1 tile to the right of the spawn)
-    if (!creep.room.memory.defenderRallyPoint && spawn) {
-        creep.room.memory.defenderRallyPoint = { x: spawn.pos.x + 1, y: spawn.pos.y, roomName: spawn.room.name };
+    // Determine a consistent hostile target for all defenders
+    const mainHostileTarget = hostiles.length > 0 ? _.sortBy(hostiles, h => (spawn ? spawn.pos.getRangeTo(h) : 0))[0] : null;
+
+    // Define dynamic rally point if mainHostileTarget exists
+    let rallyPoint;
+    if (mainHostileTarget && spawn) {
+        // Calculate a path from spawn to the hostile target
+        const pathToHostile = PathFinder.search(
+            spawn.pos, 
+            { pos: mainHostileTarget.pos, range: 1 }, 
+            { maxRooms: 1 } // Stay within the same room for rally point
+        ).path;
+
+        // Pick a point on the path that is roughly 10 tiles away from the hostile
+        // Or closer if the path is shorter than 10.
+        const pathLength = pathToHostile.length;
+        const rallyPointIndex = Math.max(0, pathLength - 10);
+        rallyPoint = pathToHostile[rallyPointIndex];
+    } else if (spawn) {
+        // If no hostiles or path, rally near spawn
+        rallyPoint = spawn.pos;
+    } else {
+        // Fallback if no spawn or hostiles (shouldn't happen for active creeps)
+        return; 
     }
-    const rallyPoint = creep.room.memory.defenderRallyPoint ? new RoomPosition(creep.room.memory.defenderRallyPoint.x, creep.room.memory.defenderRallyPoint.y, creep.room.memory.defenderRallyPoint.roomName) : spawn.pos;
 
     // State management
     if (!creep.memory.state) {
@@ -39,65 +59,15 @@ const roleDefender = {
       } 
       
       if (creep.memory.state === 'ENGAGING') {
-        // Determine a consistent hostile target for all defenders
-        const mainHostileTarget = _.sortBy(hostiles, h => creep.pos.getRangeTo(h))[0]; // Closest hostile for all defenders
-
         if (mainHostileTarget) {
-          // Determine the lead defender (closest to the mainHostileTarget)
-          const leader = _.min(allDefenders, (d) => d.pos.getRangeTo(mainHostileTarget));
-
-          if (creep.id === leader.id) {
-            // This is the leader, move directly to hostile
-            if (creep.attack(mainHostileTarget) === ERR_NOT_IN_RANGE) {
-              creep.moveTo(mainHostileTarget, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5 }); // Lower reusePath
-            }
-            creep.say('LEADER');
-          } else {
-            // This is a follower
-            // Try to move to a position adjacent to the leader that is also closer to the hostile.
-            let targetPos = mainHostileTarget.pos; // Default to hostile's position
-
-            if (leader) {
-                // Find a position adjacent to the leader that is passable and not occupied by another creep
-                const adjacentToLeader = [];
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
-                        const pos = new RoomPosition(leader.pos.x + dx, leader.pos.y + dy, leader.pos.roomName);
-                        // Using the isWalkable prototype that accounts for structures and other creeps
-                        // And ensuring the position is not further from the target than the leader's position
-                        if (pos.isWalkable(creep) && pos.getRangeTo(mainHostileTarget) <= leader.pos.getRangeTo(mainHostileTarget)) {
-                            adjacentToLeader.push(pos);
-                        }
-                    }
-                }
-                
-                // Prioritize positions that are closer to the hostile
-                if (adjacentToLeader.length > 0) {
-                    const closestAdjacentToHostile = _.min(adjacentToLeader, (p) => p.getRangeTo(mainHostileTarget));
-                    if (closestAdjacentToHostile) {
-                        targetPos = closestAdjacentToHostile;
-                    }
-                } else {
-                    // Fallback: if no good adjacent spots, just try to get closer to the leader
-                    targetPos = leader.pos;
-                }
-            }
-
-            if (creep.attack(mainHostileTarget) === ERR_NOT_IN_RANGE || creep.rangedAttack(mainHostileTarget) === ERR_NOT_IN_RANGE) {
-                if (!creep.pos.isEqualTo(targetPos)) {
-                    creep.moveTo(targetPos, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5 }); // Lower reusePath
-                }
-            }
-            creep.say('FOLLOW');
+          // All defenders directly move to and attack the mainHostileTarget
+          if (creep.attack(mainHostileTarget) === ERR_NOT_IN_RANGE) {
+            creep.moveTo(mainHostileTarget, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5 });
           }
-
-          // If in range, attack 
-          if (creep.attack(mainHostileTarget) === OK) { /* attack should happen here */ }
-          if (creep.rangedAttack(mainHostileTarget) === OK) { /* ranged attack if applicable */ }
+          creep.say('ATTACK!');
         } else {
-          // No mainHostileTarget found (hostiles might have disappeared)
-          creep.memory.state = 'GATHERING'; // Revert to gathering if target disappeared
+          // Hostile disappeared while engaging
+          creep.memory.state = 'GATHERING'; 
           creep.say('NO TARGET');
         }
       }
