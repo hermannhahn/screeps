@@ -4,10 +4,10 @@
 const roleHarvester = {
   /** @param {Creep} creep **/
   run: function(creep) {
-    // Hostile detection and flee logic
-    const hostiles = creep.room.find(FIND_HOSTILE_CREEPS);
-    if (hostiles.length > 0) {
-      const closestHostile = creep.pos.findClosestByRange(hostiles); // Find closest hostile
+    // Localized hostile detection and flee logic
+    const threateningHostiles = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3); // Check within 3 tiles (attack range)
+    if (threateningHostiles.length > 0) {
+      const closestHostile = creep.pos.findClosestByRange(threateningHostiles); // Find closest *threatening* hostile
       if (closestHostile) {
         // Move away from the hostile
         const fleePath = PathFinder.search(
@@ -44,14 +44,8 @@ const roleHarvester = {
         if (fleePath.path.length > 0) {
           creep.moveTo(fleePath.path[0], { visualizePathStyle: { stroke: '#00ffff' } });
           return; // Skip other actions this tick
-        } else {
-          // If no flee path found, maybe just move towards spawn as a last resort
-          const spawn = creep.room.find(FIND_MY_SPAWNS)[0];
-          if (spawn && !creep.pos.isEqualTo(spawn.pos)) {
-            creep.moveTo(spawn, { visualizePathStyle: { stroke: '#00ffff' } });
-            return;
-          }
-        }
+        } 
+        // Removed the else block to move to spawn as it caused unwanted behavior
       }
     }
 
