@@ -28,7 +28,7 @@ const roleSupplier = {
 
                 for (const source of sources) {
                     const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-                        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= creep.store.getCapacity() * 2 &&
+                        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= creep.store.getCapacity() &&
                             (!targetedByOthers.includes(r.id) || r.amount >= creep.store.getCapacity() * 4)
                     });
                     if (dropped.length > 0) {
