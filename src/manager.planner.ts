@@ -110,18 +110,60 @@ const managerPlanner = {
     planExtensions: function(room: Room, spawnPos: RoomPosition, count: number, minDistance: number): number {
         let plannedCount = 0;
         let sitesCreated = 0;
-        for (let xOffset = -5; xOffset <= 5; xOffset++) {
-            for (let yOffset = -5; yOffset <= 5; yOffset++) {
+
+        // Find all road positions to plan extensions near them
+        const roads = room.find(FIND_STRUCTURES, {
+            filter: (s) => s.structureType === STRUCTURE_ROAD
+        }).concat(room.find(FIND_CONSTRUCTION_SITES, {
+            filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD
+        } as any) as any);
+
+        if (roads.length === 0) return 0;
+
+        for (const road of roads) {
+            if (plannedCount >= count) break;
+
+            const adjacentPositions = road.pos.getAdjacentPositions();
+            for (const pos of adjacentPositions) {
                 if (plannedCount >= count) break;
-                const x = spawnPos.x + xOffset;
-                const y = spawnPos.y + yOffset;
-                if (x < 0 || x > 49 || y < 0 || y > 49) continue;
-                const pos = new RoomPosition(x, y, room.name);
+
+                const x = pos.x;
+                const y = pos.y;
+                if (x < 1 || x > 48 || y < 1 || y > 48) continue; // Avoid edges
+
                 if (pos.getRangeTo(spawnPos) < minDistance) continue;
+
+                // 1. Check if the terrain is plain or swamp
                 if (room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) continue;
-                if (room.createConstructionSite(x, y, STRUCTURE_EXTENSION) === OK) {
-                    plannedCount++;
-                    sitesCreated++;
+
+                // 2. Check if the position itself is occupied
+                const objectsAtPos = pos.look();
+                const isOccupied = objectsAtPos.some(obj => 
+                    obj.type === LOOK_STRUCTURES || obj.type === LOOK_CONSTRUCTION_SITES
+                );
+                if (isOccupied) continue;
+
+                // 3. Ensure 1-tile distance from roads and other structures (check neighbors)
+                // The current position is adjacent to 'road', so we need to ensure it's NOT directly on top of a road
+                // and its OTHER neighbors don't violate the "1 block distance" from structures/roads (checkerboard-like or spaced)
+                const neighbors = pos.getAdjacentPositions();
+                let tooClose = false;
+                for (const neighbor of neighbors) {
+                    const objectsAtNeighbor = neighbor.look();
+                    const hasStructure = objectsAtNeighbor.some(obj => 
+                        obj.type === LOOK_STRUCTURES || obj.type === LOOK_CONSTRUCTION_SITES
+                    );
+                    if (hasStructure) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+
+                if (!tooClose) {
+                    if (room.createConstructionSite(x, y, STRUCTURE_EXTENSION) === OK) {
+                        plannedCount++;
+                        sitesCreated++;
+                    }
                 }
             }
         }
