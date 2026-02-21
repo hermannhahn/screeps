@@ -148,8 +148,42 @@ module.exports.loop = function () {
         if (!spawn.spawning) {
             let spawned = false;
 
-            // Defender spawning - High priority when under attack
-            if (isUnderAttack && defenders.length < targetDefenders) {
+            // Harvester spawning - Highest priority
+            for (let s of sources) {
+                const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId == s.id);
+                // Find oldest harvester at this source
+                const oldestHarvester = _.min(harvestersAtSource, 'ticksToLive');
+
+                let spawnNewHarvester = false;
+                let targetHarvesters;
+                if (sources.length >= 3) {
+                    targetHarvesters = 1; // 1 harvester per source if 3 or more sources
+                } else {
+                    targetHarvesters = 2; // 2 harvesters per source otherwise
+                }
+
+                if (harvestersAtSource.length < targetHarvesters) { // Spawn if below target count
+                    spawnNewHarvester = true;
+                } else if (harvestersAtSource.length === targetHarvesters && oldestHarvester && oldestHarvester.ticksToLive !== undefined) {
+                    // Only consider pre-spawning if we already have the target number of harvesters
+                    const body = getBestBody(energyCapacity); // Assume max body for calculating spawn time for replacement
+                    const timeToSpawn = getSpawnTime(body);
+                    const travelTime = getTravelTime(spawn, s.pos, room);
+                    if (oldestHarvester.ticksToLive <= timeToSpawn + travelTime + 5) { // Add a buffer of 5 ticks
+                        spawnNewHarvester = true;
+                    }
+                }
+
+                if (spawnNewHarvester) {
+                    const body = (harvesters.length === 0 || oldestHarvester === Infinity) ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
+                    spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
+                    spawned = true;
+                    break;
+                }
+            }
+
+            // Defender spawning - Second highest priority when under attack
+            if (!spawned && isUnderAttack && defenders.length < targetDefenders) {
                 const body = getDefenderBody(energyCapacity);
                 if (body.length > 0) {
                     spawn.spawnCreep(body, 'Defender' + Game.time, { memory: { role: 'defender' } });
@@ -159,40 +193,6 @@ module.exports.loop = function () {
                 }
             }
             
-            if (!spawned) {
-                for (let s of sources) {
-                    const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId == s.id);
-                    // Find oldest harvester at this source
-                    const oldestHarvester = _.min(harvestersAtSource, 'ticksToLive');
-    
-                    let spawnNewHarvester = false;
-                    let targetHarvesters;
-                    if (sources.length >= 3) {
-                        targetHarvesters = 1; // 1 harvester per source if 3 or more sources
-                    } else {
-                        targetHarvesters = 2; // 2 harvesters per source otherwise
-                    }
-    
-                    if (harvestersAtSource.length < targetHarvesters) { // Spawn if below target count
-                        spawnNewHarvester = true;
-                    } else if (harvestersAtSource.length === targetHarvesters && oldestHarvester && oldestHarvester.ticksToLive !== undefined) {
-                        // Only consider pre-spawning if we already have the target number of harvesters
-                        const body = getBestBody(energyCapacity); // Assume max body for calculating spawn time for replacement
-                        const timeToSpawn = getSpawnTime(body);
-                        const travelTime = getTravelTime(spawn, s.pos, room);
-                        if (oldestHarvester.ticksToLive <= timeToSpawn + travelTime + 5) { // Add a buffer of 5 ticks
-                            spawnNewHarvester = true;
-                        }
-                    }
-    
-                    if (spawnNewHarvester) {
-                        const body = (harvesters.length === 0 || oldestHarvester === Infinity) ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
-                        spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
-                        spawned = true;
-                        break;
-                    }
-                }
-            }
             if (!spawned) {
                 // ... Supplier spawning
                 const oldestSupplier = _.min(suppliers, 'ticksToLive');
