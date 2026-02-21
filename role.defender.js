@@ -61,8 +61,11 @@ const roleDefender = {
       if (creep.memory.state === 'ENGAGING') {
         if (mainHostileTarget) {
           // All defenders directly move to and attack the mainHostileTarget
-          if (creep.attack(mainHostileTarget) === ERR_NOT_IN_RANGE) {
-            creep.moveTo(mainHostileTarget, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5 });
+          if (creep.rangedAttack(mainHostileTarget) === ERR_NOT_IN_RANGE) {
+            creep.moveTo(mainHostileTarget, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5, range: 3 }); // Adjust range for RANGED_ATTACK
+          } else {
+            // If in range, ensure they are still attacking
+            creep.rangedAttack(mainHostileTarget);
           }
           creep.say('ATTACK!');
         } else {

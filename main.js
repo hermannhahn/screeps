@@ -85,33 +85,33 @@ function getDefenderBody(energyLimit) {
         currentCost += toughCost;
     }
 
-    // Add ATTACK and MOVE in pairs, ensuring MOVE >= ATTACK
-    const attackCost = BODYPART_COST[ATTACK];
+    // Add RANGED_ATTACK and MOVE in pairs, ensuring MOVE >= RANGED_ATTACK
+    const rangedAttackCost = BODYPART_COST[RANGED_ATTACK]; // Changed to RANGED_ATTACK
     const moveCost = BODYPART_COST[MOVE];
-    const pairCost = attackCost + moveCost;
+    const pairCost = rangedAttackCost + moveCost;
 
     while (currentCost + pairCost <= energyLimit && parts.length < 48) {
-        parts.push(ATTACK, MOVE);
+        parts.push(RANGED_ATTACK, MOVE); // Changed to RANGED_ATTACK
         currentCost += pairCost;
     }
 
     // Add remaining MOVE parts if possible to maintain speed
-    while (currentCost + moveCost <= energyLimit && parts.length < 48 && parts.filter(p => p === MOVE).length < parts.filter(p => p === ATTACK).length + parts.filter(p => p === TOUGH).length) {
+    while (currentCost + moveCost <= energyLimit && parts.length < 48 && parts.filter(p => p === MOVE).length < parts.filter(p => p === RANGED_ATTACK).length + parts.filter(p => p === TOUGH).length) { // Changed to RANGED_ATTACK
         parts.push(MOVE);
         currentCost += moveCost;
     }
     
-    // Ensure at least one ATTACK and one MOVE if possible
-    if (parts.filter(p => p === ATTACK).length === 0 && currentCost + pairCost <= energyLimit) {
-        parts.push(ATTACK, MOVE);
+    // Ensure at least one RANGED_ATTACK and one MOVE if possible
+    if (parts.filter(p => p === RANGED_ATTACK).length === 0 && currentCost + pairCost <= energyLimit) { // Changed to RANGED_ATTACK
+        parts.push(RANGED_ATTACK, MOVE); // Changed to RANGED_ATTACK
         currentCost += pairCost;
     } else if (parts.filter(p => p === MOVE).length === 0 && currentCost + moveCost <= energyLimit) {
         parts.push(MOVE);
         currentCost += moveCost;
     }
     
-    if (parts.length === 0 && energyLimit >= (BODYPART_COST[ATTACK] + BODYPART_COST[MOVE])) {
-        return [ATTACK, MOVE]; // Minimum combat creep
+    if (parts.length === 0 && energyLimit >= (BODYPART_COST[RANGED_ATTACK] + BODYPART_COST[MOVE])) { // Changed to RANGED_ATTACK
+        return [RANGED_ATTACK, MOVE]; // Minimum combat creep (Changed to RANGED_ATTACK)
     } else if (parts.length === 0 && energyLimit >= BODYPART_COST[MOVE]) {
         return [MOVE]; // Failsafe
     }
