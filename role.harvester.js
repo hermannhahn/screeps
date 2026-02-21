@@ -4,6 +4,58 @@
 const roleHarvester = {
   /** @param {Creep} creep **/
   run: function(creep) {
+    // Hostile detection and flee logic
+    const hostiles = creep.room.find(FIND_HOSTILE_CREEPS);
+    if (hostiles.length > 0) {
+      const closestHostile = creep.pos.findClosestByRange(hostiles); // Find closest hostile
+      if (closestHostile) {
+        // Move away from the hostile
+        const fleePath = PathFinder.search(
+          creep.pos,
+          { pos: closestHostile.pos, range: 5 }, // Try to get at least 5 tiles away from hostile
+          {
+            flee: true, // This is the key for fleeing!
+            plainCost: 1,
+            swampCost: 5,
+            roomCallback: function(roomName) {
+                let room = Game.rooms[roomName];
+                if (!room) return new PathFinder.CostMatrix();
+
+                let costMatrix = new PathFinder.CostMatrix();
+                
+                // Avoid all hostile creeps with high cost
+                room.find(FIND_HOSTILE_CREEPS).forEach(c => costMatrix.set(c.pos.x, c.pos.y, 255));
+
+                // Avoid structures and construction sites (except roads and containers, as harvesters might need to interact with containers)
+                room.find(FIND_STRUCTURES).forEach(struct => {
+                    if (struct.structureType !== STRUCTURE_ROAD && struct.structureType !== STRUCTURE_CONTAINER && struct.structureType !== STRUCTURE_RAMPART) {
+                        costMatrix.set(struct.pos.x, struct.pos.y, 255);
+                    }
+                });
+                room.find(FIND_CONSTRUCTION_SITES).forEach(site => {
+                    if (site.structureType !== STRUCTURE_ROAD && site.structureType !== STRUCTURE_CONTAINER && site.structureType !== STRUCTURE_RAMPART) {
+                        costMatrix.set(site.pos.x, site.pos.y, 255);
+                    }
+                });
+                return costMatrix;
+            },
+          }
+        );
+        if (fleePath.path.length > 0) {
+          creep.moveTo(fleePath.path[0], { visualizePathStyle: { stroke: '#00ffff' } });
+          return; // Skip other actions this tick
+        } else {
+          // If no flee path found, maybe just move towards spawn as a last resort
+          const spawn = creep.room.find(FIND_MY_SPAWNS)[0];
+          if (spawn && !creep.pos.isEqualTo(spawn.pos)) {
+            creep.moveTo(spawn, { visualizePathStyle: { stroke: '#00ffff' } });
+            return;
+          }
+        }
+      }
+    }
+
+    // Original harvester logic follows...
     if (creep.store.getFreeCapacity() > 0) {
       const source = Game.getObjectById(creep.memory.sourceId);
       
