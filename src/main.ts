@@ -83,34 +83,26 @@ function getHarvesterBody(energyLimit: number): BodyPartConstant[] {
     const parts: BodyPartConstant[] = [];
     let currentCost = 0;
 
-    // Phase 1: Add WORK parts (up to 6 WORK parts)
+    // Phase 0: Ensure minimum energy for a basic functional creep
+    if (energyLimit < BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE]) {
+        return []; // Not enough energy for a basic creep, spawn will fail
+    }
+
+    // Phase 1: Add one WORK, one CARRY, and one MOVE as a base
+    parts.push(WORK, CARRY, MOVE);
+    currentCost += BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+
+    // Phase 2: Add more WORK parts up to the maximum limit (e.g., 6)
     while (currentCost + BODYPART_COST[WORK] <= energyLimit && parts.filter(p => p === WORK).length < 6 && parts.length < 48) {
         parts.push(WORK);
         currentCost += BODYPART_COST[WORK];
     }
 
-    // Phase 2: Ensure at least one MOVE part
-    if (parts.filter(p => p === MOVE).length === 0 && currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.length < 48) {
-        parts.push(MOVE);
-        currentCost += BODYPART_COST[MOVE];
-    }
-
-    // Phase 3: Ensure at least one CARRY part
-    if (parts.filter(p => p === CARRY).length === 0 && currentCost + BODYPART_COST[CARRY] <= energyLimit && parts.length < 48) {
-        parts.push(CARRY);
-        currentCost += BODYPART_COST[CARRY];
-    }
-    
-    // Phase 4: Add remaining CARRY and MOVE parts in a balanced way (1 CARRY, 1 MOVE pair)
+    // Phase 3: Add remaining CARRY and MOVE parts in a balanced way (1 CARRY, 1 MOVE pair)
     const pairCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
     while (currentCost + pairCost <= energyLimit && parts.length < 48) {
         parts.push(CARRY, MOVE);
         currentCost += pairCost;
-    }
-
-    // Final Fallback: If for some reason no parts were added, ensure a basic unit if energy allows
-    if (parts.length === 0 && energyLimit >= BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE]) {
-        return [WORK, CARRY, MOVE];
     }
 
     return parts; // Return the constructed parts
