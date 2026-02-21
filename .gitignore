@@ -1,7 +1,5 @@
 node_modules/
-dist/
 screeps-steamless-client/
-.deploy_count
 *.log
 .DS_Store
 *.tmp
