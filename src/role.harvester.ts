@@ -45,7 +45,7 @@ const roleHarvester = {
             const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
             if (source) {
                 if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10 });
+                    creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10, ignoreCreeps: true });
                 }
             } else {
                 creep.say('❓ NoSource');
@@ -68,7 +68,7 @@ const roleHarvester = {
 
                 if (container) {
                     if (creep.transfer(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(container);
+                        creep.moveTo(container, { reusePath: 10, ignoreCreeps: true });
                     }
                 } else {
                     creep.drop(RESOURCE_ENERGY);
@@ -80,7 +80,7 @@ const roleHarvester = {
                 });
                 if (target) {
                     if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(target);
+                        creep.moveTo(target, { reusePath: 10, ignoreCreeps: true });
                     }
                 }
             }
