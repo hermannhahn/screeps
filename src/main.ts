@@ -156,12 +156,15 @@ export const loop = () => {
         const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
         const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
         const isUnderAttack = hostileCreeps.length > 0 && extensions.length >= 5;
+        const rcl = room.controller?.level || 1;
 
         if (!spawn.spawning) {
             let spawned = false;
+            const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
+
             for (let s of sources) {
                 const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId === s.id);
-                if (harvestersAtSource.length < 2) {
+                if (harvestersAtSource.length < targetHarvestersPerSource) {
                     const body = harvesters.length === 0 ? getBestBody(energyAvailable) : getBestBody(energyCapacity);
                     spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } });
                     spawned = true; break;
@@ -176,7 +179,6 @@ export const loop = () => {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
                     spawned = true;
                 } else {
-                    const rcl = room.controller?.level || 1;
                     const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
                     
                     if (upgraders.length < targetUpgraders) {
