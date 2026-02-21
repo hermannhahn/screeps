@@ -4,7 +4,7 @@
   "description": "Este repositório contém um script robusto e escalável para o jogo **Screeps**, focado em automação eficiente e auto-suficiência. Ele foi projetado para otimizar o uso de recursos e o progresso da sala.",
   "main": "dist/main.js",
   "scripts": {
-    "save": "rm -rf dist && mkdir dist && webpack && expr $(cat .deploy_count) + 1 > .deploy_count && git add . && git commit -m \"Deploy N. $(cat .deploy_count)\" && git push",
+    "save": "rm -rf dist && mkdir dist && webpack && expr $(cat .deploy_count) + 1 > .deploy_count && git add . && git commit -m \"Deploy N. $(cat .deploy_count)\" && git push && node deploy.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -23,6 +23,7 @@
     "@types/lodash": "^4.17.23",
     "@types/screeps": "^3.3.8",
     "lodash": "^4.17.23",
+    "screeps-api": "^1.16.1",
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",
     "webpack": "^5.105.2",

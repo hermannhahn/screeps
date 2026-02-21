@@ -4,3 +4,4 @@ screeps-steamless-client/
 .DS_Store
 *.tmp
 /COMMIT_MSG.tmp
+screeps.json

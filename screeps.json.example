@@ -1,0 +1,8 @@
+{
+  "email": "seu-email@exemplo.com",
+  "password": "sua-senha-do-servidor-privado",
+  "hostname": "screeps.gohorse.dev",
+  "port": 21025,
+  "protocol": "http",
+  "branch": "default"
+}
