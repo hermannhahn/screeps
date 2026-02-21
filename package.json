@@ -6,7 +6,7 @@
   "scripts": {
     "save": "rm -rf dist && mkdir dist && webpack && expr $(cat .deploy_count) + 1 > .deploy_count && git add . && git commit -m \"Deploy N. $(cat .deploy_count)\" && git push && node deploy.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "ssc": "cd screeps-steamless-client && npm start"
+    "ssc": "npx screeps-steamless-client --package /home/hermann/.steam/steam/steamapps/common/Screeps/package.nw"
   },
   "repository": {
     "type": "git",
