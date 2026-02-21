@@ -25,11 +25,12 @@ const taskCollectEnergy = {
         }
 
         if (!creep.memory.targetEnergyId) {
-            const targetedByOthers = _.filter(Object.values(Game.creeps), (c) => 
-                c.id !== creep.id && 
-                c.room.name === creep.room.name && 
-                c.memory.targetEnergyId
-            ).map(c => c.memory.targetEnergyId);
+            const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
+                if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetEnergyId) {
+                    return c.memory.targetEnergyId;
+                }
+                return null;
+            })) as Id<any>[];
 
             // Priority 1: Dropped Energy
             const droppedEnergy = creep.room.find(FIND_DROPPED_RESOURCES, {

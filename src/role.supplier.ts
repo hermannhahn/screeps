@@ -19,11 +19,12 @@ const roleSupplier = {
             }
 
             if (!targetEnergy) {
-                const targetedByOthers = _.filter(Object.values(Game.creeps), (c) => 
-                    c.id !== creep.id && 
-                    c.room.name === creep.room.name && 
-                    c.memory.targetEnergyId
-                ).map(c => c.memory.targetEnergyId);
+                const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
+                    if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetEnergyId) {
+                        return c.memory.targetEnergyId;
+                    }
+                    return null;
+                })) as Id<any>[];
 
                 for (const source of sources) {
                     const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
