@@ -172,13 +172,13 @@ export const loop = () => {
                 spawned = true;
             }
             if (!spawned && !isUnderAttack) {
-                if (suppliers.length < sources.length * 2) {
+                if (suppliers.length < sources.length) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Supplier' + Game.time, { memory: { role: 'supplier' } });
                     spawned = true;
                 } else if (upgraders.length < Math.max(1, 4 - (room.controller?.level || 1))) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
                     spawned = true;
-                } else if (builders.length < (room.find(FIND_CONSTRUCTION_SITES).length > 0 ? 1 : 0)) {
+                } else if (builders.length < 1) {
                     spawn.spawnCreep(getBestBody(energyCapacity), 'Builder' + Game.time, { memory: { role: 'builder' } });
                     spawned = true;
                 }
