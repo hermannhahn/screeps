@@ -53,8 +53,39 @@ const roleHarvester = {
                 if (harvestResult !== OK) { // If not successfully harvested
                     if (harvestResult === ERR_NOT_IN_RANGE) { // If out of range, move
                         creep.say('🚶 ToSource');
-                        const moveResult = creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10, ignoreCreeps: true });
-                        creep.say(`M:${moveResult}`);
+                        const pathResult = PathFinder.search(
+                            creep.pos,
+                            { pos: source.pos, range: 1 },
+                            {
+                                plainCost: 2,
+                                swampCost: 10,
+                                roomCallback: (roomName) => {
+                                    let room = Game.rooms[roomName];
+                                    if (!room) return false;
+                                    let costMatrix = new PathFinder.CostMatrix();
+                                    // Avoid creeps in pathfinding by setting a higher cost
+                                    room.find(FIND_CREEPS).forEach(c => costMatrix.set(c.pos.x, c.pos.y, 0xFF));
+                                    room.find(FIND_STRUCTURES).forEach(s => {
+                                        if (s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_CONTAINER && s.structureType !== STRUCTURE_RAMPART) {
+                                            costMatrix.set(s.pos.x, s.pos.y, 0xFF);
+                                        }
+                                    });
+                                    room.find(FIND_CONSTRUCTION_SITES).forEach(cs => {
+                                        if (cs.structureType !== STRUCTURE_ROAD && cs.structureType !== STRUCTURE_CONTAINER && cs.structureType !== STRUCTURE_RAMPART) {
+                                            costMatrix.set(cs.pos.x, cs.pos.y, 0xFF);
+                                        }
+                                    });
+                                    return costMatrix;
+                                },
+                            }
+                        );
+                        if (pathResult.path.length > 0) {
+                            creep.say(`P: ${pathResult.path.length}, I:${pathResult.incomplete}`);
+                            const moveResult = creep.move(pathResult.path[0]); // Use creep.move for one step
+                            creep.say(`M:${moveResult}`);
+                        } else {
+                            creep.say(`M:NO_PATH`);
+                        }
                     } else { // In range, but cannot harvest (e.g., source empty, ERR_NOT_ENOUGH_RESOURCES)
                         creep.say(`H:${harvestResult}`); // Display the error (e.g., H:-6)
                         // Creep is in range, but the source is empty or other non-movement error.
@@ -114,8 +145,38 @@ const roleHarvester = {
                     const transferResult = creep.transfer(container, RESOURCE_ENERGY);
                     if (transferResult === ERR_NOT_IN_RANGE) {
                         creep.say('🚶 ToCont');
-                        const moveResult = creep.moveTo(container, { reusePath: 10, ignoreCreeps: true });
-                        creep.say(`M:${moveResult}`);
+                        const pathResult = PathFinder.search(
+                            creep.pos,
+                            { pos: container.pos, range: 1 },
+                            {
+                                plainCost: 2,
+                                swampCost: 10,
+                                roomCallback: (roomName) => {
+                                    let room = Game.rooms[roomName];
+                                    if (!room) return false;
+                                    let costMatrix = new PathFinder.CostMatrix();
+                                    room.find(FIND_CREEPS).forEach(c => costMatrix.set(c.pos.x, c.pos.y, 0xFF));
+                                    room.find(FIND_STRUCTURES).forEach(s => {
+                                        if (s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_CONTAINER && s.structureType !== STRUCTURE_RAMPART) {
+                                            costMatrix.set(s.pos.x, s.pos.y, 0xFF);
+                                        }
+                                    });
+                                    room.find(FIND_CONSTRUCTION_SITES).forEach(cs => {
+                                        if (cs.structureType !== STRUCTURE_ROAD && cs.structureType !== STRUCTURE_CONTAINER && cs.structureType !== STRUCTURE_RAMPART) {
+                                            costMatrix.set(cs.pos.x, cs.pos.y, 0xFF);
+                                        }
+                                    });
+                                    return costMatrix;
+                                },
+                            }
+                        );
+                        if (pathResult.path.length > 0) {
+                            creep.say(`P: ${pathResult.path.length}, I:${pathResult.incomplete}`);
+                            const moveResult = creep.move(pathResult.path[0]);
+                            creep.say(`M:${moveResult}`);
+                        } else {
+                            creep.say(`M:NO_PATH`);
+                        }
                     } else {
                         creep.say(`T:${transferResult}`);
                     }
@@ -131,8 +192,38 @@ const roleHarvester = {
                     const transferResult = creep.transfer(target, RESOURCE_ENERGY);
                     if (transferResult === ERR_NOT_IN_RANGE) {
                         creep.say('🚶 ToSpawn');
-                        const moveResult = creep.moveTo(target, { reusePath: 10, ignoreCreeps: true });
-                        creep.say(`M:${moveResult}`);
+                        const pathResult = PathFinder.search(
+                            creep.pos,
+                            { pos: target.pos, range: 1 },
+                            {
+                                plainCost: 2,
+                                swampCost: 10,
+                                roomCallback: (roomName) => {
+                                    let room = Game.rooms[roomName];
+                                    if (!room) return false;
+                                    let costMatrix = new PathFinder.CostMatrix();
+                                    room.find(FIND_CREEPS).forEach(c => costMatrix.set(c.pos.x, c.pos.y, 0xFF));
+                                    room.find(FIND_STRUCTURES).forEach(s => {
+                                        if (s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_CONTAINER && s.structureType !== STRUCTURE_RAMPART) {
+                                            costMatrix.set(s.pos.x, s.pos.y, 0xFF);
+                                        }
+                                    });
+                                    room.find(FIND_CONSTRUCTION_SITES).forEach(cs => {
+                                        if (cs.structureType !== STRUCTURE_ROAD && cs.structureType !== STRUCTURE_CONTAINER && cs.structureType !== STRUCTURE_RAMPART) {
+                                            costMatrix.set(cs.pos.x, cs.pos.y, 0xFF);
+                                        }
+                                    });
+                                    return costMatrix;
+                                },
+                            }
+                        );
+                        if (pathResult.path.length > 0) {
+                            creep.say(`P: ${pathResult.path.length}, I:${pathResult.incomplete}`);
+                            const moveResult = creep.move(pathResult.path[0]);
+                            creep.say(`M:${moveResult}`);
+                        } else {
+                            creep.say(`M:NO_PATH`);
+                        }
                     } else {
                         creep.say(`T:${transferResult}`);
                     }
