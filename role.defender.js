@@ -53,10 +53,40 @@ const roleDefender = {
             }
             creep.say('LEADER');
           } else {
-            // This is a follower, move directly to the leader's position
+            // This is a follower
+            // Try to move to a position adjacent to the leader that is also closer to the hostile.
+            let targetPos = mainHostileTarget.pos; // Default to hostile's position
+
+            if (leader) {
+                // Find a position adjacent to the leader that is passable and not occupied by another creep
+                const adjacentToLeader = [];
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const pos = new RoomPosition(leader.pos.x + dx, leader.pos.y + dy, leader.pos.roomName);
+                        // Using the isWalkable prototype that accounts for structures and other creeps
+                        // And ensuring the position is not further from the target than the leader's position
+                        if (pos.isWalkable(creep) && pos.getRangeTo(mainHostileTarget) <= leader.pos.getRangeTo(mainHostileTarget)) {
+                            adjacentToLeader.push(pos);
+                        }
+                    }
+                }
+                
+                // Prioritize positions that are closer to the hostile
+                if (adjacentToLeader.length > 0) {
+                    const closestAdjacentToHostile = _.min(adjacentToLeader, (p) => p.getRangeTo(mainHostileTarget));
+                    if (closestAdjacentToHostile) {
+                        targetPos = closestAdjacentToHostile;
+                    }
+                } else {
+                    // Fallback: if no good adjacent spots, just try to get closer to the leader
+                    targetPos = leader.pos;
+                }
+            }
+
             if (creep.attack(mainHostileTarget) === ERR_NOT_IN_RANGE || creep.rangedAttack(mainHostileTarget) === ERR_NOT_IN_RANGE) {
-                if (!creep.pos.isEqualTo(leader.pos)) { // Only move if not already on leader's position
-                    creep.moveTo(leader.pos, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5 }); // Lower reusePath
+                if (!creep.pos.isEqualTo(targetPos)) {
+                    creep.moveTo(targetPos, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5 }); // Lower reusePath
                 }
             }
             creep.say('FOLLOW');
