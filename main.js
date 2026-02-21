@@ -213,12 +213,7 @@ module.exports.loop = function () {
                 const oldestHarvester = _.min(harvestersAtSource, 'ticksToLive');
 
                 let spawnNewHarvester = false;
-                let targetHarvesters;
-                if (sources.length >= 3) {
-                    targetHarvesters = 1; // 1 harvester per source if 3 or more sources
-                } else {
-                    targetHarvesters = 2; // 2 harvesters per source otherwise
-                }
+                let targetHarvesters = 2; // Always 2 harvesters per source
 
                 if (harvestersAtSource.length < targetHarvesters) { // Spawn if below target count
                     spawnNewHarvester = true;
