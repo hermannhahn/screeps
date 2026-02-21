@@ -196,7 +196,11 @@ module.exports.loop = function () {
         const defenders = _.filter(Game.creeps, (c) => c.memory && c.memory.role == 'defender' && c.room.name == roomName);
 
         const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
-        const isUnderAttack = hostileCreeps.length > 0;
+        const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
+        const hasEnoughExtensions = extensions.length >= 5;
+
+        // isUnderAttack is true only if hostiles are present AND we have enough extensions to defend
+        const isUnderAttack = hostileCreeps.length > 0 && hasEnoughExtensions;
         const targetDefenders = isUnderAttack ? 3 : 0;
 
         if (!spawn.spawning) {
