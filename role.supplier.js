@@ -100,7 +100,7 @@ const roleSupplier = {
         // Prioridade Secundária: Upgraders e Builders (Se a base estiver abastecida e não estiverem atribuídos)
         if (!target) {
           target = creep.pos.findClosestByRange(FIND_CREEPS, {
-            filter: (c) => (c.memory.role == 'upgrader' || c.memory.role == 'builder') && 
+            filter: (c) => c.memory && (c.memory.role == 'upgrader' || c.memory.role == 'builder') && 
                            c.store[RESOURCE_ENERGY] === 0 &&
                            !c.memory.assignedSupplier // Não atribua se já tiver um supplier a caminho
           });
