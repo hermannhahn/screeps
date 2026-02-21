@@ -135,11 +135,11 @@ module.exports.loop = function () {
         const energyAvailable = room.energyAvailable;
         const energyCapacity = room.energyCapacityAvailable;
         
-        const harvesters = _.filter(Game.creeps, (c) => c.memory.role == 'harvester' && c.room.name == roomName);
-        const suppliers = _.filter(Game.creeps, (c) => c.memory.role == 'supplier' && c.room.name == roomName);
-        const upgraders = _.filter(Game.creeps, (c) => c.memory.role == 'upgrader' && c.room.name == roomName);
-        const builders = _.filter(Game.creeps, (c) => c.memory.role == 'builder' && c.room.name == roomName);
-        const defenders = _.filter(Game.creeps, (c) => c.memory.role == 'defender' && c.room.name == roomName);
+        const harvesters = _.filter(Game.creeps, (c) => c.memory && c.memory.role == 'harvester' && c.room.name == roomName);
+        const suppliers = _.filter(Game.creeps, (c) => c.memory && c.memory.role == 'supplier' && c.room.name == roomName);
+        const upgraders = _.filter(Game.creeps, (c) => c.memory && c.memory.role == 'upgrader' && c.room.name == roomName);
+        const builders = _.filter(Game.creeps, (c) => c.memory && c.memory.role == 'builder' && c.room.name == roomName);
+        const defenders = _.filter(Game.creeps, (c) => c.memory && c.memory.role == 'defender' && c.room.name == roomName);
 
         const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
         const isUnderAttack = hostileCreeps.length > 0;
