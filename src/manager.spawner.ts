@@ -267,6 +267,8 @@ const managerSpawner = {
                     }
                 }
             }
+        } // Missing closing brace for run function
+    }
 };
 
 export default managerSpawner;
