@@ -32,6 +32,29 @@ const roleDefender = {
             const allDefenders = _.filter(Game.creeps, (c) => c.memory && c.memory.role === 'defender' && c.room.name === creep.room.name);
             const defendersAtRallyPoint = _.filter(allDefenders, (d) => rallyPoint && d.pos.getRangeTo(rallyPoint) <= 2).length;
 
+            // Check if anyone was attacked in the last tick
+            const eventLog = creep.room.getEventLog();
+            const wasAttacked = _.some(eventLog, (event) => {
+                if (event.event === EVENT_ATTACK) {
+                    const target = Game.getObjectById(event.data.targetId as Id<any>);
+                    return !!(target && (target as any).my);
+                }
+                if (event.event === EVENT_RANGED_ATTACK) {
+                    const target = Game.getObjectById(event.data.targetId as Id<any>);
+                    return !!(target && (target as any).my);
+                }
+                if (event.event === EVENT_RANGED_MASS_ATTACK) {
+                    // If a hostile is present and mass attack happened, we engage
+                    return true;
+                }
+                return false;
+            });
+
+            if (wasAttacked && creep.memory.state !== 'ENGAGING') {
+                creep.memory.state = 'ENGAGING';
+                creep.say('DEFEND!');
+            }
+
             if (creep.memory.state === 'GATHERING') {
                 if (allDefenders.length === 3 && defendersAtRallyPoint === 3) {
                     creep.memory.state = 'ENGAGING';
