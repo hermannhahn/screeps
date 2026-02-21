@@ -1,0 +1,31 @@
+{
+  "name": "screeps",
+  "version": "1.0.0",
+  "description": "Este repositório contém um script robusto e escalável para o jogo **Screeps**, focado em automação eficiente e auto-suficiência. Ele foi projetado para otimizar o uso de recursos e o progresso da sala.",
+  "main": "dist/main.js",
+  "scripts": {
+    "save": "rm -rf dist && mkdir dist && webpack && expr $(cat .deploy_count) + 1 > .deploy_count && git add . && git commit -m \"Deploy N. $(cat .deploy_count)\" && git push",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hermannhahn/screeps.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/hermannhahn/screeps/issues"
+  },
+  "homepage": "https://github.com/hermannhahn/screeps#readme",
+  "devDependencies": {
+    "@types/lodash": "^4.17.23",
+    "@types/screeps": "^3.3.8",
+    "lodash": "^4.17.23",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "webpack": "^5.105.2",
+    "webpack-cli": "^6.0.1"
+  }
+}
