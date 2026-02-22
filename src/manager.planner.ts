@@ -37,8 +37,8 @@ const managerPlanner = {
         const nextBlueprintToPlanName = BLUEPRINTS_ORDER[currentBlueprintStage] ? BLUEPRINTS_ORDER[currentBlueprintStage].name : `Unknown Blueprint (${currentBlueprintStage})`;
 
         const constructionSites = room.find(FIND_CONSTRUCTION_SITES);
-        if (constructionSites.length > 5) {
-            console.log(`Room ${room.name} has ${constructionSites.length} construction sites. Current blueprint: ${nextBlueprintToPlanName}. Suspending.`);
+        if (constructionSites.length > 0) { // Only create new blueprints if no existing construction sites
+            console.log(`Room ${room.name} has ${constructionSites.length} construction sites. Current blueprint: ${nextBlueprintToPlanName}. Suspending new blueprint creation.`);
             return;
         }
 
