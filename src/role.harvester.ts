@@ -135,7 +135,7 @@ const roleHarvester = {
                 }
             } else {
                 const target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                    filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) &&
+                    filter: (s) => s.structureType === STRUCTURE_SPAWN &&
                         s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
                 });
                 if (target) {
@@ -143,6 +143,9 @@ const roleHarvester = {
                     if (transferResult === ERR_NOT_IN_RANGE) {
                         creep.moveTo(target);
                     }
+                } else {
+                    // If no spawn needs energy, and no suppliers, harvester can drop energy.
+                    creep.drop(RESOURCE_ENERGY);
                 }
             }
         }
