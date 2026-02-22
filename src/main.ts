@@ -9,7 +9,6 @@ import managerSpawner from './manager.spawner';
 
 declare global {
     interface RoomMemory {
-        blueprintStage?: number;
         travelTimes?: { [key: string]: number };
     }
     interface CreepMemory {
