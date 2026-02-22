@@ -265,7 +265,7 @@ const managerSpawner = {
         const defendersRanged = _.filter(Game.creeps, (c) => c.memory.role === 'defender' && c.memory.defenderType === 'ranged' && c.room.name === room.name);
         const defendersTank = _.filter(Game.creeps, (c) => c.memory.role === 'defender' && c.memory.defenderType === 'tank' && c.room.name === room.name);
         const defenders = defendersRanged.length + defendersTank.length; // Total defenders
-        const hostileCreepsInRoom = room.find(FIND_HOSTILE_CREEPS);
+        // Reusing the already defined hostileCreepsInRoom variable
         const damagedStructures = room.find(FIND_MY_STRUCTURES, {
             filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_ROAD
         });
