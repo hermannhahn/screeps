@@ -54,8 +54,7 @@ const roleHarvester = {
                         const moveResult = creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
                     } else { // In range, but cannot harvest (e.g., source empty, ERR_NOT_ENOUGH_RESOURCES)
                         // Creep is in range, but the source is empty or other non-movement error.
-                        // Clear sourceId to trigger re-assignment or fallback tasks.
-                        creep.memory.sourceId = undefined; // Clear sourceId to trigger re-assignment
+                        // Harvester will wait for source to regenerate.
                     }
                 } else {
                 }
