@@ -267,7 +267,7 @@ const managerSpawner = {
         const defenders = defendersRanged.length + defendersTank.length; // Total defenders
         // Reusing the already defined hostileCreepsInRoom variable
         const damagedStructures = room.find(FIND_MY_STRUCTURES, {
-            filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_ROAD
+            filter: (s) => s.hits < s.hitsMax
         });
         const isUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
         const rcl = room.controller?.level || 1;
