@@ -39,7 +39,7 @@ export function planRoadFromTo(room: Room, startPos: RoomPosition, endPos: RoomP
 export function findSourceContainer(source: Source): StructureContainer | ConstructionSite | null {
     // Check for existing container
     const container = source.pos.findInRange(FIND_STRUCTURES, 3, {
-        filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        filter: (s) => s.structureType === STRUCTURE_CONTAINER
     })[0] as StructureContainer;
 
     if (container) return container;
