@@ -275,7 +275,7 @@ const managerSpawner = {
         // --- Spawning Logic ---
         
         // Priority 1: Harvesters (Most critical for energy production)
-        const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
+        const targetHarvestersPerSource = rcl < 3 ? 2 : 1; // 2 harvesters for RCL 1 & 2, 1 for RCL 3+
         const totalTargetHarvesters = targetHarvestersPerSource * sources.length;
         if (harvesters.length < totalTargetHarvesters) {
             for (let s of sources) {
