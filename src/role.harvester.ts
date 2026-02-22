@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
+import { findSourceContainer } from '../blueprints/utils'; // New import
 
 // Helper function to check if a source is safe from hostile structures and creeps
 function isSourceSafe(source: Source, hostileStructures: Structure[], hostileCreeps: Creep[]): boolean {
@@ -114,38 +115,54 @@ const roleHarvester = {
                 }
             }
         } else {
-            const suppliers = creep.room.find(FIND_MY_CREEPS, {
-                filter: (c) => c.memory.role === 'supplier'
-            });
+            // Get the source the harvester is assigned to
+            const assignedSource = Game.getObjectById(creep.memory.sourceId as Id<Source>);
+            let target: StructureContainer | ConstructionSite | null = null;
 
-            if (suppliers.length > 0) {
-                const container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                    filter: (s) => s.structureType === STRUCTURE_CONTAINER &&
-                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 &&
-                        creep.pos.getRangeTo(s) <= 2
-                });
+            if (assignedSource) {
+                // Try to find a container (or CS) near the assigned source
+                target = findSourceContainer(assignedSource);
+            }
 
-                if (container) {
-                    const transferResult = creep.transfer(container, RESOURCE_ENERGY);
-                    if (transferResult === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(container);
-                    }
+            if (target) {
+                let transferResult;
+                if ((target as StructureContainer).structureType === STRUCTURE_CONTAINER) {
+                    transferResult = creep.transfer(target as StructureContainer, RESOURCE_ENERGY);
+                } else { // It's a ConstructionSite
+                    transferResult = creep.build(target as ConstructionSite);
+                }
+                
+                if (transferResult === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
+                } else if (transferResult === OK) {
+                    // Successfully transferred/built, do nothing
                 } else {
+                    // Handle other errors or fall through to dropping if issues
                     creep.drop(RESOURCE_ENERGY);
                 }
             } else {
-                const target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                    filter: (s) => s.structureType === STRUCTURE_SPAWN &&
-                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                // No source container found or available, check for suppliers for dropping
+                const suppliers = creep.room.find(FIND_MY_CREEPS, {
+                    filter: (c) => c.memory.role === 'supplier'
                 });
-                if (target) {
-                    const transferResult = creep.transfer(target, RESOURCE_ENERGY);
-                    if (transferResult === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(target);
-                    }
-                } else {
-                    // If no spawn needs energy, and no suppliers, harvester can drop energy.
+
+                if (suppliers.length > 0) {
                     creep.drop(RESOURCE_ENERGY);
+                } else {
+                    // If no source container and no suppliers, default to filling spawns if necessary
+                    const spawnTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                        filter: (s) => s.structureType === STRUCTURE_SPAWN &&
+                            s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                    });
+                    if (spawnTarget) {
+                        const transferResult = creep.transfer(spawnTarget, RESOURCE_ENERGY);
+                        if (transferResult === ERR_NOT_IN_RANGE) {
+                            creep.moveTo(spawnTarget, { visualizePathStyle: { stroke: '#ffffff' } });
+                        }
+                    } else {
+                        // If nothing else, drop energy
+                        creep.drop(RESOURCE_ENERGY);
+                    }
                 }
             }
         }

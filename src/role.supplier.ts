@@ -1,70 +1,87 @@
 import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
+import { findSourceContainer } from '../blueprints/utils'; // New import
 
 const roleSupplier = {
     run: function(creep: Creep) {
-        if (creep.store.getUsedCapacity() === 0) {
-            const sources = creep.room.find(FIND_SOURCES);
-            let targetEnergy: any = null;
-            if (creep.memory.targetEnergyId) {
-                const storedTarget = Game.getObjectById(creep.memory.targetEnergyId as Id<any>);
-                if (storedTarget &&
-                    ((storedTarget.resourceType === RESOURCE_ENERGY && (storedTarget.amount > 0)) ||
-                        (storedTarget.store && storedTarget.store.getUsedCapacity(RESOURCE_ENERGY) > 0))) {
-                    targetEnergy = storedTarget;
+                if (creep.store.getUsedCapacity() === 0) {
+                    let targetEnergy: any = null;
+                    if (creep.memory.targetEnergyId) {
+                        const storedTarget = Game.getObjectById(creep.memory.targetEnergyId as Id<any>);
+                        if (storedTarget &&
+                            ((storedTarget.resourceType === RESOURCE_ENERGY && (storedTarget.amount > 0)) ||
+                                (storedTarget.store && storedTarget.store.getUsedCapacity(RESOURCE_ENERGY) > 0))) {
+                            targetEnergy = storedTarget;
+                        } else {
+                            delete creep.memory.targetEnergyId;
+                        }
+                    }
+        
+                    if (!targetEnergy) {
+                        const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
+                            if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetEnergyId) {
+                                return c.memory.targetEnergyId;
+                            }
+                            return null;
+                        })) as Id<any>[];
+        
+                        // Priority 1: Dropped resources
+                        const droppedEnergy = creep.room.find(FIND_DROPPED_RESOURCES, {
+                            filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50 && // Minimum amount to pick up
+                                !targetedByOthers.includes(r.id)
+                        });
+                        if (droppedEnergy.length > 0) {
+                            targetEnergy = droppedEnergy[0];
+                        }
+                    }
+        
+                    if (!targetEnergy) {
+                        // Priority 2: Source containers (from the blueprint)
+                        const sources = creep.room.find(FIND_SOURCES);
+                        for (const source of sources) {
+                            const sourceContainer = findSourceContainer(source);
+                            // Ensure it's a built container and has energy
+                            if (sourceContainer && (sourceContainer as StructureContainer).structureType === STRUCTURE_CONTAINER &&
+                                (sourceContainer as StructureContainer).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity()) {
+                                
+                                if (!targetedByOthers.includes(sourceContainer.id) || (sourceContainer as StructureContainer).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4) {
+                                    targetEnergy = sourceContainer;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+        
+                    if (!targetEnergy) {
+                        // Priority 3: Other containers or storages
+                        const containersAndStorage = creep.room.find(FIND_STRUCTURES, {
+                            filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_STORAGE) &&
+                                (s as any).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity(RESOURCE_ENERGY) &&
+                                !targetedByOthers.includes(s.id)
+                        }) as (StructureContainer | StructureStorage)[];
+        
+                        if (containersAndStorage.length > 0) {
+                            targetEnergy = containersAndStorage[0];
+                        }
+                    }
+        
+                    if (targetEnergy) {
+                        let collectResult;
+                        if (targetEnergy.resourceType === RESOURCE_ENERGY) {
+                            collectResult = creep.pickup(targetEnergy);
+                        } else {
+                            collectResult = creep.withdraw(targetEnergy, RESOURCE_ENERGY);
+                        }
+        
+                        if (collectResult === ERR_NOT_IN_RANGE) {
+                            creep.moveTo(targetEnergy, { visualizePathStyle: { stroke: '#ffaa00' } });
+                            creep.memory.targetEnergyId = targetEnergy.id; // Store target if moving
+                        } else if (collectResult === OK || collectResult === ERR_FULL) {
+                            delete creep.memory.targetEnergyId;
+                        }
+                    }
                 } else {
-                    delete creep.memory.targetEnergyId;
-                }
-            }
-
-            if (!targetEnergy) {
-                const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
-                    if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetEnergyId) {
-                        return c.memory.targetEnergyId;
-                    }
-                    return null;
-                })) as Id<any>[];
-
-                for (const source of sources) {
-                    const dropped = source.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-                        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= creep.store.getCapacity() &&
-                            (!targetedByOthers.includes(r.id) || r.amount >= creep.store.getCapacity() * 4)
-                    });
-                    if (dropped.length > 0) {
-                        targetEnergy = dropped[0];
-                        creep.memory.targetEnergyId = targetEnergy.id;
-                        break;
-                    }
-
-                    const structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
-                        filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_STORAGE) &&
-                            (s as any).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity(RESOURCE_ENERGY) &&
-                            (!targetedByOthers.includes(s.id) || (s as any).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4)
-                    }) as (StructureContainer | StructureStorage)[];
-                    if (structures.length > 0) {
-                        targetEnergy = structures[0];
-                        creep.memory.targetEnergyId = targetEnergy.id;
-                        break;
-                    }
-                }
-            }
-
-            if (targetEnergy) {
-                let collectResult;
-                if (targetEnergy.resourceType === RESOURCE_ENERGY) {
-                    collectResult = creep.pickup(targetEnergy);
-                } else {
-                    collectResult = creep.withdraw(targetEnergy, RESOURCE_ENERGY);
-                }
-
-                if (collectResult === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(targetEnergy, { visualizePathStyle: { stroke: '#ffaa00' } });
-                } else if (collectResult === OK || collectResult === ERR_FULL) {
-                    delete creep.memory.targetEnergyId;
-                }
-            }
-        } else {
             let target = null;
             if (creep.memory.deliveryTargetId) {
                 target = Game.getObjectById(creep.memory.deliveryTargetId as Id<any>);

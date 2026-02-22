@@ -35,3 +35,22 @@ export function planRoadFromTo(room: Room, startPos: RoomPosition, endPos: RoomP
     }
     return sitesCreated;
 }
+
+export function findSourceContainer(source: Source): StructureContainer | ConstructionSite | null {
+    // Check for existing container
+    const container = source.pos.findInRange(FIND_STRUCTURES, 3, {
+        filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+    })[0] as StructureContainer;
+
+    if (container) return container;
+
+    // Check for container construction site
+    const containerCS = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
+        filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_CONTAINER
+    })[0];
+
+    if (containerCS) return containerCS;
+
+    return null;
+}
+
