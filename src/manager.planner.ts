@@ -11,8 +11,11 @@ const managerPlanner = {
             return;
         }
 
-        if (room.memory.blueprintStage === undefined) {
-            room.memory.blueprintStage = 0;
+        if (room.memory.maxBlueprintStageCompleted === undefined) {
+            room.memory.maxBlueprintStageCompleted = -1; // -1 indicates no blueprint has been completed yet
+        }
+        if (room.memory.currentBlueprintStage === undefined) {
+            room.memory.currentBlueprintStage = 0; // Start checking from blueprint 0
         }
 
         const BLUEPRINT_NAMES: { [key: number]: string } = {
@@ -22,9 +25,10 @@ const managerPlanner = {
             3: "Controller Roads",
             4: "Mineral Roads"
         };
+        const MAX_BLUEPRINT_STAGES = Object.keys(BLUEPRINT_NAMES).length;
 
-        const nextBlueprintToPlanStage = room.memory.blueprintStage;
-        const nextBlueprintToPlanName = BLUEPRINT_NAMES[nextBlueprintToPlanStage] || `Unknown Blueprint (${nextBlueprintToPlanStage})`;
+        let currentBlueprintStage = room.memory.currentBlueprintStage;
+        const nextBlueprintToPlanName = BLUEPRINT_NAMES[currentBlueprintStage] || `Unknown Blueprint (${currentBlueprintStage})`;
 
         const constructionSites = room.find(FIND_CONSTRUCTION_SITES);
         if (constructionSites.length > 5) {
@@ -36,55 +40,48 @@ const managerPlanner = {
         if (spawns.length === 0) return;
         const spawn = spawns[0];
 
-        if (room.memory.blueprintStage === 0) {
-            const sitesCreated = this.planRoadRing(room, spawn.pos, 1);
-            if (sitesCreated === 0) {
-                const roadConstructionSitesInRing = room.find(FIND_CONSTRUCTION_SITES, {
-                    filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD && cs.pos.getRangeTo(spawn.pos) <= 1
-                }).length;
-                if (roadConstructionSitesInRing === 0) {
-                    room.memory.blueprintStage = 1;
+        // Loop currentBlueprintStage for continuous review if all blueprints are completed
+        if (room.memory.maxBlueprintStageCompleted === MAX_BLUEPRINT_STAGES - 1 && room.memory.currentBlueprintStage >= MAX_BLUEPRINT_STAGES) {
+            room.memory.currentBlueprintStage = 0;
+        }
+
+        let sitesCreatedThisTick = 0;
+        let currentStage = room.memory.currentBlueprintStage;
+
+        // Ensure currentStage does not exceed MAX_BLUEPRINT_STAGES when planning a new one
+        if (currentStage < MAX_BLUEPRINT_STAGES) {
+            switch (currentStage) {
+                case 0: // Spawn Roads
+                    sitesCreatedThisTick = this.planRoadRing(room, spawn.pos, 1);
+                    break;
+                case 1: // Extensions
+                    if (room.controller && room.controller.level >= 2) {
+                        sitesCreatedThisTick = this.planExtensions(room, spawn.pos, 5, 2);
+                    }
+                    break;
+                case 2: // Source Roads
+                    sitesCreatedThisTick = this.planSourceRoads(room);
+                    break;
+                case 3: // Controller Roads
+                    if (room.controller) {
+                        sitesCreatedThisTick = this.planControllerRoads(room);
+                    }
+                    break;
+                // Add cases for other blueprint stages here
+            }
+        }
+
+
+        // If no sites were created in the current stage, check for completion
+        // If it's complete, advance the currentBlueprintStage
+        if (sitesCreatedThisTick === 0) {
+            // Check if the current stage is actually complete (all structures built, no CS)
+            if (this._checkBlueprintCompletion(room, currentStage)) {
+                // If we completed a *new* blueprint stage (i.e., it was not just a review of an existing one)
+                if (currentStage === room.memory.maxBlueprintStageCompleted + 1) {
+                    room.memory.maxBlueprintStageCompleted = currentStage;
                 }
-            }
-        }
-
-        if (room.memory.blueprintStage === 1 && room.controller && room.controller.level >= 2) {
-            const sitesCreated = this.planExtensions(room, spawn.pos, 5, 2);
-            if (sitesCreated === 0) {
-                const extensionConstructionSites = room.find(FIND_CONSTRUCTION_SITES, {
-                    filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_EXTENSION
-                }).length;
-                const builtExtensions = room.find(FIND_MY_STRUCTURES, {
-                    filter: (s: AnyStructure) => s.structureType === STRUCTURE_EXTENSION
-                }).length;
-                const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level];
-                const targetExtensions = Math.min(5, maxExtensionsForRCL);
-
-                if (extensionConstructionSites === 0 && (builtExtensions >= targetExtensions)) {
-                    room.memory.blueprintStage = 2;
-                }
-            }
-        }
-
-        if (room.memory.blueprintStage === 2) {
-            const sitesCreated = this.planSourceRoads(room);
-            if (sitesCreated === 0) {
-                const sourceRoadCS = room.find(FIND_SOURCES).some(source => {
-                    return source.pos.findInRange(FIND_CONSTRUCTION_SITES, 5, {
-                        filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD
-                    }).length > 0;
-                });
-                if (!sourceRoadCS) room.memory.blueprintStage = 3;
-            }
-        }
-
-        if (room.memory.blueprintStage === 3 && room.controller) {
-            const sitesCreated = this.planControllerRoads(room);
-            if (sitesCreated === 0) {
-                const controllerRoadCS = room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 5, {
-                    filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD
-                }).length > 0;
-                if (!controllerRoadCS) room.memory.blueprintStage = 4;
+                room.memory.currentBlueprintStage++;
             }
         }
     },
@@ -189,6 +186,54 @@ const managerPlanner = {
             }
         }
         return sitesCreated;
+    },
+
+    _checkBlueprintCompletion: function(room: Room, stage: number): boolean {
+        const spawns = room.find(FIND_MY_SPAWNS);
+        if (spawns.length === 0) return false;
+        const spawn = spawns[0];
+
+        switch (stage) {
+            case 0: // Spawn Roads
+                const roadConstructionSitesInRing = room.find(FIND_CONSTRUCTION_SITES, {
+                    filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD && cs.pos.getRangeTo(spawn.pos) <= 1
+                }).length;
+                const builtRoads = room.find(FIND_STRUCTURES, {
+                    filter: (s: AnyStructure) => s.structureType === STRUCTURE_ROAD && s.pos.getRangeTo(spawn.pos) <= 1
+                }).length;
+                return roadConstructionSitesInRing === 0 && builtRoads >= 8; // Assuming 8 roads for a complete ring
+            case 1: // Extensions
+                if (!room.controller || room.controller.level < 2) return true; // Not applicable or too early
+                const extensionConstructionSites = room.find(FIND_CONSTRUCTION_SITES, {
+                    filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_EXTENSION
+                }).length;
+                const builtExtensions = room.find(FIND_MY_STRUCTURES, {
+                    filter: (s: AnyStructure) => s.structureType === STRUCTURE_EXTENSION
+                }).length;
+                const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level];
+                const targetExtensions = Math.min(5, maxExtensionsForRCL); // Current planner plans up to 5 extensions
+                return extensionConstructionSites === 0 && builtExtensions >= targetExtensions;
+            case 2: // Source Roads
+                const sourceRoadCS = room.find(FIND_SOURCES).some(source => {
+                    return source.pos.findInRange(FIND_CONSTRUCTION_SITES, 5, {
+                        filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD
+                    }).length > 0;
+                });
+                if (sourceRoadCS) return false;
+                // Check if all sources have a road connection to the main path (this is complex, for simplicity we'll assume no CS means complete)
+                return true; // Placeholder, needs more robust check
+            case 3: // Controller Roads
+                if (!room.controller) return true; // No controller
+                const controllerRoadCS = room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 5, {
+                    filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD
+                }).length > 0;
+                if (controllerRoadCS) return false;
+                // Check if controller has a road connection
+                return true; // Placeholder, needs more robust check
+            // case 4: // Mineral Roads - Add similar logic
+            default:
+                return true; // Assume unknown blueprints are "complete"
+        }
     }
 };
 
