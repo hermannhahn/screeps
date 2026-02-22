@@ -4,7 +4,7 @@
   "description": "Este repositório contém um script robusto e escalável para o jogo **Screeps**, focado em automação eficiente e auto-suficiência. Ele foi projetado para otimizar o uso de recursos e o progresso da sala.",
   "main": "dist/main.js",
   "scripts": {
-    "save": "rm -rf dist && mkdir dist && webpack && expr $(cat .deploy_count) + 1 > .deploy_count && git add . && git commit -m \"Deploy N. $(cat .deploy_count)\" && git push && node deploy.js",
+    "deploy": "rm -rf dist && mkdir dist && webpack && expr $(cat .deploy_count) + 1 > .deploy_count && git add . && git commit -m \"Deploy N. $(cat .deploy_count)\" && git push && node deploy.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "ssc": "nohup npx screeps-steamless-client --package /home/hermann/.steam/steam/steamapps/common/Screeps/package.nw > /dev/null 2>&1 &"
   },
