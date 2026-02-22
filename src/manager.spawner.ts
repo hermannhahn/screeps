@@ -70,23 +70,47 @@ function getBuilderBody(energyLimit: number): BodyPartConstant[] {
     parts.push(WORK, CARRY, MOVE);
     currentCost += basicCreepCost;
 
-    // Phase 2: Add more CARRY and MOVE parts in a 1:1 ratio, up to a reasonable limit (e.g., 10 CARRY, 10 MOVE total)
-    const maxCarryMovePairs = 10;
-    const pairCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
-
-    while (currentCost + pairCost <= energyLimit && 
-           parts.filter(p => p === CARRY).length < maxCarryMovePairs && 
-           parts.filter(p => p === MOVE).length < maxCarryMovePairs && 
-           parts.length < 48) {
-        parts.push(CARRY, MOVE);
-        currentCost += pairCost;
-    }
-
-    // Phase 3: Add more WORK parts up to the maximum limit (e.g., 8 WORK total)
+    // Phase 2: Add more WORK parts up to the maximum limit (e.g., 8 WORK total)
     const maxWorkParts = 8;
     while (currentCost + BODYPART_COST[WORK] <= energyLimit && parts.filter(p => p === WORK).length < maxWorkParts && parts.length < 48) {
         parts.push(WORK);
         currentCost += BODYPART_COST[WORK];
+    }
+
+    // Phase 3: Add CARRY and MOVE parts to support the WORK parts (e.g., 1 CARRY, 1 MOVE per WORK, or based on energy carried)
+    // A common ratio is 1 CARRY and 1 MOVE for every 2 WORK parts, plus some extra CARRY for carrying.
+    // Let's aim for a balance where CARRY/MOVE parts are added in pairs,
+    // ensuring enough CARRY to carry energy for the WORK parts, and enough MOVE for speed.
+    const idealCarryPerWork = 1; // 1 CARRY can hold 50 energy, 1 WORK uses 1 energy/tick for build/repair
+    const idealMovePerWork = 0.5; // 1 MOVE for every 2 non-MOVE parts (approx 0.5 MOVE per WORK/CARRY)
+
+    // Calculate current WORK parts count
+    const currentWorkParts = parts.filter(p => p === WORK).length;
+
+    // Add CARRY parts to support WORK
+    const targetCarryParts = currentWorkParts * idealCarryPerWork;
+    while (currentCost + BODYPART_COST[CARRY] <= energyLimit && parts.filter(p => p === CARRY).length < targetCarryParts && parts.length < 48) {
+        parts.push(CARRY);
+        currentCost += BODYPART_COST[CARRY];
+    }
+
+    // Add MOVE parts to maintain speed
+    const nonMoveParts = parts.filter(p => p !== MOVE).length;
+    const targetMoveParts = Math.ceil(nonMoveParts * idealMovePerWork); // 1 MOVE for every 2 non-MOVE parts
+    while (currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.filter(p => p === MOVE).length < targetMoveParts && parts.length < 48) {
+        parts.push(MOVE);
+        currentCost += BODYPART_COST[MOVE];
+    }
+
+    // After prioritizing WORK, and then supporting CARRY/MOVE, if there's still energy,
+    // add more balanced CARRY/MOVE pairs, but with lower priority.
+    const maxAdditionalCarryMovePairs = 5;
+    const pairCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    let addedPairs = 0;
+    while (currentCost + pairCost <= energyLimit && addedPairs < maxAdditionalCarryMovePairs && parts.length < 48) {
+        parts.push(CARRY, MOVE);
+        currentCost += pairCost;
+        addedPairs++;
     }
 
     return parts;
