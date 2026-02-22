@@ -21,6 +21,7 @@ declare global {
         upgrading?: boolean;
         building?: boolean;
         state?: string;
+        defenderType?: 'ranged' | 'tank';
     }
     interface RoomPosition {
         isWalkable(creepLooking?: Creep): boolean;

@@ -156,40 +156,40 @@ function getSupplierBody(energyLimit: number): BodyPartConstant[] {
     return parts;
 }
 
-function getDefenderBody(energyLimit: number): BodyPartConstant[] {
+function getTankBody(energyLimit: number): BodyPartConstant[] {
     const parts: BodyPartConstant[] = [];
     let currentCost = 0;
 
-    // Phase 0: Ensure minimum energy for a basic functional defender (RANGED_ATTACK, MOVE)
-    const basicDefenderCost = BODYPART_COST[RANGED_ATTACK] + BODYPART_COST[MOVE];
-    if (energyLimit < basicDefenderCost) {
-        return []; // Not enough energy for a basic defender
+    // Phase 0: Ensure minimum energy for a basic functional tank (TOUGH, MOVE, ATTACK)
+    const basicCreepCost = BODYPART_COST[TOUGH] + BODYPART_COST[MOVE] + BODYPART_COST[ATTACK];
+    if (energyLimit < basicCreepCost) {
+        return [];
     }
 
-    // Phase 1: Add initial RANGED_ATTACK and MOVE as a base for versatility
-    parts.push(RANGED_ATTACK, MOVE);
-    currentCost += basicDefenderCost;
+    // Phase 1: Add a base (TOUGH, MOVE, ATTACK)
+    parts.push(TOUGH, MOVE, ATTACK);
+    currentCost += basicCreepCost;
 
-    // Phase 2: Add TOUGH parts for defense with corresponding MOVE parts (up to a limit)
-    const maxToughParts = 5; // Example limit for TOUGH parts
-    while (currentCost + BODYPART_COST[TOUGH] + BODYPART_COST[MOVE] <= energyLimit && // Ensure we can add a TOUGH + MOVE pair
-           parts.filter(p => p === TOUGH).length < maxToughParts && 
+    // Phase 2: Add more TOUGH and MOVE parts in a 1:1 ratio
+    const maxPairs = 10; // Limit for number of pairs, e.g., 10 TOUGH, 10 MOVE
+    const pairCost = BODYPART_COST[TOUGH] + BODYPART_COST[MOVE];
+    while (currentCost + pairCost <= energyLimit &&
+           parts.filter(p => p === TOUGH).length < maxPairs &&
+           parts.filter(p => p === MOVE).length < maxPairs &&
            parts.length < 48) {
-        parts.push(TOUGH, MOVE); // Add TOUGH with a MOVE to maintain speed
-        currentCost += BODYPART_COST[TOUGH] + BODYPART_COST[MOVE];
+        parts.push(TOUGH, MOVE);
+        currentCost += pairCost;
+    }
+
+    // Phase 3: Add more ATTACK parts if energy allows (up to a limit)
+    const maxAttackParts = 5; // Example limit for ATTACK parts
+    while (currentCost + BODYPART_COST[ATTACK] <= energyLimit &&
+           parts.filter(p => p === ATTACK).length < maxAttackParts &&
+           parts.length < 48) {
+        parts.push(ATTACK);
+        currentCost += BODYPART_COST[ATTACK];
     }
     
-    // Phase 3: Add more RANGED_ATTACK and MOVE parts, ensuring 1:1 ratio
-    const maxAttackMovePairs = 10; // Example limit for RANGED_ATTACK parts
-    const attackMovePairCost = BODYPART_COST[RANGED_ATTACK] + BODYPART_COST[MOVE];
-    while (currentCost + attackMovePairCost <= energyLimit &&
-           parts.filter(p => p === RANGED_ATTACK).length < maxAttackMovePairs &&
-           parts.filter(p => p === MOVE).length < (maxAttackMovePairs + parts.filter(p => p === TOUGH).length) && // Total MOVE should compensate for all non-MOVE
-           parts.length < 48) {
-        parts.push(RANGED_ATTACK, MOVE);
-        currentCost += attackMovePairCost;
-    }
-
     // Phase 4: Final check to ensure enough MOVE parts to maintain full speed (1 MOVE for every non-MOVE part)
     let nonMoveParts = parts.filter(p => p !== MOVE).length;
     let currentMoveParts = parts.filter(p => p === MOVE).length;
@@ -197,6 +197,30 @@ function getDefenderBody(energyLimit: number): BodyPartConstant[] {
         parts.push(MOVE);
         currentCost += BODYPART_COST[MOVE];
         currentMoveParts++;
+    }
+
+    return parts;
+}
+
+function getRangedBody(energyLimit: number): BodyPartConstant[] {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // Phase 0: Ensure minimum energy for a basic functional ranged defender (RANGED_ATTACK, MOVE)
+    const basicCreepCost = BODYPART_COST[RANGED_ATTACK] + BODYPART_COST[MOVE];
+    if (energyLimit < basicCreepCost) {
+        return [];
+    }
+
+    // Phase 1: Add RANGED_ATTACK and MOVE in a 1:1 ratio
+    const pairCost = BODYPART_COST[RANGED_ATTACK] + BODYPART_COST[MOVE];
+    const maxPairs = 15; // Limit for number of pairs, e.g., 15 RANGED_ATTACK, 15 MOVE
+    while (currentCost + pairCost <= energyLimit && 
+           parts.filter(p => p === RANGED_ATTACK).length < maxPairs &&
+           parts.filter(p => p === MOVE).length < maxPairs &&
+           parts.length < 48) {
+        parts.push(RANGED_ATTACK, MOVE);
+        currentCost += pairCost;
     }
 
     return parts;
@@ -238,7 +262,9 @@ const managerSpawner = {
         const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === room.name);
         const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === room.name);
         const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === room.name);
-        const defenders = _.filter(Game.creeps, (c) => c.memory.role === 'defender' && c.room.name === room.name);
+        const defendersRanged = _.filter(Game.creeps, (c) => c.memory.role === 'defender' && c.memory.defenderType === 'ranged' && c.room.name === room.name);
+        const defendersTank = _.filter(Game.creeps, (c) => c.memory.role === 'defender' && c.memory.defenderType === 'tank' && c.room.name === room.name);
+        const defenders = defendersRanged.length + defendersTank.length; // Total defenders
         const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
         const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
         const isUnderAttack = hostileCreeps.length > 0 && extensions.length >= 5;
@@ -262,10 +288,17 @@ const managerSpawner = {
         }
         
         // Priority 2: Defenders (If under attack)
-        if (isUnderAttack && defenders.length < 3) {
-            const body = defenders.length === 0 ? getDefenderBody(energyAvailable) : getDefenderBody(energyCapacity);
-            if (body.length > 0 && spawn.spawnCreep(body, 'Defender' + Game.time, { memory: { role: 'defender' } }) === OK) {
-                return; // Spawned a defender, stop for this tick
+        if (isUnderAttack && (defendersRanged.length + defendersTank.length) < 3) {
+            if (defendersRanged.length < 1) { // Need a Ranged defender
+                const body = (defendersRanged.length + defendersTank.length) === 0 ? getRangedBody(energyAvailable) : getRangedBody(energyCapacity);
+                if (body.length > 0 && spawn.spawnCreep(body, 'Ranged' + Game.time, { memory: { role: 'defender', defenderType: 'ranged' } }) === OK) {
+                    return; // Spawned a Ranged defender, stop for this tick
+                }
+            } else if (defendersTank.length < 2) { // Need a Tank defender
+                const body = (defendersRanged.length + defendersTank.length) === 0 ? getTankBody(energyAvailable) : getTankBody(energyCapacity);
+                 if (body.length > 0 && spawn.spawnCreep(body, 'Tank' + Game.time, { memory: { role: 'defender', defenderType: 'tank' } }) === OK) {
+                    return; // Spawned a Tank defender, stop for this tick
+                }
             }
         }
 
