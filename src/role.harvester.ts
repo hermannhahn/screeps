@@ -2,6 +2,17 @@ import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
 
+// Helper function to check if a source is safe from hostile structures
+function isSourceSafe(source: Source, hostileStructures: Structure[]): boolean {
+    const range = 10; // User specified range
+    for (const hostileStructure of hostileStructures) {
+        if (source.pos.getRangeTo(hostileStructure) <= range) {
+            return false; // Hostile structure too close
+        }
+    }
+    return true; // No hostile structures nearby
+}
+
 const roleHarvester = {
     run: function(creep: Creep) {
         const hostileCreepsInRoom = creep.room.find(FIND_HOSTILE_CREEPS);
@@ -59,14 +70,17 @@ const roleHarvester = {
                 } else {
                 }
             } else { // Source was null/undefined, meaning sourceId is invalid or source is gone.
-                const allSources = creep.room.find(FIND_SOURCES);
+                const allSourcesInRoom = creep.room.find(FIND_SOURCES);
+                const hostileStructuresInRoom = creep.room.find(FIND_HOSTILE_STRUCTURES); // Find hostile structures in this room
+                const safeSources = allSourcesInRoom.filter(source => isSourceSafe(source, hostileStructuresInRoom));
+                
                 // Determine target harvesters per source based on RCL, consistent with main.ts
                 const targetHarvestersPerSource = creep.room.controller && creep.room.controller.level < 4 ? 2 : 1;
 
                 let bestSource: Source | null = null;
                 let minHarvesters = Infinity;
 
-                for (const s of allSources) {
+                for (const s of safeSources) { // Iterate over safeSources
                     const harvestersAssignedToSource = _.filter(Game.creeps, (c) => 
                         c.memory.role === 'harvester' && c.memory.sourceId === s.id && c.room.name === creep.room.name
                     ).length;
