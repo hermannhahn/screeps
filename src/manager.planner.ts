@@ -3,6 +3,7 @@ import spawnRoadsBlueprint from './blueprints/spawnRoads';
 import extensionsBlueprint from './blueprints/extensions';
 import sourceRoadsBlueprint from './blueprints/sourceRoads';
 import controllerRoadsBlueprint from './blueprints/controllerRoads';
+import mineralRoadsBlueprint from './blueprints/mineralRoads'; // New import
 
 const managerPlanner = {
     run: function(room: Room) {
@@ -29,7 +30,7 @@ const managerPlanner = {
             extensionsBlueprint,
             sourceRoadsBlueprint,
             controllerRoadsBlueprint,
-            // Add other blueprints here
+            mineralRoadsBlueprint, // New blueprint
         ];
         const MAX_BLUEPRINT_STAGES = BLUEPRINTS_ORDER.length;
 

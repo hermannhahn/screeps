@@ -21,3 +21,17 @@ export function planRoadsFromToNearestRoad(room: Room, startPos: RoomPosition): 
     }
     return sitesCreated;
 }
+
+export function planRoadFromTo(room: Room, startPos: RoomPosition, endPos: RoomPosition): number {
+    const path = room.findPath(startPos, endPos, {
+        ignoreCreeps: true, swampCost: 1, plainCost: 1, maxOps: 2000
+    });
+
+    let sitesCreated = 0;
+    for (const segment of path) {
+        if (room.createConstructionSite(segment.x, segment.y, STRUCTURE_ROAD) === OK) {
+            sitesCreated++;
+        }
+    }
+    return sitesCreated;
+}
