@@ -9,12 +9,14 @@ const managerPlanner = {
     run: function(room: Room) {
         if (Game.time % 100 !== 0) return;
 
-        const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
-        const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
-        const hasEnoughExtensions = extensions.length >= 5;
+        const hostileCreepsInRoom = room.find(FIND_HOSTILE_CREEPS);
+        const damagedStructures = room.find(FIND_MY_STRUCTURES, {
+            filter: (s) => s.hits < s.hitsMax
+        });
+        const isRoomActivelyUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
 
-        if (hostileCreeps.length > 0 && hasEnoughExtensions) {
-            console.log(`Room ${room.name} under attack with enough extensions, suspending planning.`);
+        if (isRoomActivelyUnderAttack) {
+            console.log(`Room ${room.name} actively under attack, suspending planning.`);
             return;
         }
 
