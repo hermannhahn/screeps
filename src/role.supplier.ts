@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
-import { findSourceContainer } from '../blueprints/utils'; // New import
+import { findSourceContainer } from './blueprints/utils'; // Corrected import
 
 const roleSupplier = {
     run: function(creep: Creep) {
@@ -18,41 +18,40 @@ const roleSupplier = {
                         }
                     }
         
-                    if (!targetEnergy) {
-                        const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
-                            if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetEnergyId) {
-                                return c.memory.targetEnergyId;
-                            }
-                            return null;
-                        })) as Id<any>[];
-        
-                        // Priority 1: Dropped resources
-                        const droppedEnergy = creep.room.find(FIND_DROPPED_RESOURCES, {
-                            filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50 && // Minimum amount to pick up
-                                !targetedByOthers.includes(r.id)
-                        });
-                        if (droppedEnergy.length > 0) {
-                            targetEnergy = droppedEnergy[0];
-                        }
-                    }
-        
-                    if (!targetEnergy) {
-                        // Priority 2: Source containers (from the blueprint)
-                        const sources = creep.room.find(FIND_SOURCES);
-                        for (const source of sources) {
-                            const sourceContainer = findSourceContainer(source);
-                            // Ensure it's a built container and has energy
-                            if (sourceContainer && (sourceContainer as StructureContainer).structureType === STRUCTURE_CONTAINER &&
-                                (sourceContainer as StructureContainer).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity()) {
-                                
-                                if (!targetedByOthers.includes(sourceContainer.id) || (sourceContainer as StructureContainer).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4) {
-                                    targetEnergy = sourceContainer;
-                                    break;
+                                const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
+                                    if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetEnergyId) {
+                                        return c.memory.targetEnergyId;
+                                    }
+                                    return null;
+                                })) as Id<any>[];
+                    
+                                if (!targetEnergy) {
+                                    // Priority 1: Dropped resources
+                                    const droppedEnergy = creep.room.find(FIND_DROPPED_RESOURCES, {
+                                        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50 && // Minimum amount to pick up
+                                            !targetedByOthers.includes(r.id)
+                                    });
+                                    if (droppedEnergy.length > 0) {
+                                        targetEnergy = droppedEnergy[0];
+                                    }
                                 }
-                            }
-                        }
-                    }
-        
+                    
+                                if (!targetEnergy) {
+                                    // Priority 2: Source containers (from the blueprint)
+                                    const sources = creep.room.find(FIND_SOURCES);
+                                    for (const source of sources) {
+                                        const sourceContainer = findSourceContainer(source);
+                                        // Ensure it's a built container and has energy
+                                        if (sourceContainer && (sourceContainer as StructureContainer).structureType === STRUCTURE_CONTAINER &&
+                                            (sourceContainer as StructureContainer).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity()) {
+                                            
+                                            if (!targetedByOthers.includes(sourceContainer.id) || (sourceContainer as StructureContainer).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4) {
+                                                targetEnergy = sourceContainer;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }        
                     if (!targetEnergy) {
                         // Priority 3: Other containers or storages
                         const containersAndStorage = creep.room.find(FIND_STRUCTURES, {

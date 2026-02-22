@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
-import { findSourceContainer } from '../blueprints/utils'; // New import
+import { findSourceContainer } from './blueprints/utils'; // Corrected import
 
 // Helper function to check if a source is safe from hostile structures and creeps
 function isSourceSafe(source: Source, hostileStructures: Structure[], hostileCreeps: Creep[]): boolean {
