@@ -78,12 +78,38 @@ RoomPosition.prototype.hasCreep = function(): boolean {
     return this.lookFor(LOOK_CREEPS).length > 0;
 };
 
+// Helper function to display creep counts
+function displayCreepCounts(room: Room) {
+    const rcl = room.controller?.level || 1;
+    const sources = room.find(FIND_SOURCES); // Need all sources to calculate harvester target
 
+    const harvesters = _.filter(Game.creeps, (c) => c.memory.role === 'harvester' && c.room.name === room.name);
+    const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === room.name);
+    const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === room.name);
+    const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === room.name);
+    const defenders = _.filter(Game.creeps, (c) => c.memory.role === 'defender' && c.room.name === room.name);
 
+    // Calculate targets (similar to manager.spawner.ts)
+    const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
+    const totalTargetHarvesters = targetHarvestersPerSource * sources.length;
+    const targetSuppliers = sources.length;
+    const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
+    const targetBuilders = 1;
+    const targetDefenders = 3;
 
+    const lineOffset = 0.9;
+    let y = 0.5; // Starting Y position
 
-
-
+    room.visual.text(`Harvesters: ${harvesters.length}/${totalTargetHarvesters}`, 49, y, { align: "right", opacity: 0.8 });
+    y += lineOffset;
+    room.visual.text(`Suppliers: ${suppliers.length}/${targetSuppliers}`, 49, y, { align: "right", opacity: 0.8 });
+    y += lineOffset;
+    room.visual.text(`Upgraders: ${upgraders.length}/${targetUpgraders}`, 49, y, { align: "right", opacity: 0.8 });
+    y += lineOffset;
+    room.visual.text(`Builders: ${builders.length}/${targetBuilders}`, 49, y, { align: "right", opacity: 0.8 });
+    y += lineOffset;
+    room.visual.text(`Defenders: ${defenders.length}/${targetDefenders}`, 49, y, { align: "right", opacity: 0.8 });
+}
 
 
 export const loop = () => {
@@ -97,6 +123,8 @@ export const loop = () => {
         const spawn = room.find(FIND_MY_SPAWNS)[0];
         if (!spawn) continue;
         managerSpawner.run(room, spawn);
+
+        displayCreepCounts(room);
 
         const sources = room.find(FIND_SOURCES);
         const energyAvailable = room.energyAvailable;

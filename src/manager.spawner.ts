@@ -203,14 +203,24 @@ function getDefenderBody(energyLimit: number): BodyPartConstant[] {
 }
 
 // Helper function to check if a source is safe from hostile structures
-function isSourceSafe(source: Source, hostileStructures: Structure[]): boolean {
+function isSourceSafe(source: Source, hostileStructures: Structure[], hostileCreeps: Creep[]): boolean {
     const range = 10; // User specified range
+
+    // Check for hostile structures
     for (const hostileStructure of hostileStructures) {
         if (source.pos.getRangeTo(hostileStructure) <= range) {
             return false; // Hostile structure too close
         }
     }
-    return true; // No hostile structures nearby
+
+    // Check for hostile creeps
+    for (const hostileCreep of hostileCreeps) {
+        if (source.pos.getRangeTo(hostileCreep) <= range) {
+            return false; // Hostile creep too close
+        }
+    }
+
+    return true; // No hostile structures or creeps nearby
 }
 
 
@@ -220,7 +230,8 @@ const managerSpawner = {
 
         const allSources = room.find(FIND_SOURCES);
         const hostileStructures = room.find(FIND_HOSTILE_STRUCTURES); // All hostile structures in the room
-        const sources = allSources.filter(source => isSourceSafe(source, hostileStructures));
+        const hostileCreepsInRoom = room.find(FIND_HOSTILE_CREEPS); // All hostile creeps in the room
+        const sources = allSources.filter(source => isSourceSafe(source, hostileStructures, hostileCreepsInRoom));
         const energyAvailable = room.energyAvailable;
         const energyCapacity = room.energyCapacityAvailable;
         const harvesters = _.filter(Game.creeps, (c) => c.memory.role === 'harvester' && c.room.name === room.name);

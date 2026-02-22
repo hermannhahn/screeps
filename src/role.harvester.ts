@@ -2,15 +2,25 @@ import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
 
-// Helper function to check if a source is safe from hostile structures
-function isSourceSafe(source: Source, hostileStructures: Structure[]): boolean {
+// Helper function to check if a source is safe from hostile structures and creeps
+function isSourceSafe(source: Source, hostileStructures: Structure[], hostileCreeps: Creep[]): boolean {
     const range = 10; // User specified range
+
+    // Check for hostile structures
     for (const hostileStructure of hostileStructures) {
         if (source.pos.getRangeTo(hostileStructure) <= range) {
             return false; // Hostile structure too close
         }
     }
-    return true; // No hostile structures nearby
+
+    // Check for hostile creeps
+    for (const hostileCreep of hostileCreeps) {
+        if (source.pos.getRangeTo(hostileCreep) <= range) {
+            return false; // Hostile creep too close
+        }
+    }
+
+    return true; // No hostile structures or creeps nearby
 }
 
 const roleHarvester = {
@@ -72,7 +82,8 @@ const roleHarvester = {
             } else { // Source was null/undefined, meaning sourceId is invalid or source is gone.
                 const allSourcesInRoom = creep.room.find(FIND_SOURCES);
                 const hostileStructuresInRoom = creep.room.find(FIND_HOSTILE_STRUCTURES); // Find hostile structures in this room
-                const safeSources = allSourcesInRoom.filter(source => isSourceSafe(source, hostileStructuresInRoom));
+                const hostileCreepsInRoom = creep.room.find(FIND_HOSTILE_CREEPS); // Find hostile creeps in this room
+                const safeSources = allSourcesInRoom.filter(source => isSourceSafe(source, hostileStructuresInRoom, hostileCreepsInRoom));
                 
                 // Determine target harvesters per source based on RCL, consistent with main.ts
                 const targetHarvestersPerSource = creep.room.controller && creep.room.controller.level < 4 ? 2 : 1;
