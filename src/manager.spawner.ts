@@ -311,7 +311,7 @@ const managerSpawner = {
         }
         
         // Priority 4: Upgraders
-        const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
+        const targetUpgraders = 1; // Always 1 upgrader, as per user request
         if (upgraders.length < targetUpgraders) {
             const body = upgraders.length === 0 ? getUpgraderBody(energyAvailable) : getUpgraderBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } }) === OK) {
