@@ -75,8 +75,17 @@ const roleSupplier = {
             }
 
             if (!target) {
+                // Prioritize spawns
                 target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                    filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) &&
+                    filter: (s) => s.structureType === STRUCTURE_SPAWN &&
+                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                });
+            }
+
+            if (!target) {
+                // Then extensions
+                target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: (s) => s.structureType === STRUCTURE_EXTENSION &&
                         s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
                 });
             }
