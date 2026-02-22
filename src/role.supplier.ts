@@ -42,15 +42,15 @@ const roleSupplier = {
                                     for (const source of sources) {
                                         const sourceContainer = findSourceContainer(source);
                                         // Ensure it's a built container and has energy
-                                        if (sourceContainer && (sourceContainer as StructureContainer).structureType === STRUCTURE_CONTAINER &&
-                                            (sourceContainer as StructureContainer).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity()) {
-                                            
-                                            if (!targetedByOthers.includes(sourceContainer.id) || (sourceContainer as StructureContainer).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4) {
-                                                targetEnergy = sourceContainer;
-                                                break;
-                                            }
-                                        }
-                                    }
+                                                            if (sourceContainer && (sourceContainer.structureType === STRUCTURE_CONTAINER) ) { // Only proceed if it's a built container
+                                                                const builtContainer = sourceContainer as StructureContainer;
+                                                                if (builtContainer.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity()) {
+                                                                    if (!targetedByOthers.includes(builtContainer.id) || builtContainer.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4) {
+                                                                        targetEnergy = builtContainer;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }                                    }
                                 }        
                     if (!targetEnergy) {
                         // Priority 3: Other containers or storages
