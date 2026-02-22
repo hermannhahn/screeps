@@ -265,9 +265,11 @@ const managerSpawner = {
         const defendersRanged = _.filter(Game.creeps, (c) => c.memory.role === 'defender' && c.memory.defenderType === 'ranged' && c.room.name === room.name);
         const defendersTank = _.filter(Game.creeps, (c) => c.memory.role === 'defender' && c.memory.defenderType === 'tank' && c.room.name === room.name);
         const defenders = defendersRanged.length + defendersTank.length; // Total defenders
-        const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
-        const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
-        const isUnderAttack = hostileCreeps.length > 0 && extensions.length >= 5;
+        const hostileCreepsInRoom = room.find(FIND_HOSTILE_CREEPS);
+        const damagedStructures = room.find(FIND_MY_STRUCTURES, {
+            filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_ROAD
+        });
+        const isUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
         const rcl = room.controller?.level || 1;
 
         // --- Spawning Logic ---
