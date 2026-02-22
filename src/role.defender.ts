@@ -46,7 +46,7 @@ const roleDefender = {
                 if (teamComplete && allAtRallyPoint) {
                     creep.memory.state = 'ENGAGING';
                 } else if (rallyPoint && !creep.pos.isEqualTo(rallyPoint)) {
-                    creep.moveTo(rallyPoint, { visualizePathStyle: { stroke: '#ffff00' }, reusePath: 5 });
+                    creep.moveTo(rallyPoint, { visualizePathStyle: { stroke: '#ffff00' }, reusePath: 5, ignoreCreeps: false });
                 } else {
                 }
             } else if (creep.memory.state === 'ENGAGING') {
@@ -54,12 +54,12 @@ const roleDefender = {
                     if (creep.memory.defenderType === 'ranged') {
                         // Ranged: Stay at range 3 from hostile, attack
                         if (creep.rangedAttack(mainHostileTarget) === ERR_NOT_IN_RANGE) {
-                            creep.moveTo(mainHostileTarget, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5, range: 3 });
+                            creep.moveTo(mainHostileTarget, { visualizePathStyle: { stroke: '#ff0000' }, reusePath: 5, ignoreCreeps: false, range: 3 });
                         }
                     } else if (creep.memory.defenderType === 'tank') {
                         // Tank: Move into range 1, attack
                         if (creep.attack(mainHostileTarget) === ERR_NOT_IN_RANGE) {
-                            creep.moveTo(mainHostileTarget, { visualizePathStyle: { stroke: '#0000ff' }, reusePath: 5, range: 1 });
+                            creep.moveTo(mainHostileTarget, { visualizePathStyle: { stroke: '#0000ff' }, reusePath: 5, ignoreCreeps: false, range: 1 });
                         }
                     }
                 } else {
@@ -71,9 +71,9 @@ const roleDefender = {
             // If no hostiles, return to spawn or rally point
             creep.memory.state = 'GATHERING'; // Reset state
             if (rallyPoint && !creep.pos.isEqualTo(rallyPoint)) {
-                creep.moveTo(rallyPoint, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 5 });
+                creep.moveTo(rallyPoint, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 5, ignoreCreeps: false });
             } else if (spawn && !creep.pos.isEqualTo(spawn.pos)) { // Fallback to spawn if no rally point defined
-                creep.moveTo(spawn.pos, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 5 });
+                creep.moveTo(spawn.pos, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 5, ignoreCreeps: false });
             } else {
             }
         }

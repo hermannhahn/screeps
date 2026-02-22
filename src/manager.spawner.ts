@@ -289,15 +289,15 @@ const managerSpawner = {
         
         // Priority 2: Defenders (If under attack)
         if (isUnderAttack && (defendersRanged.length + defendersTank.length) < 3) {
-            if (defendersRanged.length < 1) { // Need a Ranged defender
-                const body = (defendersRanged.length + defendersTank.length) === 0 ? getRangedBody(energyAvailable) : getRangedBody(energyCapacity);
-                if (body.length > 0 && spawn.spawnCreep(body, 'Ranged' + Game.time, { memory: { role: 'defender', defenderType: 'ranged' } }) === OK) {
-                    return; // Spawned a Ranged defender, stop for this tick
-                }
-            } else if (defendersTank.length < 2) { // Need a Tank defender
+            if (defendersTank.length < 2) { // Need a Tank defender (prioritize this first)
                 const body = (defendersRanged.length + defendersTank.length) === 0 ? getTankBody(energyAvailable) : getTankBody(energyCapacity);
                  if (body.length > 0 && spawn.spawnCreep(body, 'Tank' + Game.time, { memory: { role: 'defender', defenderType: 'tank' } }) === OK) {
                     return; // Spawned a Tank defender, stop for this tick
+                }
+            } else if (defendersRanged.length < 1) { // Then spawn a Ranged defender
+                const body = (defendersRanged.length + defendersTank.length) === 0 ? getRangedBody(energyAvailable) : getRangedBody(energyCapacity);
+                if (body.length > 0 && spawn.spawnCreep(body, 'Ranged' + Game.time, { memory: { role: 'defender', defenderType: 'ranged' } }) === OK) {
+                    return; // Spawned a Ranged defender, stop for this tick
                 }
             }
         }
