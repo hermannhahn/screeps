@@ -1,4 +1,5 @@
 import { Blueprint } from './blueprintInterface';
+import { findSourceContainer } from './utils'; // New import
 
 const sourceContainersBlueprint: Blueprint = {
     name: "Source Containers",
@@ -8,6 +9,11 @@ const sourceContainersBlueprint: Blueprint = {
         let sitesCreated = 0;
 
         for (const source of sources) {
+            // Check if a container (or CS) already exists near this source
+            if (findSourceContainer(source)) {
+                continue; // Skip this source if a container already exists or is planned
+            }
+
             // Find a suitable position for the container 2 blocks away from the source
             // Prefer positions that are not walls or existing structures
             let foundPos: RoomPosition | null = null;
