@@ -16,7 +16,7 @@ const roleUpgrader = {
         } else {
             // Lógica de coleta de energia para Upgrader, priorizando Links
             const link = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                filter: (s) => s.structureType === STRUCTURE_LINK && s.store.getUsedCapacity(RESOURCE_ENERGY) > 0 && s.energy > 0
+                filter: (s) => s.structureType === STRUCTURE_LINK && s.energy > 0
             }) as StructureLink | null; // Adicionado s.energy > 0 para garantir que o link tenha energia
 
             if (link) {
