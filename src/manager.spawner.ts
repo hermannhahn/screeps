@@ -237,6 +237,29 @@ function getArcherBody(energyLimit: number): BodyPartConstant[] {
 }
 
 
+function getRepairerBody(energyLimit: number): BodyPartConstant[] {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // Base: 1 WORK, 1 CARRY, 1 MOVE
+    const basicCreepCost = BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    if (energyLimit < basicCreepCost) {
+        return [];
+    }
+    parts.push(WORK, CARRY, MOVE);
+    currentCost += basicCreepCost;
+
+    // Adicionar WORK, CARRY, MOVE em pares balanceados
+    const balancedPartCost = BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    while (currentCost + balancedPartCost <= energyLimit && parts.length < 48) {
+        parts.push(WORK, CARRY, MOVE);
+        currentCost += balancedPartCost;
+    }
+
+    return parts;
+}
+
+
 // Helper function to check if a source is safe from hostile structures
 function isSourceSafe(source: Source, hostileStructures: Structure[], hostileCreeps: Creep[]): boolean {
     const range = 10; // User specified range
@@ -276,6 +299,7 @@ const managerSpawner = {
         // Novos contadores para as roles de defesa
         const guards = _.filter(Game.creeps, (c) => c.memory.role === 'guard' && c.room.name === room.name);
         const archers = _.filter(Game.creeps, (c) => c.memory.role === 'archer' && c.room.name === room.name);
+        const repairers = _.filter(Game.creeps, (c) => c.memory.role === 'repairer' && c.room.name === room.name); // Novo contador
         
         const damagedStructures = room.find(FIND_MY_STRUCTURES, {
             filter: (s) => s.hits < s.hitsMax
@@ -335,7 +359,16 @@ const managerSpawner = {
             }
         }
 
-        // Priority 5: Builders
+        // Priority 5: Repairers (Manter as estruturas em ordem) - Antes dos builders
+        const targetRepairers = (damagedStructures.length > 5 && rcl >= 3) ? 1 : 0; // 1 repairer se houver mais de 5 estruturas danificadas e RCL >= 3
+        if (repairers.length < targetRepairers) {
+            const body = repairers.length === 0 ? getRepairerBody(energyAvailable) : getRepairerBody(energyCapacity);
+            if (body.length > 0 && spawn.spawnCreep(body, 'Repairer' + Game.time, { memory: { role: 'repairer', repairing: false } }) === OK) {
+                return;
+            }
+        }
+
+        // Priority 6: Builders (Novas construções)
         if (builders.length < 1) { // Builders target is 1
             const body = builders.length === 0 ? getBuilderBody(energyAvailable) : getBuilderBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Builder' + Game.time, { memory: { role: 'builder' } }) === OK) {

@@ -1,7 +1,6 @@
 import taskCollectEnergy from './task.collectEnergy';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
-import taskRepair from './task.repair';
 
 const roleBuilder = {
     run: function(creep: Creep) {
@@ -15,13 +14,10 @@ const roleBuilder = {
         }
 
         if (creep.memory.building) {
-            // Prioridade 1: Reparar
-            if (!taskRepair.run(creep)) {
-                // Prioridade 2: Construir
-                if (!taskBuild.run(creep)) {
-                    // Fallback: Upgrade
-                    taskUpgrade.run(creep);
-                }
+            // Prioridade 1: Construir
+            if (!taskBuild.run(creep)) {
+                // Fallback: Upgrade
+                taskUpgrade.run(creep);
             }
         } else {
             taskCollectEnergy.run(creep);

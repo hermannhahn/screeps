@@ -5,6 +5,7 @@ import roleSupplier from './role.supplier';
 import roleBuilder from './role.builder';
 import roleGuard from './role.guard'; // Novo
 import roleArcher from './role.archer'; // Novo
+import roleRepairer from './role.repairer'; // Novo
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
 import { managerTower } from './manager.tower'; // Add this line
@@ -91,6 +92,7 @@ function displayCreepCounts(room: Room) {
     const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === room.name);
     const guards = _.filter(Game.creeps, (c) => c.memory.role === 'guard' && c.room.name === room.name); // Novo
     const archers = _.filter(Game.creeps, (c) => c.memory.role === 'archer' && c.room.name === room.name); // Novo
+    const repairers = _.filter(Game.creeps, (c) => c.memory.role === 'repairer' && c.room.name === room.name); // Novo
 
     // Calculate targets (similar to manager.spawner.ts)
     const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
@@ -105,6 +107,7 @@ function displayCreepCounts(room: Room) {
     const isUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
     const targetGuards = isUnderAttack ? 1 : 0; // Novo
     const targetArchers = isUnderAttack ? 2 : 0; // Novo
+    const targetRepairers = (damagedStructures.length > 5 && rcl >= 3) ? 1 : 0; // Novo
 
     const lineOffset = 0.9;
     let y = 0.5; // Starting Y position
@@ -120,6 +123,8 @@ function displayCreepCounts(room: Room) {
     room.visual.text(`Guards: ${guards.length}/${targetGuards}`, 49, y, { align: "right", opacity: 0.8 }); // Novo
     y += lineOffset; // Novo
     room.visual.text(`Archers: ${archers.length}/${targetArchers}`, 49, y, { align: "right", opacity: 0.8 }); // Novo
+    y += lineOffset; // Novo
+    room.visual.text(`Repairers: ${repairers.length}/${targetRepairers}`, 49, y, { align: "right", opacity: 0.8 }); // Novo
 }
 
 
@@ -162,5 +167,6 @@ export const loop = () => {
         if (creep.memory.role === 'builder') roleBuilder.run(creep);
         if (creep.memory.role === 'guard') roleGuard.run(creep); // Novo
         if (creep.memory.role === 'archer') roleArcher.run(creep); // Novo
+        if (creep.memory.role === 'repairer') roleRepairer.run(creep); // Novo
     }
 };
