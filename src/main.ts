@@ -3,7 +3,6 @@ import roleHarvester from './role.harvester';
 import roleUpgrader from './role.upgrader';
 import roleSupplier from './role.supplier';
 import roleBuilder from './role.builder';
-import roleDefender from './role.defender';
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
 import { managerTower } from './manager.tower'; // Add this line
@@ -22,7 +21,6 @@ declare global {
         upgrading?: boolean;
         building?: boolean;
         state?: string;
-        defenderType?: 'ranged' | 'tank';
     }
     interface RoomPosition {
         isWalkable(creepLooking?: Creep): boolean;
@@ -89,7 +87,6 @@ function displayCreepCounts(room: Room) {
     const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === room.name);
     const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === room.name);
     const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === room.name);
-    const defenders = _.filter(Game.creeps, (c) => c.memory.role === 'defender' && c.room.name === room.name);
 
     // Calculate targets (similar to manager.spawner.ts)
     const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
@@ -97,7 +94,6 @@ function displayCreepCounts(room: Room) {
     const targetSuppliers = sources.length;
     const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
     const targetBuilders = 1;
-    const targetDefenders = 3;
 
     const lineOffset = 0.9;
     let y = 0.5; // Starting Y position
@@ -109,8 +105,6 @@ function displayCreepCounts(room: Room) {
     room.visual.text(`Upgraders: ${upgraders.length}/${targetUpgraders}`, 49, y, { align: "right", opacity: 0.8 });
     y += lineOffset;
     room.visual.text(`Builders: ${builders.length}/${targetBuilders}`, 49, y, { align: "right", opacity: 0.8 });
-    y += lineOffset;
-    room.visual.text(`Defenders: ${defenders.length}/${targetDefenders}`, 49, y, { align: "right", opacity: 0.8 });
 }
 
 
@@ -137,7 +131,6 @@ export const loop = () => {
         const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === roomName);
         const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === roomName);
         const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === roomName);
-        const defenders = _.filter(Game.creeps, (c) => c.memory.role === 'defender' && c.room.name === roomName);
         const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
         const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
         const isUnderAttack = hostileCreeps.length > 0 && extensions.length >= 5;
@@ -153,6 +146,5 @@ export const loop = () => {
         if (creep.memory.role === 'upgrader') roleUpgrader.run(creep);
         if (creep.memory.role === 'supplier') roleSupplier.run(creep);
         if (creep.memory.role === 'builder') roleBuilder.run(creep);
-        if (creep.memory.role === 'defender') roleDefender.run(creep);
     }
 };
