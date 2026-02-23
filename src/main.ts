@@ -6,7 +6,6 @@ import roleBuilder from './role.builder';
 import roleDefender from './role.defender';
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
-import * as Watcher from './watch-client';
 
 declare global {
     interface RoomMemory {
