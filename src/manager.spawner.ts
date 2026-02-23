@@ -343,7 +343,8 @@ const managerSpawner = {
         }
         
         // Priority 3: Suppliers (Critical for energy distribution)
-        if (suppliers.length < sources.length) {
+        const targetSuppliers = sources.length > 0 ? sources.length + 1 : 0;
+        if (suppliers.length < targetSuppliers) {
             const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } }) === OK) {
                 return; // Spawned a supplier, stop for this tick
