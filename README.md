@@ -197,7 +197,7 @@ b. **Comandos `/watch`:**
 - **Configuração de Roles:**
   - **Harvesters:** 2 por fonte. Prioridade máxima.
   - **Defenders:** 3 defensores ativos quando a sala está sob ataque e possui pelo menos 5 extensões.
-  - **Suppliers:** 2 por fonte (logística).
+  - **Suppliers:** 1 por source seguro + 1 adicional (total: `N+1` para `N` sources seguras; 0 se não houver sources seguras).
   - **Upgraders:** Dinâmico com base no RCL (`Math.max(1, 4 - RCL)`).
   - **Builders:** 1 ativo quando há construções pendentes.
 
@@ -206,7 +206,9 @@ b. **Comandos `/watch`:**
 - **Harvester (`role.harvester.ts`):** 
   - Foca na mineração estática. 
   - **Fuga:** Se houver hostis por perto e a sala tiver defesa (5+ extensões), ele foge.
-  - **Entrega:** Se houver Suppliers, deposita em containers próximos (raio 2) ou dropa no chão. Se não houver Suppliers, abastece Spawn/Extensions diretamente.
+  - **Entrega:**
+    - **Se houver Suppliers na sala:** Deposita energia em containers a até 3 tiles da sua source atribuída. Se nenhum container adequado for encontrado, dropa a energia no chão. Nunca deposita em outras estruturas ou containers de outras sources.
+    - **Se NÃO houver Suppliers na sala:** Deposita energia no Spawn, depois nas Extensions. Se nenhum desses precisar de energia, dropa a energia no chão.
   
 - **Supplier (`role.supplier.ts`):** 
   - **Coleta:** Prioriza energia dropada (acima de 2x sua capacidade) perto das fontes, então containers/storage próximos às fontes.

@@ -43,6 +43,6 @@ As instruções detalhadas para configuração e uso do `screeps-multimeter` e s
 - [x] Migração total para TypeScript.
 - [x] Sistema de Build com Webpack.
 - [x] Deploy automatizado com Git.
-- [ ] Implementar Role: **Repairer** para manutenção de estruturas.
+- [x] Implementar Role: **Repairer** para manutenção de estruturas.
 - [ ] Otimização de CPU: Caching de resultados de busca frequentes na memória global.
 - [ ] Blueprint: Posicionamento automático de Containers perto das fontes.
