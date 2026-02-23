@@ -24,6 +24,7 @@ declare global {
         upgrading?: boolean;
         building?: boolean;
         state?: string;
+        repairing?: boolean; // Novo
     }
     interface RoomPosition {
         isWalkable(creepLooking?: Creep): boolean;
