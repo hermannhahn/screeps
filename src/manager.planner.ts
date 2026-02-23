@@ -6,7 +6,8 @@ import controllerRoadsBlueprint from './blueprints/controllerRoads';
 import mineralRoadsBlueprint from './blueprints/mineralRoads';
 import sourceContainersBlueprint from './blueprints/sourceContainers';
 import firstTowerBlueprint from './blueprints/firstTower';
-import secondTowerBlueprint from './blueprints/secondTower'; // Novo import
+import secondTowerBlueprint from './blueprints/secondTower';
+import rampartsWallsBlueprint from './blueprints/rampartsWalls'; // Novo import
 
 const managerPlanner = {
     run: function(room: Room) {
@@ -39,6 +40,7 @@ const managerPlanner = {
             sourceContainersBlueprint,
             firstTowerBlueprint, // New blueprint
             secondTowerBlueprint, // Nova blueprint adicionada ao final
+            rampartsWallsBlueprint, // Nova blueprint adicionada
         ];
         const MAX_BLUEPRINT_STAGES = BLUEPRINTS_ORDER.length;
 
