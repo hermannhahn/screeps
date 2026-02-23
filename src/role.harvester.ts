@@ -113,32 +113,59 @@ const roleHarvester = {
                     }
                 }
             }
-        } else { // Creep está cheio de energia, depositar ou dropar
-            const assignedSource = Game.getObjectById(creep.memory.sourceId as Id<Source>);
-            let depositTarget: StructureContainer | null = null; // Only containers are allowed now
+        } else { // Creep está cheio de energia
+            const suppliersInRoom = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === creep.room.name);
 
-            // Prioridade: Containers (próximos à fonte, até 3 tiles)
-            if (assignedSource) {
-                const containersInRange = assignedSource.pos.findInRange(FIND_STRUCTURES, 3, { // Search within 3 tiles
-                    filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-                }) as StructureContainer[];
+            if (suppliersInRoom.length > 0) {
+                // Logic for when suppliers ARE present (current behavior: container near source or drop)
+                const assignedSource = Game.getObjectById(creep.memory.sourceId as Id<Source>);
+                let depositTarget: StructureContainer | null = null; 
 
-                if (containersInRange.length > 0) {
-                    // Sort by distance to creep, then by remaining capacity (prefer less full)
-                    depositTarget = containersInRange.sort((a, b) => 
-                        creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b) ||
-                        a.store.getFreeCapacity(RESOURCE_ENERGY) - b.store.getFreeCapacity(RESOURCE_ENERGY)
-                    )[0];
+                // Prioridade: Containers (próximos à fonte, até 3 tiles)
+                if (assignedSource) {
+                    const containersInRange = assignedSource.pos.findInRange(FIND_STRUCTURES, 3, { 
+                        filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                    }) as StructureContainer[];
+
+                    if (containersInRange.length > 0) {
+                        depositTarget = containersInRange.sort((a, b) => 
+                            creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b) ||
+                            a.store.getFreeCapacity(RESOURCE_ENERGY) - b.store.getFreeCapacity(RESOURCE_ENERGY)
+                        )[0];
+                    }
                 }
-            }
 
-            if (depositTarget) {
-                if (creep.transfer(depositTarget, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(depositTarget, { visualizePathStyle: { stroke: '#ffffff' } });
+                if (depositTarget) {
+                    if (creep.transfer(depositTarget, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                        creep.moveTo(depositTarget, { visualizePathStyle: { stroke: '#ffffff' } });
+                    }
+                } else {
+                    creep.drop(RESOURCE_ENERGY);
                 }
             } else {
-                // Se não há container próximo à fonte, dropar a energia
-                creep.drop(RESOURCE_ENERGY);
+                // Logic for when NO suppliers are present (deliver to spawn, then extensions)
+                let depositTarget: StructureSpawn | StructureExtension | null = null;
+
+                // Prioridade 1: Spawn
+                depositTarget = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+                    filter: (s) => s.structureType === STRUCTURE_SPAWN && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                }) as StructureSpawn | null;
+
+                // Prioridade 2: Extensions
+                if (!depositTarget) {
+                    depositTarget = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+                        filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                    }) as StructureExtension | null;
+                }
+
+                if (depositTarget) {
+                    if (creep.transfer(depositTarget, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                        creep.moveTo(depositTarget, { visualizePathStyle: { stroke: '#ffffff' } });
+                    }
+                } else {
+                    // If no spawn or extension needs energy, drop it
+                    creep.drop(RESOURCE_ENERGY);
+                }
             }
         }
     }
