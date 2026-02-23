@@ -351,7 +351,15 @@ const managerSpawner = {
         }
         
         // Priority 4: Upgraders
-        const targetUpgraders = 1; // Always 1 upgrader, as per user request
+        let targetUpgraders = 1;
+        if (rcl >= 4) { // Em RCL 4+
+            if (room.storage && room.storage.store[RESOURCE_ENERGY] > 50000) { // Se tiver um storage com bastante energia
+                targetUpgraders = 2;
+            }
+            if (room.storage && room.storage.store[RESOURCE_ENERGY] > 100000) { // Com ainda mais energia
+                targetUpgraders = 3;
+            }
+        }
         if (upgraders.length < targetUpgraders) {
             const body = upgraders.length === 0 ? getUpgraderBody(energyAvailable) : getUpgraderBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } }) === OK) {
