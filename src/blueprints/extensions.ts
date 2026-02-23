@@ -4,13 +4,13 @@ const extensionsBlueprint: Blueprint = {
     name: "Extensions",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
+        if (!room.controller || room.controller.level < 2) return 0;
+
         let plannedCount = 0;
         let sitesCreated = 0;
-        const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level]; // Obter o max extensions para o RCL atual
-        const targetCount = maxExtensionsForRCL; // Agora planeja o total disponível
+        const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level];
+        const targetCount = maxExtensionsForRCL;
         const minDistance = 2; // From original planExtensions
-
-        if (!room.controller || room.controller.level < 2) return 0;
 
         const roads = room.find(FIND_STRUCTURES, {
             filter: (s) => s.structureType === STRUCTURE_ROAD
