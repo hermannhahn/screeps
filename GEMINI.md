@@ -25,6 +25,12 @@ Script de automação para o jogo de estratégia MMO **Screeps**. O código é f
 - **Configuração do Deploy:** Credenciais do servidor privado ficam no arquivo `screeps.json` (baseado no `screeps.json.example`).
 - **Configuração de População:** As metas de população (`targetCount`) estão no `src/main.ts`.
 
+### Ferramentas e Métodos de Depuração
+Para auxiliar no debug e teste de funcionalidades, o projeto utiliza o `screeps-multimeter`. Esta ferramenta permite acesso direto ao console do servidor e oferece um plugin "Watch" para monitorar expressões e variáveis no jogo em tempo real.
+- **`screeps-multimeter` (executável: `multimeter`):** Console interativo para interagir com o servidor Screeps.
+- **Plugin "Watch":** Funcionalidade para monitorar o estado de variáveis e expressões JavaScript dentro do jogo Screeps, com saída no terminal do `multimeter`.
+As instruções detalhadas para configuração e uso do `screeps-multimeter` e seu plugin "Watch" estão disponíveis no arquivo `README.md` na seção "🛠️ Ferramentas de Depuração e Monitoramento".
+
 ## 📝 Convenções de Desenvolvimento (Surgical Changes)
 - **TypeScript Strict:** Manter a tipagem rigorosa para evitar erros de tempo de execução.
 - **ES Modules:** Usar `import` e `export default` nos arquivos da `src/`.

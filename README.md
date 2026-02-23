@@ -54,6 +54,142 @@ Para que o deploy automático funcione, crie um arquivo `screeps.json` na raiz d
 ```
 Este arquivo é ignorado pelo Git por segurança.
 
+### Comandos Disponíveis
+
+- `npm run save`: O comando principal de desenvolvimento. Ele realiza as seguintes ações:
+  1. Limpa a pasta `dist/`.
+  2. Compila todos os arquivos `.ts` em um único `main.js` minificado.
+  3. Incrementa o contador de deploy no arquivo `.deploy_count`.
+  4. Realiza um `git commit` automático com a mensagem `"Deploy N. X"`.
+  5. Faz o `git push` para o repositório remoto.
+  6. **NOVO**: Envia o código automaticamente para o servidor privado configurado no `screeps.json` via `screeps-api`.
+
+- `npm run ssc`: Inicia o Screeps Steamless Client em segundo plano. Este comando é crucial para interagir com o ambiente de desenvolvimento do Screeps fora do cliente oficial Steam.
+  **Importante:** Este comando espera encontrar o arquivo `package.nw` na seguinte localização: `/home/hermann/.steam/steam/steamapps/common/Screeps/package.nw`.
+  Se o seu cliente Steamless não iniciar corretamente, é provável que o caminho para `package.nw` esteja diferente em sua máquina. Para corrigir isso:
+  1. Localize o arquivo `package.nw` (ou `app.nw`) na instalação do seu Screeps.
+     - Geralmente, está dentro da pasta de instalação do jogo Screeps na sua biblioteca Steam (ex: `~/.steam/steam/steamapps/common/Screeps/`).
+  2. Edite o arquivo `package.json` na raiz deste projeto.
+  3. Altere o valor do script `ssc` para refletir o caminho correto:
+     ```json
+     "scripts": {
+       "ssc": "npx screeps-steamless-client --package /caminho/correto/para/seu/package.nw"
+     }
+     ```
+     Lembre-se de que o comando global `npx screeps-steamless-client` deve estar acessível (instalado via `npm install -g screeps-steamless-client`).
+
+
+## ⚙️ Configuração do Servidor Privado
+
+Para que o deploy automático funcione, crie um arquivo `screeps.json` na raiz do projeto baseado no `screeps.json.example`:
+
+```json
+{
+  "email": "seu-email@exemplo.com",
+  "password": "sua-senha",
+  "hostname": "screeps.gohorse.dev",
+  "port": 21025,
+  "protocol": "http",
+  "branch": "default"
+}
+```
+Este arquivo é ignorado pelo Git por segurança.
+
+## 🛠️ Ferramentas de Depuração e Monitoramento
+
+Para interagir com o console do seu servidor Screeps e monitorar variáveis em tempo real, utilizamos o `screeps-multimeter`.
+
+### 1. Verificação de Instalação do `multimeter`
+
+Primeiro, verifique se o `screeps-multimeter` (executável como `multimeter`) está instalado globalmente:
+```bash
+npm list -g multimeter
+```
+Se não estiver instalado, você pode instalá-lo com:
+```bash
+npm install -g screeps-multimeter
+```
+
+### 2. Configuração do `~/.screeps.yaml`
+
+O `multimeter` usa um arquivo de configuração `~/.screeps.yaml` (na sua pasta home) para armazenar credenciais de servidor.
+
+**Criação e Conteúdo:**
+Crie ou edite o arquivo `~/.screeps.yaml` com o seguinte formato, substituindo os valores entre `< >` pelas suas informações reais:
+
+```yaml
+servers:
+  private:
+    host: <SEU_HOST_DO_SERVIDOR_PRIVADO> # Ex: 127.0.0.1 ou o IP/domínio do seu servidor
+    port: <SUA_PORTA_DO_SERVIDOR_PRIVADO> # Ex: 21025
+    secure: false # Defina como true se o seu servidor privado usa HTTPS
+    username: <SEU_USUARIO_DO_SCREEPS_PRIVADO>
+    password: <SUA_SENHA_DO_SCREEPS_PRIVADO>
+```
+**ATENÇÃO:** Mantenha a indentação rigorosa, usando dois espaços para cada nível. Não compartilhe este arquivo, pois ele contém suas credenciais.
+
+### 3. Integração do Plugin "Watch"
+
+Para usar a funcionalidade de "watch" do `multimeter` (monitorar variáveis no jogo):
+
+a. **Copiar `watch-client.js`:**
+   Este arquivo precisa estar na pasta `src/` do seu projeto. Copie-o da instalação global do `screeps-multimeter`:
+   ```bash
+   cp /home/hermann/.nvm/versions/node/v22.17.0/lib/node_modules/screeps-multimeter/lib/watch-client.js ./src/watch-client.js
+   ```
+
+b. **Integrar no `main.ts`:**
+   Adicione as seguintes linhas ao seu `src/main.ts`:
+   *   No início do arquivo:
+     ```typescript
+     import * as Watcher from './watch-client'; // Adicione esta linha
+     ```
+   *   Dentro da função `export const loop = () => { ... }`, no início:
+     ```typescript
+     export const loop = () => {
+         Watcher(); // Adicione esta linha
+         // ...
+     };
+     ```
+   *   **Importante:** Se você estiver usando o TypeScript de forma estrita, pode ser necessário criar um arquivo de declaração `src/watch-client.d.ts` com o seguinte conteúdo para evitar erros de tipagem:
+     ```typescript
+     declare function Watcher(): void;
+     ```
+
+c. **Deploy das Alterações:**
+   Após estas alterações, você deve fazer commit (`git add`, `git commit`), push (`git push`) e deploy (`npm run save`) para que o código atualizado vá para o seu servidor Screeps.
+
+### 4. Uso do Console e Comandos `/watch`
+
+Com tudo configurado e o código implantado, você pode iniciar o `multimeter` e usar os comandos de monitoramento:
+
+a. **Conectar ao servidor:**
+   ```bash
+   multimeter -s private
+   ```
+   *(Substitua `private` pelo nome que você configurou em `~/.screeps.yaml`)*
+
+b. **Comandos `/watch`:**
+   Dentro do console do `multimeter`:
+   *   **Monitorar no console (saída de log):**
+     ```
+     /watch console <SUA_EXPRESSAO_JAVASCRIPT>
+     ```
+     Ex: `/watch console _.size(Game.creeps)`
+   *   **Monitorar na barra de status:**
+     ```
+     /watch status <SUA_EXPRESSAO_JAVASCRIPT>
+     ```
+     Ex: `/watch status Game.cpu.getUsed()`
+   *   **Remover monitoramento:**
+     ```
+     /watch unwatch <SUA_EXPRESSAO_JAVASCRIPT>
+     ```
+   *   **Listar monitoramentos ativos:**
+     ```
+     /watch list
+     ```
+
 ## 🛠️ Funcionalidades do Script
 
 ### 1. Gestão de População (`main.ts`)
