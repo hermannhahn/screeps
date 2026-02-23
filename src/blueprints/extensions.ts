@@ -6,7 +6,8 @@ const extensionsBlueprint: Blueprint = {
     plan: function(room: Room, spawn: StructureSpawn): number {
         let plannedCount = 0;
         let sitesCreated = 0;
-        const count = 5; // From original planExtensions
+        const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level]; // Obter o max extensions para o RCL atual
+        const targetCount = maxExtensionsForRCL; // Agora planeja o total disponível
         const minDistance = 2; // From original planExtensions
 
         if (!room.controller || room.controller.level < 2) return 0;
@@ -20,12 +21,12 @@ const extensionsBlueprint: Blueprint = {
         if (roads.length === 0) return 0;
 
         for (const road of roads) {
-            if (plannedCount >= count) break;
+            if (plannedCount >= targetCount) break;
 
             // Look for positions at exactly range 2 from the road
             for (let dx = -2; dx <= 2; dx++) {
                 for (let dy = -2; dy <= 2; dy++) {
-                    if (plannedCount >= count) break;
+                    if (plannedCount >= targetCount) break;
                     if (Math.abs(dx) < 2 && Math.abs(dy) < 2) continue; // Skip range 0 and 1
 
                     const x = road.pos.x + dx;
@@ -62,7 +63,7 @@ const extensionsBlueprint: Blueprint = {
             filter: (s: AnyStructure) => s.structureType === STRUCTURE_EXTENSION
         }).length;
         const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level];
-        const targetExtensions = Math.min(5, maxExtensionsForRCL); // Current planner plans up to 5 extensions
+        const targetExtensions = maxExtensionsForRCL; // Plan for all extensions available at current RCL
         return extensionConstructionSites === 0 && builtExtensions >= targetExtensions;
     }
 };
