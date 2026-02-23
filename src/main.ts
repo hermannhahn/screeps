@@ -7,7 +7,7 @@ import roleDefender from './role.defender';
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
 import { managerTower } from './manager.tower'; // Add this line
-import { Watcher } from './watch-client'; // Change to named import
+import Watcher from './watch-client'; // Change to default import
 
 declare global {
     interface RoomMemory {

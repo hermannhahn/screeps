@@ -1,1 +1,2 @@
-export function Watcher(): void;
+declare function Watcher(): void;
+export default Watcher;
