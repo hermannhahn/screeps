@@ -1,3 +1,4 @@
+/// <reference path="./declarations.d.ts" />
 import _ from 'lodash';
 import { OBSTACLE_OBJECT_TYPES } from './constants'; // Importa a constante
 

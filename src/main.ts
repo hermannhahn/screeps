@@ -1,3 +1,4 @@
+/// <reference path="./declarations.d.ts" />
 import _ from 'lodash';
 import roleHarvester from './role.harvester';
 import roleUpgrader from './role.upgrader';
