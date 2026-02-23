@@ -1,17 +1,134 @@
-/// <reference path="./declarations.d.ts" />
 import _ from 'lodash';
 import roleHarvester from './role.harvester';
 import roleUpgrader from './role.upgrader';
 import roleSupplier from './role.supplier';
 import roleBuilder from './role.builder';
-import roleGuard from './role.guard'; // Novo
-import roleArcher from './role.archer'; // Novo
-import roleRepairer from './role.repairer'; // Novo
+import roleGuard from './role.guard';
+import roleArcher from './role.archer';
+import roleRepairer from './role.repairer';
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
-import { managerTower } from './manager.tower'; // Add this line
-import Watcher from './watch-client'; // Change to default import
-import './prototypes'; // Importa os protótipos
+import { managerTower } from './manager.tower';
+import Watcher from './watch-client';
+
+declare global {
+    interface RoomMemory {
+        travelTimes?: { [key: string]: number };
+        primaryHostileTargetId?: Id<Creep> | null;
+        blueprintStage?: number;
+        maxBlueprintStageCompleted: number;
+        currentBlueprintStage: number;
+    }
+    interface CreepMemory {
+        role: string;
+        sourceId?: Id<Source>;
+        targetEnergyId?: Id<any>;
+        deliveryTargetId?: Id<any>;
+        assignedSupplier?: Id<Creep>;
+        upgrading?: boolean;
+        building?: boolean;
+        state?: string;
+        repairing?: boolean;
+    }
+    interface RoomPosition {
+        isWalkable(creepLooking?: Creep): boolean;
+        getAdjacentPositions(): RoomPosition[];
+        hasCreep(): boolean;
+        findAdjacentWalkableSpot(): RoomPosition | null;
+    }
+    interface Memory {
+        uuid: number;
+        log: any;
+        primaryHostileTargetId?: Id<Creep> | null;
+    }
+}
+
+const OBSTACLE_OBJECT_TYPES: string[] = [
+    STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_WALL,
+    STRUCTURE_RAMPART, STRUCTURE_KEEPER_LAIR, STRUCTURE_PORTAL, STRUCTURE_CONTROLLER,
+    STRUCTURE_LINK, STRUCTURE_STORAGE, STRUCTURE_TOWER, STRUCTURE_OBSERVER,
+    STRUCTURE_POWER_SPAWN, STRUCTURE_EXTRACTOR, STRUCTURE_LAB, STRUCTURE_TERMINAL,
+    STRUCTURE_NUKER, STRUCTURE_FACTORY, STRUCTURE_POWER_BANK
+];
+
+RoomPosition.prototype.isWalkable = function(creepLooking?: Creep): boolean {
+    const terrain = this.lookFor(LOOK_TERRAIN)[0];
+    if (terrain === 'wall') return false;
+
+    const structures = this.lookFor(LOOK_STRUCTURES);
+    if (_.some(structures, (s) => OBSTACLE_OBJECT_TYPES.includes(s.structureType) && (!('my' in s) || !(s as OwnedStructure).my))) {
+        return false;
+    }
+
+    const constructionSites = this.lookFor(LOOK_CONSTRUCTION_SITES);
+    if (_.some(constructionSites, (cs) => OBSTACLE_OBJECT_TYPES.includes(cs.structureType) && (!('my' in cs) || !(cs as any).my))) {
+        return false;
+    }
+    
+    const creeps = this.lookFor(LOOK_CREEPS);
+    if (creeps.length > 0 && (!creepLooking || creeps[0].id !== creepLooking.id)) { 
+        return false;
+    }
+
+    return true;
+};
+
+RoomPosition.prototype.getAdjacentPositions = function(): RoomPosition[] {
+    const positions: RoomPosition[] = [];
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const x = this.x + dx;
+            const y = this.y + dy;
+            if (x >= 0 && x <= 49 && y >= 0 && y <= 49) {
+                positions.push(new RoomPosition(x, y, this.roomName));
+            }
+        }
+    }
+    return positions;
+};
+
+RoomPosition.prototype.hasCreep = function(): boolean {
+    return this.lookFor(LOOK_CREEPS).length > 0;
+};
+
+// Helper function to find an adjacent walkable spot for a given RoomPosition
+RoomPosition.prototype.findAdjacentWalkableSpot = function(this: RoomPosition): RoomPosition | null {
+    const room = Game.rooms[this.roomName];
+    if (!room) return null;
+
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue; // Skip the center position
+
+            const x = this.x + dx;
+            const y = this.y + dy;
+
+            // Check if within room bounds
+            if (x < 0 || x > 49 || y < 0 || y > 49) continue;
+
+            const pos = new RoomPosition(x, y, this.roomName);
+
+            // Check if terrain is walkable
+            if (room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) continue;
+
+            // Check for existing structures that block movement/construction
+            const structures = pos.lookFor(LOOK_STRUCTURES);
+            if (_.some(structures, (s) => OBSTACLE_OBJECT_TYPES.includes(s.structureType))) {
+                continue;
+            }
+
+            // Check for existing construction sites that block movement/construction
+            const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+            if (_.some(constructionSites, (cs) => OBSTACLE_OBJECT_TYPES.includes(cs.structureType))) {
+                continue;
+            }
+
+            return pos; // Found a walkable and empty spot
+        }
+    }
+    return null; // No walkable spot found
+};
 
 // Helper function to display creep counts
 function displayCreepCounts(room: Room) {
@@ -22,9 +139,9 @@ function displayCreepCounts(room: Room) {
     const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === room.name);
     const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === room.name);
     const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === room.name);
-    const guards = _.filter(Game.creeps, (c) => c.memory.role === 'guard' && c.room.name === room.name); // Novo
-    const archers = _.filter(Game.creeps, (c) => c.memory.role === 'archer' && c.room.name === room.name); // Novo
-    const repairers = _.filter(Game.creeps, (c) => c.memory.role === 'repairer' && c.room.name === room.name); // Novo
+    const guards = _.filter(Game.creeps, (c) => c.memory.role === 'guard' && c.room.name === room.name);
+    const archers = _.filter(Game.creeps, (c) => c.memory.role === 'archer' && c.room.name === room.name);
+    const repairers = _.filter(Game.creeps, (c) => c.memory.role === 'repairer' && c.room.name === room.name);
 
     // Calculate targets (similar to manager.spawner.ts)
     const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
@@ -32,14 +149,14 @@ function displayCreepCounts(room: Room) {
     const targetSuppliers = sources.length;
     const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
     const targetBuilders = 1;
-    const hostileCreepsInRoom = room.find(FIND_HOSTILE_CREEPS); // Reutilizar aqui para o display
+    const hostileCreepsInRoom = room.find(FIND_HOSTILE_CREEPS);
     const damagedStructures = room.find(FIND_MY_STRUCTURES, {
         filter: (s) => s.hits < s.hitsMax
     });
     const isUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
-    const targetGuards = isUnderAttack ? 1 : 0; // Novo
-    const targetArchers = isUnderAttack ? 2 : 0; // Novo
-    const targetRepairers = (damagedStructures.length > 5 && rcl >= 3) ? 1 : 0; // Novo
+    const targetGuards = isUnderAttack ? 1 : 0;
+    const targetArchers = isUnderAttack ? 2 : 0;
+    const targetRepairers = (damagedStructures.length > 5 && rcl >= 3) ? 1 : 0;
 
     const lineOffset = 0.9;
     let y = 0.5; // Starting Y position
@@ -51,12 +168,12 @@ function displayCreepCounts(room: Room) {
     room.visual.text(`Upgraders: ${upgraders.length}/${targetUpgraders}`, 49, y, { align: "right", opacity: 0.8 });
     y += lineOffset;
     room.visual.text(`Builders: ${builders.length}/${targetBuilders}`, 49, y, { align: "right", opacity: 0.8 });
-    y += lineOffset; // Novo
-    room.visual.text(`Guards: ${guards.length}/${targetGuards}`, 49, y, { align: "right", opacity: 0.8 }); // Novo
-    y += lineOffset; // Novo
-    room.visual.text(`Archers: ${archers.length}/${targetArchers}`, 49, y, { align: "right", opacity: 0.8 }); // Novo
-    y += lineOffset; // Novo
-    room.visual.text(`Repairers: ${repairers.length}/${targetRepairers}`, 49, y, { align: "right", opacity: 0.8 }); // Novo
+    y += lineOffset;
+    room.visual.text(`Guards: ${guards.length}/${targetGuards}`, 49, y, { align: "right", opacity: 0.8 });
+    y += lineOffset;
+    room.visual.text(`Archers: ${archers.length}/${targetArchers}`, 49, y, { align: "right", opacity: 0.8 });
+    y += lineOffset;
+    room.visual.text(`Repairers: ${repairers.length}/${targetRepairers}`, 49, y, { align: "right", opacity: 0.8 });
 }
 
 
@@ -97,8 +214,8 @@ export const loop = () => {
         if (creep.memory.role === 'upgrader') roleUpgrader.run(creep);
         if (creep.memory.role === 'supplier') roleSupplier.run(creep);
         if (creep.memory.role === 'builder') roleBuilder.run(creep);
-        if (creep.memory.role === 'guard') roleGuard.run(creep); // Novo
-        if (creep.memory.role === 'archer') roleArcher.run(creep); // Novo
-        if (creep.memory.role === 'repairer') roleRepairer.run(creep); // Novo
+        if (creep.memory.role === 'guard') roleGuard.run(creep);
+        if (creep.memory.role === 'archer') roleArcher.run(creep);
+        if (creep.memory.role === 'repairer') roleRepairer.run(creep);
     }
 };
