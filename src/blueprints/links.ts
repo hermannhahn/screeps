@@ -17,7 +17,7 @@ const linksBlueprint: Blueprint = {
             filter: (cs) => cs.structureType === STRUCTURE_LINK
         });
 
-        const totalLinksPlanned = existingLinks.length + existingLinkCS.length;
+        let totalLinksPlanned = existingLinks.length + existingLinkCS.length;
         const maxLinks = CONTROLLER_STRUCTURES[STRUCTURE_LINK][room.controller.level]; // Max links para o RCL 5
 
         if (totalLinksPlanned >= maxLinks) {

@@ -11,115 +11,6 @@ import managerSpawner from './manager.spawner';
 import { managerTower } from './manager.tower'; // Add this line
 import Watcher from './watch-client'; // Change to default import
 
-declare global {
-    interface RoomMemory {
-        travelTimes?: { [key: string]: number };
-    }
-    interface CreepMemory {
-        role: string;
-        sourceId?: Id<Source>;
-        targetEnergyId?: Id<any>;
-        deliveryTargetId?: Id<any>;
-        assignedSupplier?: Id<Creep>;
-        upgrading?: boolean;
-        building?: boolean;
-        state?: string;
-        repairing?: boolean; // Novo
-    }
-    interface RoomPosition {
-        isWalkable(creepLooking?: Creep): boolean;
-        getAdjacentPositions(): RoomPosition[];
-        hasCreep(): boolean;
-    }
-}
-
-const OBSTACLE_OBJECT_TYPES: string[] = [
-    STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_WALL,
-    STRUCTURE_RAMPART, STRUCTURE_KEEPER_LAIR, STRUCTURE_PORTAL, STRUCTURE_CONTROLLER,
-    STRUCTURE_LINK, STRUCTURE_STORAGE, STRUCTURE_TOWER, STRUCTURE_OBSERVER,
-    STRUCTURE_POWER_SPAWN, STRUCTURE_EXTRACTOR, STRUCTURE_LAB, STRUCTURE_TERMINAL,
-    STRUCTURE_NUKER, STRUCTURE_FACTORY, STRUCTURE_POWER_BANK
-];
-
-RoomPosition.prototype.isWalkable = function(creepLooking?: Creep): boolean {
-    const terrain = this.lookFor(LOOK_TERRAIN)[0];
-    if (terrain === 'wall') return false;
-
-    const structures = this.lookFor(LOOK_STRUCTURES);
-    if (_.some(structures, (s) => OBSTACLE_OBJECT_TYPES.includes(s.structureType) && (!('my' in s) || !(s as OwnedStructure).my))) {
-        return false;
-    }
-
-    const constructionSites = this.lookFor(LOOK_CONSTRUCTION_SITES);
-    if (_.some(constructionSites, (cs) => OBSTACLE_OBJECT_TYPES.includes(cs.structureType) && (!('my' in cs) || !(cs as any).my))) {
-        return false;
-    }
-    
-    const creeps = this.lookFor(LOOK_CREEPS);
-    if (creeps.length > 0 && (!creepLooking || creeps[0].id !== creepLooking.id)) { 
-        return false;
-    }
-
-    return true;
-};
-
-RoomPosition.prototype.getAdjacentPositions = function(): RoomPosition[] {
-    const positions: RoomPosition[] = [];
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const x = this.x + dx;
-            const y = this.y + dy;
-            if (x >= 0 && x <= 49 && y >= 0 && y <= 49) {
-                positions.push(new RoomPosition(x, y, this.roomName));
-            }
-        }
-    }
-    return positions;
-};
-
-RoomPosition.prototype.hasCreep = function(): boolean {
-    return this.lookFor(LOOK_CREEPS).length > 0;
-};
-
-// Helper function to find an adjacent walkable spot for a given RoomPosition
-RoomPosition.prototype.findAdjacentWalkableSpot = function(this: RoomPosition): RoomPosition | null {
-    const room = Game.rooms[this.roomName];
-    if (!room) return null;
-
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue; // Skip the center position
-
-            const x = this.x + dx;
-            const y = this.y + dy;
-
-            // Check if within room bounds
-            if (x < 0 || x > 49 || y < 0 || y > 49) continue;
-
-            const pos = new RoomPosition(x, y, this.roomName);
-
-            // Check if terrain is walkable
-            if (room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) continue;
-
-            // Check for existing structures that block movement/construction
-            const structures = pos.lookFor(LOOK_STRUCTURES);
-            // OBSTACLE_OBJECT_TYPES é usado aqui
-            if (_.some(structures, (s) => OBSTACLE_OBJECT_TYPES.includes(s.structureType))) {
-                continue;
-            }
-
-            // Check for existing construction sites that block movement/construction
-            const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-            if (_.some(constructionSites, (cs) => OBSTACLE_OBJECT_TYPES.includes(cs.structureType))) {
-                continue;
-            }
-
-            return pos; // Found a walkable and empty spot
-        }
-    }
-    return null; // No walkable spot found
-};
 
 // Helper function to display creep counts
 function displayCreepCounts(room: Room) {
@@ -166,3 +57,47 @@ function displayCreepCounts(room: Room) {
     y += lineOffset; // Novo
     room.visual.text(`Repairers: ${repairers.length}/${targetRepairers}`, 49, y, { align: "right", opacity: 0.8 }); // Novo
 }
+
+
+export const loop = () => {
+    Watcher();
+
+    for (const name in Memory.creeps) {
+        if (!Game.creeps[name]) delete Memory.creeps[name];
+    }
+
+    for (const roomName in Game.rooms) {
+        const room = Game.rooms[roomName];
+        managerPlanner.run(room);
+        const spawn = room.find(FIND_MY_SPAWNS)[0];
+        if (!spawn) continue;
+        managerSpawner.run(room, spawn);
+
+        displayCreepCounts(room);
+
+        const sources = room.find(FIND_SOURCES);
+        const energyAvailable = room.energyAvailable;
+        const energyCapacity = room.energyCapacityAvailable;
+        const harvesters = _.filter(Game.creeps, (c) => c.memory.role === 'harvester' && c.room.name === roomName);
+        const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === roomName);
+        const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === roomName);
+        const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === room.name);
+        const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
+        const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
+        const rcl = room.controller?.level || 1;
+
+        // Run Tower Manager
+        managerTower.run(room);
+    }
+
+    for (const name in Game.creeps) {
+        const creep = Game.creeps[name];
+        if (creep.memory.role === 'harvester') roleHarvester.run(creep);
+        if (creep.memory.role === 'upgrader') roleUpgrader.run(creep);
+        if (creep.memory.role === 'supplier') roleSupplier.run(creep);
+        if (creep.memory.role === 'builder') roleBuilder.run(creep);
+        if (creep.memory.role === 'guard') roleGuard.run(creep); // Novo
+        if (creep.memory.role === 'archer') roleArcher.run(creep); // Novo
+        if (creep.memory.role === 'repairer') roleRepairer.run(creep); // Novo
+    }
+};
