@@ -15,7 +15,7 @@ O código fonte reside na pasta `src/` e é compilado para a pasta `dist/`.
 
 ### Comandos Disponíveis
 
-- `npm run save`: O comando principal de desenvolvimento. Ele realiza as seguintes ações:
+- `npm run deploy`: O comando principal de desenvolvimento. Ele realiza as seguintes ações:
   1. Limpa a pasta `dist/`.
   2. Compila todos os arquivos `.ts` em um único `main.js` minificado.
   3. Incrementa o contador de deploy no arquivo `.deploy_count`.
@@ -56,7 +56,7 @@ Este arquivo é ignorado pelo Git por segurança.
 
 ### Comandos Disponíveis
 
-- `npm run save`: O comando principal de desenvolvimento. Ele realiza as seguintes ações:
+- `npm run deploy`: O comando principal de desenvolvimento. Ele realiza as seguintes ações:
   1. Limpa a pasta `dist/`.
   2. Compila todos os arquivos `.ts` em um único `main.js` minificado.
   3. Incrementa o contador de deploy no arquivo `.deploy_count`.
@@ -157,7 +157,7 @@ b. **Integrar no `main.ts`:**
      ```
 
 c. **Deploy das Alterações:**
-   Após estas alterações, você deve fazer commit (`git add`, `git commit`), push (`git push`) e deploy (`npm run save`) para que o código atualizado vá para o seu servidor Screeps.
+   Após estas alterações, você deve fazer commit (`git add`, `git commit`), push (`git push`) e deploy (`npm run deploy`) para que o código atualizado vá para o seu servidor Screeps.
 
 ### 4. Uso do Console e Comandos `/watch`
 
@@ -256,4 +256,4 @@ Executa a cada 100 ticks. Suspende se houver hostis e defesa pronta.
 ```
 
 ---
-*Nota: Para utilizar este script, configure o seu cliente Steam para ler o arquivo `dist/main.js` ou utilize o comando `npm run save` para enviar as mudanças para o seu repositório sincronizado com o jogo.*
+*Nota: Para utilizar este script, configure o seu cliente Steam para ler o arquivo `dist/main.js` ou utilize o comando `npm run deploy` para enviar as mudanças para o seu repositório sincronizado com o jogo.*

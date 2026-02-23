@@ -20,8 +20,8 @@ Script de automação para o jogo de estratégia MMO **Screeps**. O código é f
 - `dist/main.js`: Arquivo final gerado pelo Webpack para deploy.
 
 ## 🛠️ Comandos e Operações
-- **Workflow de Alteração:** Sempre que fizer uma alteração no código, você deve primeiro realizar um `git commit` (com mensagem descritiva) e um `git push`. Somente após isso, execute o comando `npm run save` para o deploy.
-- **Deploy Automático:** Execute `npm run save`. Isso limpa a `dist/`, compila o código, incrementa o contador de deploy, envia para o GitHub e realiza o upload via `screeps-api` para o servidor privado.
+- **Workflow de Alteração:** Sempre que fizer uma alteração no código, você deve primeiro realizar um `git commit` (com mensagem descritiva) e um `git push`. Somente após isso, execute o comando `npm run deploy` para o deploy.
+- **Deploy Automático:** Execute `npm run deploy`. Isso limpa a `dist/`, compila o código, incrementa o contador de deploy, envia para o GitHub e realiza o upload via `screeps-api` para o servidor privado.
 - **Configuração do Deploy:** Credenciais do servidor privado ficam no arquivo `screeps.json` (baseado no `screeps.json.example`).
 - **Configuração de População:** As metas de população (`targetCount`) estão no `src/main.ts`.
 
