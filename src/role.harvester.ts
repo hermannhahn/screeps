@@ -120,7 +120,7 @@ const roleHarvester = {
             // Prioridade 1: Links (próximos à fonte)
             if (assignedSource) {
                 depositTarget = assignedSource.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                    filter: (s) => s.structureType === STRUCTURE_LINK && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                    filter: (s) => s.structureType === STRUCTURE_LINK && s.energy < s.energyCapacity
                 }) as StructureLink | null;
             }
             
