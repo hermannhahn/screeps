@@ -17,10 +17,18 @@ const taskCollectEnergy = {
         // Validate existing targetEnergyId
         if (creep.memory.targetEnergyId) {
             const target = Game.getObjectById(creep.memory.targetEnergyId as Id<any>);
-            if (!target || 
-                (target instanceof Resource && target.amount === 0) || 
-                (target instanceof Structure && (target as any).store && (target as any).store[RESOURCE_ENERGY] === 0)) {
+            if (!target) { // If target doesn't exist
                 delete creep.memory.targetEnergyId;
+            } else if (target instanceof Resource) { // If it's a dropped resource
+                if (target.amount === 0) {
+                    delete creep.memory.targetEnergyId;
+                }
+            } else if ('store' in target) { // If it's a structure with a store
+                if ((target as any).store[RESOURCE_ENERGY] === 0) {
+                    delete creep.memory.targetEnergyId;
+                }
+            } else { // It's an object that is not a Resource and does not have a store (e.g., a Source, Controller, or unknown structure type)
+                delete creep.memory.targetEnergyId; // Invalidate target if it's not a valid energy source
             }
         }
 
