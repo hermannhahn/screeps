@@ -54,7 +54,7 @@ const roleSupplier = {
                                     for (const source of sources) {
                                         const sourceContainer = findSourceContainer(source);
                                         // Ensure it's a built container and has energy
-                                                            if (sourceContainer && (sourceContainer.structureType === STRUCTURE_CONTAINER) ) { // Only proceed if it's a built container
+                                                            if (sourceContainer && sourceContainer.structureType === STRUCTURE_CONTAINER && ('store' in sourceContainer) ) { // Check if it's a built container WITH a store
                                                                 const builtContainer = sourceContainer as StructureContainer;
                                                                 if (builtContainer.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity()) {
                                                                     if (!targetedByOthers.includes(builtContainer.id) || builtContainer.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4) {
