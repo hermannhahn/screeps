@@ -9,14 +9,26 @@ const roleSupplier = {
                     let targetEnergy: any = null;
                     if (creep.memory.targetEnergyId) {
                         const storedTarget = Game.getObjectById(creep.memory.targetEnergyId as Id<any>);
-                        if (storedTarget &&
-                            ((storedTarget.resourceType === RESOURCE_ENERGY && (storedTarget.amount > 0)) ||
-                                (storedTarget.store && storedTarget.store.getUsedCapacity(RESOURCE_ENERGY) > 0))) {
-                            targetEnergy = storedTarget;
-                        } else {
-                            delete creep.memory.targetEnergyId;
-                        }
-                    }
+                                            if (storedTarget) {
+                                                let isValidTarget = false;
+                                                if ('resourceType' in storedTarget && storedTarget.resourceType === RESOURCE_ENERGY) { // Check if it's a dropped resource
+                                                    if (storedTarget.amount > 0) {
+                                                        isValidTarget = true;
+                                                    }
+                                                } else if ('store' in storedTarget) { // Check if it's a structure with a store
+                                                    if (storedTarget.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+                                                        isValidTarget = true;
+                                                    }
+                                                }
+                        
+                                                if (isValidTarget) {
+                                                    targetEnergy = storedTarget;
+                                                } else {
+                                                    delete creep.memory.targetEnergyId;
+                                                }
+                                            } else { // storedTarget is null or undefined
+                                                delete creep.memory.targetEnergyId;
+                                            }                    }
         
                                 const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
                                     if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetEnergyId) {
