@@ -14,30 +14,29 @@ const sourceContainersBlueprint: Blueprint = {
                 continue; // Skip this source if a container already exists or is planned
             }
 
-            // Find a suitable position for the container 2 blocks away from the source
+            // Find a suitable position for the container 1 block away from the source
             // Prefer positions that are not walls or existing structures
             let foundPos: RoomPosition | null = null;
-            for (let dx = -2; dx <= 2; dx++) {
-                for (let dy = -2; dy <= 2; dy++) {
-                    if (Math.abs(dx) === 2 || Math.abs(dy) === 2) { // Exactly 2 blocks away
-                        const x = source.pos.x + dx;
-                        const y = source.pos.y + dy;
+            for (let dx = -1; dx <= 1; dx++) { // Alterado para -1 a 1
+                for (let dy = -1; dy <= 1; dy++) { // Alterado para -1 a 1
+                    if (dx === 0 && dy === 0) continue; // Não pode ser a própria fonte
+                    const x = source.pos.x + dx;
+                    const y = source.pos.y + dy;
 
-                        if (x < 0 || x > 49 || y < 0 || y > 49) continue;
-                        const pos = new RoomPosition(x, y, room.name);
+                    if (x < 0 || x > 49 || y < 0 || y > 49) continue;
+                    const pos = new RoomPosition(x, y, room.name);
 
-                        const terrain = room.getTerrain().get(x, y);
-                        if (terrain === TERRAIN_MASK_WALL) continue;
+                    const terrain = room.getTerrain().get(x, y);
+                    if (terrain === TERRAIN_MASK_WALL) continue;
 
-                        // Check if position is occupied by another structure or construction site
-                        const structures = pos.lookFor(LOOK_STRUCTURES);
-                        if (structures.length > 0) continue;
-                        const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-                        if (constructionSites.length > 0) continue;
+                    // Check if position is occupied by another structure or construction site
+                    const structures = pos.lookFor(LOOK_STRUCTURES);
+                    if (structures.length > 0) continue;
+                    const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+                    if (constructionSites.length > 0) continue;
 
-                        foundPos = pos;
-                        break;
-                    }
+                    foundPos = pos;
+                    break;
                 }
                 if (foundPos) break;
             }
