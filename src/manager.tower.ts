@@ -12,7 +12,12 @@ export const managerTower = {
                 tower.attack(closestHostile);
             } else {
                 const damagedStructures = room.find(FIND_STRUCTURES, {
-                    filter: (structure) => structure.hits < structure.hitsMax / 2 && structure.hits < structure.hitsMax
+                    filter: (structure) => {
+                        if (structure.structureType === STRUCTURE_WALL || structure.structureType === STRUCTURE_RAMPART) {
+                            return structure.hits < 10000; // Repara Walls e Ramparts até 10.000 hits
+                        }
+                        return structure.hits < structure.hitsMax * 0.9; // Repara outras estruturas até 90% da vida máxima
+                    }
                 });
 
                 if (damagedStructures.length > 0) {
