@@ -8,7 +8,8 @@ import sourceContainersBlueprint from './blueprints/sourceContainers';
 import firstTowerBlueprint from './blueprints/firstTower';
 import storageBlueprint from './blueprints/storage'; // Novo import
 import secondTowerBlueprint from './blueprints/secondTower';
-import rampartsWallsBlueprint from './blueprints/rampartsWalls'; // Novo import
+import rampartsWallsBlueprint from './blueprints/rampartsWalls';
+import linksBlueprint from './blueprints/links'; // Novo import
 
 const managerPlanner = {
     run: function(room: Room) {
@@ -43,6 +44,7 @@ const managerPlanner = {
             storageBlueprint,       // Adicionado aqui
             secondTowerBlueprint,
             rampartsWallsBlueprint,
+            linksBlueprint, // Nova blueprint adicionada
         ];
         const MAX_BLUEPRINT_STAGES = BLUEPRINTS_ORDER.length;
 

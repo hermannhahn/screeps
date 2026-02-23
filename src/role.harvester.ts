@@ -1,7 +1,6 @@
 import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
-import { findSourceContainer } from './blueprints/utils'; // Corrected import
 
 // Helper function to check if a source is safe from hostile structures and creeps
 function isSourceSafe(source: Source, hostileStructures: Structure[], hostileCreeps: Creep[]): boolean {
@@ -114,56 +113,44 @@ const roleHarvester = {
                     }
                 }
             }
-        } else {
-            // Get the source the harvester is assigned to
+        } else { // Creep está cheio de energia, depositar
             const assignedSource = Game.getObjectById(creep.memory.sourceId as Id<Source>);
-            let target: StructureContainer | ConstructionSite | null = null;
+            let depositTarget: StructureLink | StructureContainer | StructureStorage | StructureSpawn | StructureExtension | null = null;
 
+            // Prioridade 1: Links (próximos à fonte)
             if (assignedSource) {
-                // Try to find a container (or CS) near the assigned source
-                target = findSourceContainer(assignedSource);
+                depositTarget = assignedSource.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+                    filter: (s) => s.structureType === STRUCTURE_LINK && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                }) as StructureLink | null;
+            }
+            
+            // Prioridade 2: Containers (próximos à fonte)
+            if (!depositTarget && assignedSource) {
+                depositTarget = assignedSource.pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                }) as StructureContainer | null;
             }
 
-            if (target) {
-                let transferResult;
-                if ((target as StructureContainer).structureType === STRUCTURE_CONTAINER) {
-                    transferResult = creep.transfer(target as StructureContainer, RESOURCE_ENERGY);
-                } else { // It's a ConstructionSite
-                    transferResult = creep.build(target as ConstructionSite);
-                }
-                
-                if (transferResult === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
-                } else if (transferResult === OK) {
-                    // Successfully transferred/built, do nothing
-                } else {
-                    // Handle other errors or fall through to dropping if issues
-                    creep.drop(RESOURCE_ENERGY);
+            // Prioridade 3: Storage
+            if (!depositTarget && creep.room.storage && creep.room.storage.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                depositTarget = creep.room.storage;
+            }
+
+            // Prioridade 4: Spawn/Extensions (se precisarem de energia e não houver storage)
+            if (!depositTarget) {
+                depositTarget = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+                    filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                }) as (StructureSpawn | StructureExtension) | null;
+            }
+
+
+            if (depositTarget) {
+                if (creep.transfer(depositTarget, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(depositTarget, { visualizePathStyle: { stroke: '#ffffff' } });
                 }
             } else {
-                // No source container found or available, check for suppliers for dropping
-                const suppliers = creep.room.find(FIND_MY_CREEPS, {
-                    filter: (c) => c.memory.role === 'supplier'
-                });
-
-                if (suppliers.length > 0) {
-                    creep.drop(RESOURCE_ENERGY);
-                } else {
-                    // If no source container and no suppliers, default to filling spawns if necessary
-                    const spawnTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                        filter: (s) => s.structureType === STRUCTURE_SPAWN &&
-                            s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-                    });
-                    if (spawnTarget) {
-                        const transferResult = creep.transfer(spawnTarget, RESOURCE_ENERGY);
-                        if (transferResult === ERR_NOT_IN_RANGE) {
-                            creep.moveTo(spawnTarget, { visualizePathStyle: { stroke: '#ffffff' } });
-                        }
-                    } else {
-                        // If nothing else, drop energy
-                        creep.drop(RESOURCE_ENERGY);
-                    }
-                }
+                // Se não há lugar para depositar, dropa a energia
+                creep.drop(RESOURCE_ENERGY);
             }
         }
     }
