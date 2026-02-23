@@ -113,43 +113,31 @@ const roleHarvester = {
                     }
                 }
             }
-        } else { // Creep está cheio de energia, depositar
+        } else { // Creep está cheio de energia, depositar ou dropar
             const assignedSource = Game.getObjectById(creep.memory.sourceId as Id<Source>);
-            let depositTarget: StructureLink | StructureContainer | StructureStorage | StructureSpawn | StructureExtension | null = null;
+            let depositTarget: StructureContainer | null = null; // Only containers are allowed now
 
-            // Prioridade 1: Links (próximos à fonte)
+            // Prioridade: Containers (próximos à fonte, até 3 tiles)
             if (assignedSource) {
-                depositTarget = assignedSource.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                    filter: (s) => s.structureType === STRUCTURE_LINK && s.energy < s.energyCapacity
-                }) as StructureLink | null;
-            }
-            
-            // Prioridade 2: Containers (próximos à fonte)
-            if (!depositTarget && assignedSource) {
-                depositTarget = assignedSource.pos.findClosestByRange(FIND_STRUCTURES, {
+                const containersInRange = assignedSource.pos.findInRange(FIND_STRUCTURES, 3, { // Search within 3 tiles
                     filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-                }) as StructureContainer | null;
-            }
+                }) as StructureContainer[];
 
-            // Prioridade 3: Storage
-            if (!depositTarget && creep.room.storage && creep.room.storage.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
-                depositTarget = creep.room.storage;
+                if (containersInRange.length > 0) {
+                    // Sort by distance to creep, then by remaining capacity (prefer less full)
+                    depositTarget = containersInRange.sort((a, b) => 
+                        creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b) ||
+                        a.store.getFreeCapacity(RESOURCE_ENERGY) - b.store.getFreeCapacity(RESOURCE_ENERGY)
+                    )[0];
+                }
             }
-
-            // Prioridade 4: Spawn/Extensions (se precisarem de energia e não houver storage)
-            if (!depositTarget) {
-                depositTarget = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                    filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-                }) as (StructureSpawn | StructureExtension) | null;
-            }
-
 
             if (depositTarget) {
                 if (creep.transfer(depositTarget, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(depositTarget, { visualizePathStyle: { stroke: '#ffffff' } });
                 }
             } else {
-                // Se não há lugar para depositar, dropa a energia
+                // Se não há container próximo à fonte, dropar a energia
                 creep.drop(RESOURCE_ENERGY);
             }
         }
