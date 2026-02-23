@@ -179,6 +179,64 @@ function getSupplierBody(energyLimit: number): BodyPartConstant[] {
     return parts;
 }
 
+function getGuardBody(energyLimit: number): BodyPartConstant[] {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // Base: 1 TOUGH, 1 ATTACK, 2 MOVE (para garantir mobilidade inicial e ataque)
+    const basicCreepCost = BODYPART_COST[TOUGH] + BODYPART_COST[ATTACK] + (BODYPART_COST[MOVE] * 2);
+    if (energyLimit < basicCreepCost) {
+        return [];
+    }
+    parts.push(TOUGH, ATTACK, MOVE, MOVE);
+    currentCost += basicCreepCost;
+
+    // Adicionar mais TOUGH e MOVE (2 TOUGH para 1 MOVE) para aumentar a resistência e manter a mobilidade
+    const toughMovePairCost = (BODYPART_COST[TOUGH] * 2) + BODYPART_COST[MOVE];
+    const maxToughMovePairs = 8; // Limite para evitar creeps gigantescos
+    let toughMovePairs = 0;
+    while (currentCost + toughMovePairCost <= energyLimit && toughMovePairs < maxToughMovePairs && parts.length < 48) {
+        parts.push(TOUGH, TOUGH, MOVE);
+        currentCost += toughMovePairCost;
+        toughMovePairs++;
+    }
+
+    // Se ainda houver energia, adicionar mais ATTACK
+    const maxAttackParts = 10;
+    while (currentCost + BODYPART_COST[ATTACK] <= energyLimit && parts.filter(p => p === ATTACK).length < maxAttackParts && parts.length < 48) {
+        parts.push(ATTACK);
+        currentCost += BODYPART_COST[ATTACK];
+    }
+    
+    return parts;
+}
+
+function getArcherBody(energyLimit: number): BodyPartConstant[] {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // Base: 1 RANGED_ATTACK, 1 MOVE
+    const basicCreepCost = BODYPART_COST[RANGED_ATTACK] + BODYPART_COST[MOVE];
+    if (energyLimit < basicCreepCost) {
+        return [];
+    }
+    parts.push(RANGED_ATTACK, MOVE);
+    currentCost += basicCreepCost;
+
+    // Adicionar RANGED_ATTACK e MOVE em pares 1:1
+    const rangedMovePairCost = BODYPART_COST[RANGED_ATTACK] + BODYPART_COST[MOVE];
+    const maxRangedMovePairs = 15; // Limite para evitar creeps gigantescos
+    let rangedMovePairs = 0;
+    while (currentCost + rangedMovePairCost <= energyLimit && rangedMovePairs < maxRangedMovePairs && parts.length < 48) {
+        parts.push(RANGED_ATTACK, MOVE);
+        currentCost += rangedMovePairCost;
+        rangedMovePairs++;
+    }
+
+    return parts;
+}
+
+
 // Helper function to check if a source is safe from hostile structures
 function isSourceSafe(source: Source, hostileStructures: Structure[], hostileCreeps: Creep[]): boolean {
     const range = 10; // User specified range
@@ -215,7 +273,10 @@ const managerSpawner = {
         const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === room.name);
         const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === room.name);
         const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === room.name);
-        // Reusing the already defined hostileCreepsInRoom variable
+        // Novos contadores para as roles de defesa
+        const guards = _.filter(Game.creeps, (c) => c.memory.role === 'guard' && c.room.name === room.name);
+        const archers = _.filter(Game.creeps, (c) => c.memory.role === 'archer' && c.room.name === room.name);
+        
         const damagedStructures = room.find(FIND_MY_STRUCTURES, {
             filter: (s) => s.hits < s.hitsMax
         });
@@ -239,7 +300,25 @@ const managerSpawner = {
             }
         }
         
-        // Priority 2: Suppliers (Critical for energy distribution)
+        // Priority 2: Defense (If under attack)
+        const targetGuards = isUnderAttack ? 1 : 0; // 1 Guard se estiver sob ataque
+        const targetArchers = isUnderAttack ? 2 : 0; // 2 Archers se estiver sob ataque
+
+        if (guards.length < targetGuards) {
+            const body = getGuardBody(energyCapacity);
+            if (body.length > 0 && spawn.spawnCreep(body, 'Guard' + Game.time, { memory: { role: 'guard' } }) === OK) {
+                return;
+            }
+        }
+
+        if (archers.length < targetArchers) {
+            const body = getArcherBody(energyCapacity);
+            if (body.length > 0 && spawn.spawnCreep(body, 'Archer' + Game.time, { memory: { role: 'archer' } }) === OK) {
+                return;
+            }
+        }
+        
+        // Priority 3: Suppliers (Critical for energy distribution)
         if (suppliers.length < sources.length) {
             const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } }) === OK) {
@@ -247,7 +326,7 @@ const managerSpawner = {
             }
         }
         
-        // Priority 3: Upgraders
+        // Priority 4: Upgraders
         const targetUpgraders = 1; // Always 1 upgrader, as per user request
         if (upgraders.length < targetUpgraders) {
             const body = upgraders.length === 0 ? getUpgraderBody(energyAvailable) : getUpgraderBody(energyCapacity);
@@ -256,7 +335,7 @@ const managerSpawner = {
             }
         }
 
-        // Priority 4: Builders
+        // Priority 5: Builders
         if (builders.length < 1) { // Builders target is 1
             const body = builders.length === 0 ? getBuilderBody(energyAvailable) : getBuilderBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Builder' + Game.time, { memory: { role: 'builder' } }) === OK) {

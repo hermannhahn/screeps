@@ -3,6 +3,8 @@ import roleHarvester from './role.harvester';
 import roleUpgrader from './role.upgrader';
 import roleSupplier from './role.supplier';
 import roleBuilder from './role.builder';
+import roleGuard from './role.guard'; // Novo
+import roleArcher from './role.archer'; // Novo
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
 import { managerTower } from './manager.tower'; // Add this line
@@ -87,6 +89,8 @@ function displayCreepCounts(room: Room) {
     const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === room.name);
     const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === room.name);
     const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === room.name);
+    const guards = _.filter(Game.creeps, (c) => c.memory.role === 'guard' && c.room.name === room.name); // Novo
+    const archers = _.filter(Game.creeps, (c) => c.memory.role === 'archer' && c.room.name === room.name); // Novo
 
     // Calculate targets (similar to manager.spawner.ts)
     const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
@@ -94,6 +98,13 @@ function displayCreepCounts(room: Room) {
     const targetSuppliers = sources.length;
     const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
     const targetBuilders = 1;
+    const hostileCreepsInRoom = room.find(FIND_HOSTILE_CREEPS); // Reutilizar aqui para o display
+    const damagedStructures = room.find(FIND_MY_STRUCTURES, {
+        filter: (s) => s.hits < s.hitsMax
+    });
+    const isUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
+    const targetGuards = isUnderAttack ? 1 : 0; // Novo
+    const targetArchers = isUnderAttack ? 2 : 0; // Novo
 
     const lineOffset = 0.9;
     let y = 0.5; // Starting Y position
@@ -105,6 +116,10 @@ function displayCreepCounts(room: Room) {
     room.visual.text(`Upgraders: ${upgraders.length}/${targetUpgraders}`, 49, y, { align: "right", opacity: 0.8 });
     y += lineOffset;
     room.visual.text(`Builders: ${builders.length}/${targetBuilders}`, 49, y, { align: "right", opacity: 0.8 });
+    y += lineOffset; // Novo
+    room.visual.text(`Guards: ${guards.length}/${targetGuards}`, 49, y, { align: "right", opacity: 0.8 }); // Novo
+    y += lineOffset; // Novo
+    room.visual.text(`Archers: ${archers.length}/${targetArchers}`, 49, y, { align: "right", opacity: 0.8 }); // Novo
 }
 
 
@@ -133,7 +148,6 @@ export const loop = () => {
         const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === roomName);
         const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
         const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
-        const isUnderAttack = hostileCreeps.length > 0 && extensions.length >= 5;
         const rcl = room.controller?.level || 1;
 
         // Run Tower Manager
@@ -146,5 +160,7 @@ export const loop = () => {
         if (creep.memory.role === 'upgrader') roleUpgrader.run(creep);
         if (creep.memory.role === 'supplier') roleSupplier.run(creep);
         if (creep.memory.role === 'builder') roleBuilder.run(creep);
+        if (creep.memory.role === 'guard') roleGuard.run(creep); // Novo
+        if (creep.memory.role === 'archer') roleArcher.run(creep); // Novo
     }
 };
