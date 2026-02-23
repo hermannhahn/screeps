@@ -6,6 +6,7 @@ import roleBuilder from './role.builder';
 import roleDefender from './role.defender';
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
+import { managerTower } from './manager.tower'; // Add this line
 
 declare global {
     interface RoomMemory {
@@ -141,6 +142,8 @@ export const loop = () => {
         const isUnderAttack = hostileCreeps.length > 0 && extensions.length >= 5;
         const rcl = room.controller?.level || 1;
 
+        // Run Tower Manager
+        managerTower.run(room);
     }
 
     for (const name in Game.creeps) {

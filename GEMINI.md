@@ -32,6 +32,7 @@ Para auxiliar no debug e teste de funcionalidades, o projeto utiliza o `screeps-
 As instruções detalhadas para configuração e uso do `screeps-multimeter` e seu plugin "Watch" estão disponíveis no arquivo `README.md` na seção "🛠️ Ferramentas de Depuração e Monitoramento".
 
 ## 📝 Convenções de Desenvolvimento (Surgical Changes)
+- **Modularity & No Repetition:** Sempre que possível, organize a lógica em módulos separados (ex: `role.*.ts`, `task.*.ts`, `manager.*.ts`) para evitar repetição de código e promover a manutenibilidade.
 - **TypeScript Strict:** Manter a tipagem rigorosa para evitar erros de tempo de execução.
 - **ES Modules:** Usar `import` e `export default` nos arquivos da `src/`.
 - **CPU Efficiency:** Utilizar `reusePath` em movimentos e evitar `room.find` excessivos dentro do loop.
