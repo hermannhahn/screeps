@@ -10,7 +10,7 @@ import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
 import { managerTower } from './manager.tower'; // Add this line
 import Watcher from './watch-client'; // Change to default import
-
+import './prototypes'; // Importa os protótipos
 
 // Helper function to display creep counts
 function displayCreepCounts(room: Room) {
@@ -81,7 +81,7 @@ export const loop = () => {
         const harvesters = _.filter(Game.creeps, (c) => c.memory.role === 'harvester' && c.room.name === roomName);
         const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === roomName);
         const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === roomName);
-        const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === room.name);
+        const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === roomName);
         const hostileCreeps = room.find(FIND_HOSTILE_CREEPS);
         const extensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
         const rcl = room.controller?.level || 1;
