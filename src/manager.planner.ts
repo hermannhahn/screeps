@@ -85,9 +85,14 @@ const managerPlanner = {
         let sitesCreatedThisTick = currentBlueprint.plan(room, spawn);
 
         if (sitesCreatedThisTick === 0) {
-            // This case shouldn't happen often if isComplete and plan are consistent,
-            // but it acts as a safeguard.
+            // If the blueprint is already complete, move to the next
             if (currentBlueprint.isComplete(room, spawn)) {
+                room.memory.currentBlueprintStage++;
+            } else {
+                // If it's NOT complete but also NOT creating sites (e.g., due to isSafePosition)
+                // we allow the loop to continue to the next stages in the NEXT tick
+                // to avoid getting stuck.
+                console.log(`[ManagerPlanner] Stage ${nextBlueprintToPlanName} is incomplete but didn't create new sites (possibly unsafe). Allowing next stages to be checked in future cycles.`);
                 room.memory.currentBlueprintStage++;
             }
         }
