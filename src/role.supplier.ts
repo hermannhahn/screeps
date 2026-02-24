@@ -6,8 +6,20 @@ import { findSourceContainer, findControllerContainer } from './blueprints/utils
 
 const roleSupplier = {
     run: function(creep: Creep) {
-                if (creep.store.getUsedCapacity() === 0) {
-                    let targetEnergy: any = null;
+        // Toggle state: if full, deliver. If empty, collect.
+        if (creep.memory.delivering && creep.store.getUsedCapacity() === 0) {
+            creep.memory.delivering = false;
+            delete creep.memory.deliveryTargetId;
+            creep.say('🔄 collect');
+        }
+        if (!creep.memory.delivering && creep.store.getFreeCapacity() === 0) {
+            creep.memory.delivering = true;
+            delete creep.memory.targetEnergyId;
+            creep.say('📦 deliver');
+        }
+
+        if (!creep.memory.delivering) {
+            let targetEnergy: any = null;
                     if (creep.memory.targetEnergyId) {
                         const storedTarget = Game.getObjectById(creep.memory.targetEnergyId as Id<any>);
                                             if (storedTarget) {
@@ -176,15 +188,6 @@ const roleSupplier = {
                         taskUpgrade.run(creep);
                     }
                 }
-            }
-        }
-
-        // Final safety: if creep is idle (not moving and has no target), move it out of the way
-        if (!creep.memory.targetEnergyId && !creep.memory.deliveryTargetId && creep.store.getUsedCapacity() === 0) {
-            const spawn = creep.room.find(FIND_MY_SPAWNS)[0];
-            if (spawn && creep.pos.getRangeTo(spawn) < 3) {
-                const idlePos = new RoomPosition(spawn.pos.x + 3, spawn.pos.y + 3, creep.room.name);
-                creep.moveTo(idlePos);
             }
         }
     }
