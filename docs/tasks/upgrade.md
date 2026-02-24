@@ -2,7 +2,9 @@
 
 Módulo simples para upgrade do controlador da sala.
 
-## Lógica
-1. Move-se para o alcance do `room.controller`.
-2. Executa `upgradeController`.
-3. Retorna `true` se estiver em processo de upgrade.
+## Logic Flow (English)
+
+- If room has controller:
+    - If `upgradeController` is `ERR_NOT_IN_RANGE`: Move to controller
+    - Return `True`
+- Return `False`

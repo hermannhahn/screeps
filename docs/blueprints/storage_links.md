@@ -2,9 +2,14 @@
 
 Estruturas de gerenciamento de recursos avançados.
 
-## Storage
-- Armazenamento centralizado de energia para a sala.
-- Localizado próximo ao Spawn para fácil acesso.
+## Logic Flow (English)
 
-## Links
-- Permitem transferência instantânea de energia entre diferentes pontos da sala (ex: de uma fonte distante para o controlador).
+- **`plan(room, spawn)`**:
+    - **Storage**:
+        - If RCL < 4: Skip
+        - Find position near spawn (range 2-3) and empty: `createConstructionSite(STORAGE)`
+    - **Links**:
+        - If RCL < 5: Skip
+        - Plan links near sources and controller for energy transfer
+- **`isComplete(room, spawn)`**:
+    - Return True if structures exist for current RCL and no sites are pending

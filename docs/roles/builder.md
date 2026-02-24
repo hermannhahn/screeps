@@ -8,6 +8,11 @@ O **Builder** (Construtor) é responsável por transformar sites de construção
 2.  **Construção:** Utiliza a `task.build` para focar em sites de construção existentes.
 3.  **Fallback:** Se não houver nada para construir, ajuda no upgrade do Controller.
 
-## Fluxo de Decisão
-- Se `creep.store[RESOURCE_ENERGY] == 0` -> Vai coletar.
-- Se `creep.store.getFreeCapacity() == 0` -> Vai construir.
+## Logic Flow (English)
+
+- If creep energy == 0:
+    - Run `taskCollectEnergy.run()`
+- Else:
+    - Run `taskBuild.run()`
+    - If `taskBuild` returns False (No sites):
+        - Run `taskUpgrade.run()`

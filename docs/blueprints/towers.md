@@ -2,7 +2,19 @@
 
 Responsável pelo planejamento das torres de defesa.
 
-## Lógica
-- **Primeira Torre:** Planejada assim que possível (RCL 3). Fica a uma distância segura do Spawn e próxima a uma estrada.
-- **Segunda Torre:** Planejada em níveis superiores para aumentar o poder de fogo e capacidade de reparo.
-- **Função:** Defesa automática contra invasores e reparo de emergência de estruturas.
+## Logic Flow (English)
+
+- **`plan(room, spawn)`**:
+    - If Spawn position unsafe: Return 0
+    - If tower exists or is planned: Return 0
+    - Find roads within range 5 of spawn
+    - If no roads: Return 0
+    - For each road:
+        - Check positions at range 2 from road:
+            - If distance to spawn >= 3 AND position is not wall AND is empty:
+                - `createConstructionSite(TOWER)`
+                - **Break**
+    - Return number of sites created
+- **`isComplete(room, spawn)`**:
+    - If tower exists AND no tower construction sites: Return True
+    - Else: Return False

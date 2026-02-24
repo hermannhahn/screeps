@@ -2,12 +2,18 @@
 
 Módulo responsável pela manutenção de estruturas.
 
-## Lógica
+## Logic Flow (English)
 
-1.  **Seleção de Alvo:**
-    - Busca estruturas com `hits < hitsMax`.
-    - Prioriza estruturas com menor vida relativa.
-2.  **Limiares:**
-    - Só seleciona um NOVO alvo se ele estiver com menos de 60% de HP.
-    - Uma vez selecionado, continua reparando até atingir 100%.
-3.  **Execução:** Move-se até a estrutura e usa `repair`.
+- If `memory.targetRepairId` exists:
+    - Get object by ID
+    - If null OR `hits == hitsMax`: Clear `memory.targetRepairId`
+- If no target:
+    - Find all structures in room with `hits < hitsMax`
+    - Filter structures with `hits / hitsMax < 0.6` (60% HP threshold)
+    - If found:
+        - Sort by relative HP (ascending)
+        - Select first and save to `memory.targetRepairId`
+- If target exists:
+    - If `repair(target)` is `ERR_NOT_IN_RANGE`: Move to target
+    - Return `True`
+- Return `False`

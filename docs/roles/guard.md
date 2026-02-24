@@ -2,10 +2,14 @@
 
 O **Guard** (Guarda) é uma unidade de combate corpo-a-corpo (Melee) para defesa da sala.
 
-## Comportamento
+## Logic Flow (English)
 
-1.  **Ataque:** Persegue o inimigo mais próximo e utiliza `attack`.
-2.  **Defesa:** Prioriza a proteção de estruturas críticas como Spawns e Containers.
+- Find closest hostile creep in room
+- If hostile found:
+    - `attack(hostile)`
+    - Move to hostile
+- Else:
+    - Move to rally point
 
 ## Requisitos de Spawn
 - Requer pelo menos **15 extensões** para ser gerado.

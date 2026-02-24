@@ -2,7 +2,18 @@
 
 Planeja containers fixos ao lado das fontes de energia.
 
-## Lógica
-- **Objetivo:** Permitir que os `Harvesters` depositem energia imediatamente, minimizando perda por decay e facilitando a coleta pelos `Suppliers`.
-- **Posicionamento:** Procura uma posição adjacente (distância 1) à fonte que não seja uma parede.
-- **Segurança:** Só planeja se a fonte estiver em uma área segura (longe de inimigos).
+## Logic Flow (English)
+
+- **`plan(room, spawn)`**:
+    - For each source in room:
+        - If container already exists or is planned nearby: **Continue**
+        - If source position is not safe: **Continue**
+        - For each adjacent position (range 1) around source:
+            - If position is not wall AND is empty (no structures/sites):
+                - `createConstructionSite(CONTAINER)`
+                - **Break** to next source
+    - Return number of sites created
+- **`isComplete(room, spawn)`**:
+    - For each source:
+        - If no container or site within range 3: Return False
+    - Return True
