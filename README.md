@@ -195,50 +195,53 @@ b. **Comandos `/watch`:**
 ### 1. Gestão de População (`main.ts`)
 - **Spawn Inteligente:** Cálculo de tempo de spawn e viagem para reposição antecipada de creeps (pre-spawning).
 - **Configuração de Roles:**
-  - **Harvesters:** 2 por fonte. Prioridade máxima.
-  - **Defenders:** 3 defensores ativos quando a sala está sob ataque e possui pelo menos 5 extensões.
-  - **Suppliers:** 1 por source seguro + 1 adicional (total: `N+1` para `N` sources seguras; 0 se não houver sources seguras).
-  - **Upgraders:** Dinâmico com base no RCL (`Math.max(1, 4 - RCL)`).
+  - **Harvesters:** 1-2 por fonte (dependendo do RCL). Prioridade máxima.
+  - **Defenders (Guards/Archers):** Só são spawnados se a sala estiver sob ataque e possuir pelo menos **15 extensões**.
+  - **Suppliers:** `N+1` para `N` sources seguras. Gerenciam o estado `delivering` para máxima eficiência.
+  - **Upgraders:** Dinâmico com base no RCL e energia no Storage.
   - **Builders:** 1 ativo quando há construções pendentes.
+  - **Repairers:** 1 ativo quando há muitas estruturas precisando de manutenção.
 
 ### 2. Comportamentos (Roles)
 
+- **Persistência de Alvos:** Todos os creeps (Builders, Repairers, Suppliers) mantêm seus alvos em memória (`targetBuildId`, `targetRepairId`, etc.) até a conclusão da tarefa ou esgotamento de energia, evitando oscilações de movimento.
+
+- **Reparo Inteligente:** Novos alvos de reparo só são selecionados se a vida da estrutura for inferior a **60%**. Uma vez iniciado, o reparo continua até 100%.
+
 - **Harvester (`role.harvester.ts`):** 
   - Foca na mineração estática. 
-  - **Fuga:** Se houver hostis por perto e a sala tiver defesa (5+ extensões), ele foge.
-  - **Entrega:**
-    - **Se houver Suppliers na sala:** Deposita energia em containers a até 3 tiles da sua source atribuída. Se nenhum container adequado for encontrado, dropa a energia no chão. Nunca deposita em outras estruturas ou containers de outras sources.
-    - **Se NÃO houver Suppliers na sala:** Deposita energia no Spawn, depois nas Extensions. Se nenhum desses precisar de energia, dropa a energia no chão.
+  - **Entrega:** Prioriza containers próximos à fonte; caso não existam, dropa a energia para coleta dos Suppliers.
   
 - **Supplier (`role.supplier.ts`):** 
-  - **Coleta:** Prioriza energia dropada (acima de 2x sua capacidade) perto das fontes, então containers/storage próximos às fontes.
+  - **Coleta:** Prioriza energia dropada, depois containers de fonte. Evita retirar do Controller Container (exceto em emergências).
   - **Entrega:** 
     1. Spawn e Extensions.
-    2. Upgraders e Builders sem energia (atribuição 1-para-1 via `assignedSupplier`).
-    3. Towers.
-  - **Fallback:** Se nada precisar de energia, ajuda na construção ou upgrade.
+    2. Torres.
+    3. Controller Container (armazenamento para Upgraders).
+    4. Atribuição direta a Builders/Upgraders.
+  - **Fallback:** Se ocioso com energia, ajuda no reparo, construção ou upgrade.
 
 - **Upgrader (`role.upgrader.ts`):** 
   - Focado exclusivamente no Controlador. 
-  - **Coleta:** Usa a tarefa centralizada `task.collectEnergy`, priorizando receber de um Supplier atribuído, então energia dropada, containers perto de fontes e storage.
+  - **Coleta:** Prioriza o Controller Container (distância 1).
 
 - **Builder (`role.builder.ts`):** 
-  - Focado em construções (`Construction Sites`).
-  - **Prioridade de Construção:** Sites mais avançados (maior % de progresso) primeiro; em empate, o mais próximo.
-  - **Fallback:** Se não houver construções, ajuda no upgrade.
-  - **Coleta:** Mesma lógica do Upgrader via `task.collectEnergy`.
+  - Focado em construções. Fallback para upgrade.
 
-- **Defender (`role.defender.ts`):** 
-  - **Estratégia:** Agrupa-se (Rally Point) até atingir 3 unidades antes de atacar coordenadamente o alvo hostil mais próximo do Spawn.
-  - **Ataque:** Utiliza ataque à distância (`Ranged Attack`).
+- **Repairer (`role.repairer.ts`):** 
+  - Manutenção de infraestrutura (estradas, containers, etc).
+
+- **Defender:**
+  - **Guard:** Combate corpo-a-corpo.
+  - **Archer:** Combate à distância.
+  - Requer 15+ extensões para spawnar.
 
 ### 3. Planejamento de Construção (`manager.planner.ts`)
-Executa a cada 100 ticks. Suspende se houver hostis e defesa pronta.
-- **Blueprint 0:** Estradas em anel ao redor do Spawn (distância 1).
-- **Blueprint 1:** 5 Extensões próximas ao Spawn (mín. distância 2).
-- **Blueprint 2:** Estradas conectando Fontes à rede existente.
-- **Blueprint 3:** Estradas conectando o Controller.
-- **Blueprint 4:** Estradas conectando Minerais.
+Executa a cada 100 ticks.
+- **Robustez:** Verifica todos os estágios desde o início para reconstruir estruturas perdidas.
+- **Segurança:** Ignora o planejamento em áreas próximas a inimigos ou estruturas hostis (raio de 5 tiles).
+- **Flexibilidade:** Se um estágio está bloqueado (inseguro), pula para o próximo para não travar o progresso.
+- **Blueprints:** Spawn, Extensions, Estradas, Source Containers, Controller Container, Towers, Storage, Walls/Ramparts (requer torres), Links.
 
 ## 📁 Estrutura do Projeto
 

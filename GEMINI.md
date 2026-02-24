@@ -9,14 +9,14 @@ Script de automação para o jogo de estratégia MMO **Screeps**. O código é f
 - **Linguagem:** TypeScript (compilado para ES2018).
 - **Build System:** Webpack para minificação e empacotamento em um único `main.js`.
 - **Estrutura:** Modular baseada em Roles (Papéis) em arquivos `.ts`.
-- **Gerenciamento de Spawn:** Spawner inteligente com reposição antecipada de creeps (pre-spawning).
-- **Logística:** Mineração estática (Harvesters) e logística dinâmica (Suppliers).
+- **Gerenciamento de Spawn:** Spawner inteligente com reposição antecipada de creeps (pre-spawning). Unidades de combate (Guards/Archers) só são spawnadas com 15+ extensões.
+- **Logística:** Mineração estática (Harvesters), logística dinâmica (Suppliers) e armazenamento dedicado para upgrade (Controller Container).
 
 ## 📁 Estrutura de Arquivos
 - `src/main.ts`: Loop principal e orquestração global.
-- `src/manager.planner.ts`: Inteligência de planejamento de construções e blueprints.
-- `src/role.*.ts`: Comportamentos específicos de creeps (Harvester, Supplier, Upgrader, Builder, Defender).
-- `src/task.*.ts`: Módulos de tarefas reutilizáveis (Build, Upgrade, CollectEnergy).
+- `src/manager.planner.ts`: Inteligência de planejamento que verifica todos os estágios (blueprint stages) e ignora áreas inseguras.
+- `src/role.*.ts`: Comportamentos específicos de creeps com persistência de alvo na memória para evitar oscilações.
+- `src/task.*.ts`: Módulos de tarefas reutilizáveis (Build, Upgrade, CollectEnergy, Repair).
 - `dist/main.js`: Arquivo final gerado pelo Webpack para deploy.
 
 ## 🛠️ Comandos e Operações
@@ -44,5 +44,7 @@ As instruções detalhadas para configuração e uso do `screeps-multimeter` e s
 - [x] Sistema de Build com Webpack.
 - [x] Deploy automatizado com Git.
 - [x] Implementar Role: **Repairer** para manutenção de estruturas.
+- [x] Blueprint: Posicionamento automático de Containers perto das fontes e do Controller.
+- [x] Persistência de alvos em memória para evitar oscilações de movimento.
 - [ ] Otimização de CPU: Caching de resultados de busca frequentes na memória global.
-- [ ] Blueprint: Posicionamento automático de Containers perto das fontes.
+- [ ] Implementar sistema de Market para venda de excesso de energia/minerais.
