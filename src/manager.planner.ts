@@ -50,46 +50,46 @@ const managerPlanner = {
         ];
         const MAX_BLUEPRINT_STAGES = BLUEPRINTS_ORDER.length;
 
-        let currentBlueprintStage = room.memory.currentBlueprintStage;
-        const nextBlueprintToPlanName = BLUEPRINTS_ORDER[currentBlueprintStage] ? BLUEPRINTS_ORDER[currentBlueprintStage].name : `Unknown Blueprint (${currentBlueprintStage})`;
-
-        const constructionSites = room.find(FIND_CONSTRUCTION_SITES);
-        if (constructionSites.length > 0) { // Only create new blueprints if no existing construction sites
-            console.log(`Room ${room.name} has ${constructionSites.length} construction sites. Current blueprint: ${nextBlueprintToPlanName}. Suspending new blueprint creation.`);
-            return;
-        }
-
         const spawns = room.find(FIND_MY_SPAWNS);
         if (spawns.length === 0) return;
         const spawn = spawns[0];
 
-        // Loop currentBlueprintStage for continuous review if all blueprints are completed
-        // or ensure it stays within valid blueprint indices
-        if (room.memory.currentBlueprintStage >= MAX_BLUEPRINT_STAGES) {
-            room.memory.currentBlueprintStage = 0; // Loop back to start for continuous review
+        // NEW LOGIC: Always check from the beginning to see if anything needs to be rebuilt
+        let foundIncompleteStage = -1;
+        for (let i = 0; i < MAX_BLUEPRINT_STAGES; i++) {
+            if (!BLUEPRINTS_ORDER[i].isComplete(room, spawn)) {
+                foundIncompleteStage = i;
+                break;
+            }
         }
 
-        let sitesCreatedThisTick = 0;
-        const currentBlueprint = BLUEPRINTS_ORDER[room.memory.currentBlueprintStage];
+        // If everything is complete, we can still run a loop to verify (redundant but safe)
+        if (foundIncompleteStage === -1) {
+            // console.log(`Room ${room.name}: All blueprints completed and verified.`);
+            room.memory.currentBlueprintStage = 0; // Reset to 0 for next check cycle
+            return;
+        }
 
-        if (currentBlueprint) { // Ensure blueprint exists
-            sitesCreatedThisTick = currentBlueprint.plan(room, spawn);
+        // Update current stage to the first incomplete one
+        room.memory.currentBlueprintStage = foundIncompleteStage;
+        const currentBlueprint = BLUEPRINTS_ORDER[foundIncompleteStage];
+        const nextBlueprintToPlanName = currentBlueprint.name;
 
-            // If no sites were created by the planning function, check for completion
-            // If it's complete, advance the currentBlueprintStage
-            if (sitesCreatedThisTick === 0) {
-                // Check if the current stage is actually complete (all structures built, no CS)
-                if (currentBlueprint.isComplete(room, spawn)) {
-                    // If we completed a *new* blueprint stage (i.e., it was not just a review of an existing one)
-                    if (room.memory.currentBlueprintStage === room.memory.maxBlueprintStageCompleted + 1) {
-                        room.memory.maxBlueprintStageCompleted = room.memory.currentBlueprintStage;
-                    }
-                    room.memory.currentBlueprintStage++;
-                }
+        const constructionSites = room.find(FIND_CONSTRUCTION_SITES);
+        if (constructionSites.length > 0) { 
+            console.log(`Room ${room.name} has ${constructionSites.length} construction sites. Current blueprint being built: ${nextBlueprintToPlanName}.`);
+            return;
+        }
+
+        console.log(`[ManagerPlanner] Planning stage ${foundIncompleteStage}: ${nextBlueprintToPlanName}`);
+        let sitesCreatedThisTick = currentBlueprint.plan(room, spawn);
+
+        if (sitesCreatedThisTick === 0) {
+            // This case shouldn't happen often if isComplete and plan are consistent,
+            // but it acts as a safeguard.
+            if (currentBlueprint.isComplete(room, spawn)) {
+                room.memory.currentBlueprintStage++;
             }
-        } else {
-            console.log(`[ManagerPlanner] No blueprint found for stage ${room.memory.currentBlueprintStage}. Resetting to 0.`);
-            room.memory.currentBlueprintStage = 0; // Fallback in case of undefined blueprint
         }
     }
 };
