@@ -15,8 +15,11 @@ const taskRepair = {
         if (!target) {
             const targets = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
-                    return (structure.hits < structure.hitsMax) && 
-                           (structure.structureType !== STRUCTURE_WALL && structure.structureType !== STRUCTURE_RAMPART || structure.hits < 10000);
+                    const isDamaged = structure.hits < structure.hitsMax * 0.6;
+                    const isNotWallOrRampart = structure.structureType !== STRUCTURE_WALL && structure.structureType !== STRUCTURE_RAMPART;
+                    const isWallOrRampartLow = (structure.structureType === STRUCTURE_WALL || structure.structureType === STRUCTURE_RAMPART) && structure.hits < 10000;
+                    
+                    return isDamaged && (isNotWallOrRampart || isWallOrRampartLow);
                 }
             });
 
