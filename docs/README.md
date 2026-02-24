@@ -15,6 +15,7 @@ Comportamentos individuais de cada tipo de creep:
 ## 🛠️ [Tasks (Tarefas)](tasks/)
 Lógicas modulares reutilizáveis:
 - [Collect Energy](tasks/collectEnergy.md) - Busca universal de recursos.
+- [Deliver Energy](tasks/deliver.md) - Distribuição inteligente de energia.
 - [Build](tasks/build.md) - Execução de obras.
 - [Repair](tasks/repair.md) - Manutenção de vida de estruturas.
 - [Upgrade](tasks/upgrade.md) - Upgrade do controlador.

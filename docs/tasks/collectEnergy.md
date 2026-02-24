@@ -1,32 +1,41 @@
 # Task: Collect Energy
 
-Módulo universal para coleta de energia, usado por quase todas as roles civis.
+Módulo universal para coleta de energia, usado por todas as roles civis. Implementa um sistema de reservas reais para evitar que múltiplos creeps se desloquem para o mesmo recurso escasso.
+
+## Sistema de Reservas (Energy Accounting)
+
+Para cada alvo potencial, o creep calcula a **Energia Real Disponível**:
+`Disponível = Quantidade Total - Energia já reservada por outros creeps`
+
+A energia reservada é a soma da capacidade livre (`store.getFreeCapacity`) de todos os creeps que já têm aquele `targetEnergyId` em sua memória. Isso garante que, se um container tem 50 de energia e um creep já está indo buscar, o próximo creep verá 0 disponível e buscará outro alvo.
+
+## Pontuação por Eficiência (Scoring)
+
+Quando múltiplos alvos têm energia disponível, o creep escolhe o melhor baseado em:
+`Score = (Disponível^2) / Distância`
+
+Isso prioriza fortemente grandes acúmulos de energia (como drops de morte), mas penaliza a distância para evitar viagens ineficientes.
 
 ## Prioridades de Coleta
 
 1.  **Energia Dropada:** Recursos no chão (evita desperdício por decay).
-2.  **Controller Container:** Apenas se o creep for um `Upgrader`.
-3.  **Source Containers:** Containers posicionados ao lado das fontes de energia.
-4.  **Storage:** Armazenamento central da sala.
-5.  **Controller Container:** Fallback para outras roles se as fontes acima falharem.
+2.  **Source Containers:** Containers posicionados ao lado das fontes de energia.
+3.  **Storage:** Armazenamento central da sala.
+4.  **Controller Container:** Container de suporte ao Upgrader.
 
 ## Logic Flow (English)
 
-- If `memory.assignedSupplier` exists:
-    - If supplier has energy: Move to supplier and return
-    - Else: Clear assignment
+- If `memory.assignedSupplier` exists: Move to supplier and return.
 - If `memory.targetEnergyId` exists:
-    - Validate target (Exists and has amount/energy)
-    - If invalid: Clear `memory.targetEnergyId`
+    - Validate if `Available Energy (Amount - Reservations + MyNeed) > 0`.
+    - If <= 0: Clear `memory.targetEnergyId`.
 - If no target:
-    - Get IDs of energy sources targeted by other creeps
-    - Priority 1: Find dropped energy (amount > 0 AND (not targeted OR large amount))
-    - Priority 1.5 (Upgraders only): Find Controller Container with energy
-    - Priority 2: Find containers near sources (dist <= 3, not targeted OR large amount)
-    - Priority 3: Find Storage with energy
-    - Priority 4: Find Controller Container (Fallback for everyone)
+    - Search Priority List (Dropped -> Containers -> Storage -> Controller Container).
+    - For each category, find the target with the highest `Score`.
+    - Target must have `Available Energy > 0`.
+    - Set `memory.targetEnergyId`.
 - If target found:
-    - If `pickup/withdraw` is `ERR_NOT_IN_RANGE`: Move to target
-    - If `OK` or `ERR_FULL`: Clear `memory.targetEnergyId`
+    - If `pickup/withdraw` is `ERR_NOT_IN_RANGE`: Move to target.
+    - If `OK`, `ERR_FULL` or `ERR_NOT_ENOUGH`: Clear `memory.targetEnergyId`.
 - Else (No energy found):
-    - Fallback: Move to Controller and try `upgradeController`
+    - Idle behavior (Move towards controller).
