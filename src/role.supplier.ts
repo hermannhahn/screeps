@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
+import taskRepair from './task.repair';
 import { findSourceContainer, findControllerContainer } from './blueprints/utils'; // Corrected import
 
 const roleSupplier = {
@@ -169,9 +170,21 @@ const roleSupplier = {
                     delete creep.memory.deliveryTargetId;
                 }
             } else {
-                if (!taskBuild.run(creep)) {
-                    taskUpgrade.run(creep);
+                // Fallback: Help with other tasks if carrying energy
+                if (!taskRepair.run(creep)) {
+                    if (!taskBuild.run(creep)) {
+                        taskUpgrade.run(creep);
+                    }
                 }
+            }
+        }
+
+        // Final safety: if creep is idle (not moving and has no target), move it out of the way
+        if (!creep.memory.targetEnergyId && !creep.memory.deliveryTargetId && creep.store.getUsedCapacity() === 0) {
+            const spawn = creep.room.find(FIND_MY_SPAWNS)[0];
+            if (spawn && creep.pos.getRangeTo(spawn) < 3) {
+                const idlePos = new RoomPosition(spawn.pos.x + 3, spawn.pos.y + 3, creep.room.name);
+                creep.moveTo(idlePos);
             }
         }
     }
