@@ -325,8 +325,12 @@ const managerSpawner = {
         }
         
         // Priority 2: Defense (If under attack)
-        const targetGuards = isUnderAttack ? 1 : 0; // 1 Guard se estiver sob ataque
-        const targetArchers = isUnderAttack ? 2 : 0; // 2 Archers se estiver sob ataque
+        const extensions = room.find(FIND_MY_STRUCTURES, {
+            filter: { structureType: STRUCTURE_EXTENSION }
+        });
+        const hasEnoughExtensionsForCombat = extensions.length >= 15;
+        const targetGuards = (isUnderAttack && hasEnoughExtensionsForCombat) ? 1 : 0; // 1 Guard se estiver sob ataque e tiver 15+ extensões
+        const targetArchers = (isUnderAttack && hasEnoughExtensionsForCombat) ? 2 : 0; // 2 Archers se estiver sob ataque e tiver 15+ extensões
 
         if (guards.length < targetGuards) {
             const body = getGuardBody(energyCapacity);
