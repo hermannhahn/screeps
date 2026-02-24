@@ -146,7 +146,7 @@ function displayCreepCounts(room: Room) {
     // Calculate targets (similar to manager.spawner.ts)
     const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
     const totalTargetHarvesters = targetHarvestersPerSource * sources.length;
-    const targetSuppliers = sources.length;
+    const targetSuppliers = 2 * sources.length;
     const targetUpgraders = rcl === 1 ? 3 : (rcl === 2 ? 2 : 1);
     const targetBuilders = 1;
     const hostileCreepsInRoom = room.find(FIND_HOSTILE_CREEPS);
