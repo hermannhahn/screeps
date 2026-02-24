@@ -180,6 +180,12 @@ function displayCreepCounts(room: Room) {
 export const loop = () => {
     Watcher();
 
+    // Pixel generation logic for official server
+    if (Game.cpu.bucket >= 10000) {
+        Game.cpu.generatePixel();
+        console.log("[Main] Generated a Pixel! 💎");
+    }
+
     for (const name in Memory.creeps) {
         if (!Game.creeps[name]) delete Memory.creeps[name];
     }
