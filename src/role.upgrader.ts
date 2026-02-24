@@ -12,6 +12,14 @@ const roleUpgrader = {
         }
 
         if (creep.memory.upgrading) {
+            // Sign controller logic
+            const signMessage = "Stay away! This room is protected by advanced AI. 🛡️💀";
+            if (creep.room.controller && (!creep.room.controller.sign || creep.room.controller.sign.text !== signMessage)) {
+                if (creep.signController(creep.room.controller, signMessage) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: '#ffffff' } });
+                    return; // Focus on signing first
+                }
+            }
             taskUpgrade.run(creep);
         } else {
             // Lógica de coleta de energia para Upgrader, priorizando Links

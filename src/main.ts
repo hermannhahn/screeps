@@ -206,6 +206,20 @@ export const loop = () => {
 
         // Run Tower Manager
         managerTower.run(room);
+
+        // Safe Mode Activation Logic
+        if (room.controller && room.controller.my && !room.controller.safeMode && room.controller.safeModeAvailable > 0) {
+            const hostiles = room.find(FIND_HOSTILE_CREEPS);
+            if (hostiles.length > 0) {
+                const criticalStructures = room.find(FIND_MY_STRUCTURES, {
+                    filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_TOWER) && s.hits < s.hitsMax
+                });
+                if (criticalStructures.length > 0) {
+                    room.controller.activateSafeMode();
+                    console.log(`[Main] Safe Mode activated in room ${room.name}! Critical structures under attack.`);
+                }
+            }
+        }
     }
 
     for (const name in Game.creeps) {
