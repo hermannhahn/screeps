@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
-import { findSourceContainer } from './blueprints/utils'; // Corrected import
+import { findSourceContainer, findControllerContainer } from './blueprints/utils'; // Corrected import
 
 const roleSupplier = {
     run: function(creep: Creep) {
@@ -17,7 +17,14 @@ const roleSupplier = {
                                                     }
                                                 } else if ('store' in storedTarget) { // Check if it's a structure with a store
                                                     if (storedTarget.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
-                                                        isValidTarget = true;
+                                                        // RESTRICTION: Suppliers should never withdraw from Controller Container unless no harvesters
+                                                        const controllerContainer = findControllerContainer(creep.room);
+                                                        const isControllerContainer = controllerContainer && 'id' in controllerContainer && controllerContainer.id === storedTarget.id;
+                                                        const harvestersCount = _.filter(Game.creeps, (c) => c.memory.role === 'harvester' && c.room.name === creep.room.name).length;
+
+                                                        if (!isControllerContainer || harvestersCount === 0) {
+                                                            isValidTarget = true;
+                                                        }
                                                     }
                                                 }
                         
@@ -66,10 +73,15 @@ const roleSupplier = {
                                 }        
                     if (!targetEnergy) {
                         // Priority 3: Other containers or storages
+                        const harvestersCount = _.filter(Game.creeps, (c) => c.memory.role === 'harvester' && c.room.name === creep.room.name).length;
+                        const controllerContainer = findControllerContainer(creep.room);
+                        const controllerContainerId = controllerContainer && 'id' in controllerContainer ? controllerContainer.id : null;
+
                         const containersAndStorage = creep.room.find(FIND_STRUCTURES, {
                             filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_STORAGE) &&
                                 (s as any).store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity(RESOURCE_ENERGY) &&
-                                !targetedByOthers.includes(s.id)
+                                !targetedByOthers.includes(s.id) &&
+                                (s.id !== controllerContainerId || harvestersCount === 0) // Restriction applied here
                         }) as (StructureContainer | StructureStorage)[];
         
                         if (containersAndStorage.length > 0) {
@@ -135,6 +147,14 @@ const roleSupplier = {
                 target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                     filter: (s) => s.structureType === STRUCTURE_TOWER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
                 });
+            }
+
+            if (!target) {
+                // Finally, fill the Controller Container
+                const controllerContainer = findControllerContainer(creep.room);
+                if (controllerContainer && 'store' in controllerContainer && controllerContainer.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                    target = controllerContainer;
+                }
             }
 
             if (target) {

@@ -5,6 +5,7 @@ import sourceRoadsBlueprint from './blueprints/sourceRoads';
 import controllerRoadsBlueprint from './blueprints/controllerRoads';
 import mineralRoadsBlueprint from './blueprints/mineralRoads';
 import sourceContainersBlueprint from './blueprints/sourceContainers';
+import controllerContainerBlueprint from './blueprints/controllerContainer';
 import firstTowerBlueprint from './blueprints/firstTower';
 import storageBlueprint from './blueprints/storage'; // Novo import
 import secondTowerBlueprint from './blueprints/secondTower';
@@ -40,6 +41,7 @@ const managerPlanner = {
             controllerRoadsBlueprint,
             mineralRoadsBlueprint,
             sourceContainersBlueprint,
+            controllerContainerBlueprint,
             firstTowerBlueprint,
             storageBlueprint,       // Adicionado aqui
             secondTowerBlueprint,

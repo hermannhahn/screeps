@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import { findControllerContainer } from './blueprints/utils';
 
 const taskCollectEnergy = {
     run: function(creep: Creep) {
@@ -48,6 +49,14 @@ const taskCollectEnergy = {
 
             if (droppedEnergy.length > 0) {
                 creep.memory.targetEnergyId = droppedEnergy[0].id as Id<any>;
+            }
+
+            // Priority 1.5: Controller Container (especially for upgraders)
+            if (!creep.memory.targetEnergyId) {
+                const controllerContainer = findControllerContainer(creep.room);
+                if (controllerContainer && 'store' in controllerContainer && controllerContainer.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+                    creep.memory.targetEnergyId = controllerContainer.id as Id<any>;
+                }
             }
 
             // Priority 2: Containers near Sources
