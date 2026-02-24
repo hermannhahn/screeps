@@ -54,47 +54,39 @@ const managerPlanner = {
         if (spawns.length === 0) return;
         const spawn = spawns[0];
 
-        // NEW LOGIC: Always check from the beginning to see if anything needs to be rebuilt
-        let foundIncompleteStage = -1;
-        for (let i = 0; i < MAX_BLUEPRINT_STAGES; i++) {
-            if (!BLUEPRINTS_ORDER[i].isComplete(room, spawn)) {
-                foundIncompleteStage = i;
-                break;
-            }
-        }
-
-        // If everything is complete, we can still run a loop to verify (redundant but safe)
-        if (foundIncompleteStage === -1) {
-            // console.log(`Room ${room.name}: All blueprints completed and verified.`);
-            room.memory.currentBlueprintStage = 0; // Reset to 0 for next check cycle
-            return;
-        }
-
-        // Update current stage to the first incomplete one
-        room.memory.currentBlueprintStage = foundIncompleteStage;
-        const currentBlueprint = BLUEPRINTS_ORDER[foundIncompleteStage];
-        const nextBlueprintToPlanName = currentBlueprint.name;
-
         const constructionSites = room.find(FIND_CONSTRUCTION_SITES);
         if (constructionSites.length > 0) { 
-            console.log(`Room ${room.name} has ${constructionSites.length} construction sites. Current blueprint being built: ${nextBlueprintToPlanName}.`);
+            // We still want to prioritize rebuilding, but if CS exist, we wait for them
+            // to avoid hitting the 100 CS limit and to keep builders focused.
+            // However, we can still print what we are waiting for.
             return;
         }
 
-        console.log(`[ManagerPlanner] Planning stage ${foundIncompleteStage}: ${nextBlueprintToPlanName}`);
-        let sitesCreatedThisTick = currentBlueprint.plan(room, spawn);
+        // NEW LOGIC: Iterate through blueprints. Plan the first one that is incomplete and CAN be planned.
+        let plannedSomething = false;
 
-        if (sitesCreatedThisTick === 0) {
-            // If the blueprint is already complete, move to the next
-            if (currentBlueprint.isComplete(room, spawn)) {
-                room.memory.currentBlueprintStage++;
-            } else {
-                // If it's NOT complete but also NOT creating sites (e.g., due to isSafePosition)
-                // we allow the loop to continue to the next stages in the NEXT tick
-                // to avoid getting stuck.
-                console.log(`[ManagerPlanner] Stage ${nextBlueprintToPlanName} is incomplete but didn't create new sites (possibly unsafe). Allowing next stages to be checked in future cycles.`);
-                room.memory.currentBlueprintStage++;
+        for (let i = 0; i < MAX_BLUEPRINT_STAGES; i++) {
+            const currentBlueprint = BLUEPRINTS_ORDER[i];
+            
+            if (!currentBlueprint.isComplete(room, spawn)) {
+                // Stage is incomplete, try to plan it
+                let sitesCreated = currentBlueprint.plan(room, spawn);
+                
+                if (sitesCreated > 0) {
+                    console.log(`[ManagerPlanner] Planned ${sitesCreated} sites for stage ${i}: ${currentBlueprint.name}`);
+                    room.memory.currentBlueprintStage = i;
+                    plannedSomething = true;
+                    break; // Stop after planning one blueprint to avoid flooding
+                } else {
+                    // Stage is incomplete but couldn't be planned (e.g. unsafe)
+                    // We continue the loop to check if later stages can be planned
+                    // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) is incomplete but could not be planned. Checking next stages...`);
+                }
             }
+        }
+
+        if (!plannedSomething) {
+            // console.log(`[ManagerPlanner] No planning needed or possible in Room ${room.name}`);
         }
     }
 };
