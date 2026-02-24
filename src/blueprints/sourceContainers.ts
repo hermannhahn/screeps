@@ -1,5 +1,5 @@
 import { Blueprint } from './blueprintInterface';
-import { findSourceContainer } from './utils'; // New import
+import { findSourceContainer, isSafePosition } from './utils'; // New import
 
 const sourceContainersBlueprint: Blueprint = {
     name: "Source Containers",
@@ -12,6 +12,12 @@ const sourceContainersBlueprint: Blueprint = {
             // Check if a container (or CS) already exists near this source
             if (findSourceContainer(source)) {
                 continue; // Skip this source if a container already exists or is planned
+            }
+
+            // Check if the source is safe (no enemies nearby)
+            if (!isSafePosition(source.pos)) {
+                console.log(`[ManagerPlanner] Source at ${source.pos} is not safe. Skipping container planning.`);
+                continue;
             }
 
             // Find a suitable position for the container 1 block away from the source

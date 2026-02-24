@@ -1,12 +1,12 @@
 import { Blueprint } from './blueprintInterface';
-import { planRoadsFromToNearestRoad } from './utils';
+import { planRoadsFromToNearestRoad, isSafePosition } from './utils';
 
 const mineralRoadsBlueprint: Blueprint = {
     name: "Mineral Roads",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
         const mineral = room.find(FIND_MINERALS)[0];
-        if (!mineral) return 0;
+        if (!mineral || !isSafePosition(mineral.pos)) return 0;
         return planRoadsFromToNearestRoad(room, mineral.pos);
     },
 

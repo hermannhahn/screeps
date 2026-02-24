@@ -1,5 +1,5 @@
 import { Blueprint } from './blueprintInterface';
-import { planRoadFromTo } from './utils'; // This function will be added to utils.ts
+import { planRoadFromTo, isSafePosition } from './utils'; // This function will be added to utils.ts
 
 const sourceRoadsBlueprint: Blueprint = {
     name: "Source Roads",
@@ -8,6 +8,10 @@ const sourceRoadsBlueprint: Blueprint = {
         const sources = room.find(FIND_SOURCES);
         let sitesCreated = 0;
         for (const source of sources) {
+            if (!isSafePosition(source.pos)) {
+                console.log(`[ManagerPlanner] Source at ${source.pos} is not safe. Skipping road planning.`);
+                continue;
+            }
             sitesCreated += planRoadFromTo(room, source.pos, spawn.pos);
         }
         return sitesCreated;
