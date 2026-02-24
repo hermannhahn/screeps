@@ -4,6 +4,14 @@ const rampartsWallsBlueprint: Blueprint = {
     name: "Ramparts and Walls",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
+        // Only plan Ramparts and Walls if there is at least one tower built
+        const towers = room.find(FIND_MY_STRUCTURES, {
+            filter: { structureType: STRUCTURE_TOWER }
+        });
+        if (towers.length === 0) {
+            return 0;
+        }
+
         let sitesCreated = 0;
 
         // Limite de Ramparts para RCL 3 é 10. Em RCL 4, 25.
@@ -49,6 +57,14 @@ const rampartsWallsBlueprint: Blueprint = {
     },
 
     isComplete: function(room: Room, spawn: StructureSpawn): boolean {
+        // If there are no towers, we skip this blueprint for now (consider it "complete" so the planner advances)
+        const towers = room.find(FIND_MY_STRUCTURES, {
+            filter: { structureType: STRUCTURE_TOWER }
+        });
+        if (towers.length === 0) {
+            return true;
+        }
+
         // Obter o número máximo de Ramparts permitidos para o RCL atual
         const maxRamparts = CONTROLLER_STRUCTURES[STRUCTURE_RAMPART][room.controller?.level || 1];
 
