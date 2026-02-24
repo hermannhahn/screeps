@@ -181,7 +181,7 @@ export const loop = () => {
     Watcher();
 
     // Pixel generation logic for official server
-    if (Game.cpu.bucket >= 10000) {
+    if (Game.cpu.generatePixel && Game.cpu.bucket >= 10000) {
         // Suspend pixel generation if any room is under attack
         const anyRoomUnderAttack = _.some(Game.rooms, (room) => {
             const hostiles = room.find(FIND_HOSTILE_CREEPS);
