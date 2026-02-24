@@ -1,4 +1,5 @@
 import taskUpgrade from './task.upgrade';
+import taskCollectEnergy from './task.collectEnergy';
 
 const roleUpgrader = {
     run: function(creep: Creep) {
@@ -8,6 +9,7 @@ const roleUpgrader = {
         }
         if (!creep.memory.upgrading && creep.store.getFreeCapacity() === 0) {
             creep.memory.upgrading = true;
+            delete creep.memory.targetEnergyId;
             creep.say('⚡ upgrade');
         }
 
@@ -22,40 +24,18 @@ const roleUpgrader = {
             }
             taskUpgrade.run(creep);
         } else {
-            // Lógica de coleta de energia para Upgrader, priorizando Links
+            // Priority: Links (very efficient for upgraders)
             const link = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                filter: (s) => s.structureType === STRUCTURE_LINK && s.energy > 0
-            }) as StructureLink | null; // Adicionado s.energy > 0 para garantir que o link tenha energia
+                filter: (s) => s.structureType === STRUCTURE_LINK && s.store[RESOURCE_ENERGY] > 0
+            }) as StructureLink | null;
 
             if (link) {
                 if (creep.withdraw(link, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(link, { visualizePathStyle: { stroke: '#ffaa00' } });
                 }
             } else {
-                // Se não há links, usar a lógica de taskCollectEnergy (ou reescrever aqui)
-                // Por enquanto, podemos reescrever uma versão simplificada de taskCollectEnergy aqui
-                const containerOrStorage = creep.pos.findClosestByPath(FIND_STRUCTURES, {
-                    filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_STORAGE) && s.store.getUsedCapacity(RESOURCE_ENERGY) > 0
-                });
-                if (containerOrStorage) {
-                    if (creep.withdraw(containerOrStorage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(containerOrStorage, { visualizePathStyle: { stroke: '#ffaa00' } });
-                    }
-                } else {
-                    const droppedEnergy = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-                        filter: (r) => r.resourceType === RESOURCE_ENERGY
-                    });
-                    if (droppedEnergy) {
-                        if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {
-                            creep.moveTo(droppedEnergy, { visualizePathStyle: { stroke: '#ffaa00' } });
-                        }
-                    } else {
-                        const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
-                        if (source && creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                            creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
-                        }
-                    }
-                }
+                // Fallback to general collection logic which respects reservations
+                taskCollectEnergy.run(creep);
             }
         }
     }

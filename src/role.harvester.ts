@@ -1,26 +1,18 @@
 import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
+import taskDeliver from './task.deliver';
 
 // Helper function to check if a source is safe from hostile structures and creeps
 function isSourceSafe(source: Source, hostileStructures: Structure[], hostileCreeps: Creep[]): boolean {
-    const range = 10; // User specified range
-
-    // Check for hostile structures
+    const range = 10;
     for (const hostileStructure of hostileStructures) {
-        if (source.pos.getRangeTo(hostileStructure) <= range) {
-            return false; // Hostile structure too close
-        }
+        if (source.pos.getRangeTo(hostileStructure) <= range) return false;
     }
-
-    // Check for hostile creeps
     for (const hostileCreep of hostileCreeps) {
-        if (source.pos.getRangeTo(hostileCreep) <= range) {
-            return false; // Hostile creep too close
-        }
+        if (source.pos.getRangeTo(hostileCreep) <= range) return false;
     }
-
-    return true; // No hostile structures or creeps nearby
+    return true;
 }
 
 const roleHarvester = {
@@ -29,6 +21,7 @@ const roleHarvester = {
         const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
         const hasEnoughExtensions = extensions.length >= 5;
 
+        // Flee logic
         const threateningHostiles = creep.pos.findInRange(hostileCreepsInRoom, 3);
         if (threateningHostiles.length > 0 && hasEnoughExtensions) {
             const closestHostile = creep.pos.findClosestByRange(threateningHostiles);
@@ -50,11 +43,6 @@ const roleHarvester = {
                                     costMatrix.set(struct.pos.x, struct.pos.y, 255);
                                 }
                             });
-                            room.find(FIND_CONSTRUCTION_SITES).forEach(site => {
-                                if (site.structureType !== STRUCTURE_ROAD && site.structureType !== STRUCTURE_CONTAINER && site.structureType !== STRUCTURE_RAMPART) {
-                                    costMatrix.set(site.pos.x, site.pos.y, 255);
-                                }
-                            });
                             return costMatrix;
                         },
                     }
@@ -69,69 +57,42 @@ const roleHarvester = {
         if (creep.store.getFreeCapacity() > 0) {
             const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
             if (source) {
-                const harvestResult = creep.harvest(source);
-                if (harvestResult !== OK) { // If not successfully harvested
-                    if (harvestResult === ERR_NOT_IN_RANGE) { // If out of range, move
-                        const moveResult = creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
-                    } else { // In range, but cannot harvest (e.g., source empty, ERR_NOT_ENOUGH_RESOURCES)
-                        // Creep is in range, but the source is empty or other non-movement error.
-                        // Harvester will wait for source to regenerate.
-                    }
-                } else {
+                if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
                 }
-            } else { // Source was null/undefined, meaning sourceId is invalid or source is gone.
-                const allSourcesInRoom = creep.room.find(FIND_SOURCES);
-                const hostileStructuresInRoom = creep.room.find(FIND_HOSTILE_STRUCTURES); // Find hostile structures in this room
-                const hostileCreepsInRoom = creep.room.find(FIND_HOSTILE_CREEPS); // Find hostile creeps in this room
-                const safeSources = allSourcesInRoom.filter(source => isSourceSafe(source, hostileStructuresInRoom, hostileCreepsInRoom));
-                
-                // Determine target harvesters per source based on RCL, consistent with main.ts
+            } else {
+                const safeSources = creep.room.find(FIND_SOURCES).filter(s => isSourceSafe(s, creep.room.find(FIND_HOSTILE_STRUCTURES), hostileCreepsInRoom));
                 const targetHarvestersPerSource = creep.room.controller && creep.room.controller.level < 4 ? 2 : 1;
 
                 let bestSource: Source | null = null;
                 let minHarvesters = Infinity;
 
-                for (const s of safeSources) { // Iterate over safeSources
-                    const harvestersAssignedToSource = _.filter(Game.creeps, (c) => 
-                        c.memory.role === 'harvester' && c.memory.sourceId === s.id && c.room.name === creep.room.name
-                    ).length;
-
-                    if (harvestersAssignedToSource < targetHarvestersPerSource) {
-                        if (harvestersAssignedToSource < minHarvesters) {
-                            minHarvesters = harvestersAssignedToSource;
-                            bestSource = s;
-                        }
+                for (const s of safeSources) {
+                    const assigned = _.filter(Game.creeps, (c) => c.memory.role === 'harvester' && c.memory.sourceId === s.id).length;
+                    if (assigned < targetHarvestersPerSource && assigned < minHarvesters) {
+                        minHarvesters = assigned;
+                        bestSource = s;
                     }
                 }
 
-                if (bestSource) {
-                    creep.memory.sourceId = bestSource.id;
-                } else {
-                    // All sources are full or assigned. Harvester should now assist with other tasks.
-                    if (!taskBuild.run(creep)) {
-                        taskUpgrade.run(creep);
-                    }
-                }
+                if (bestSource) creep.memory.sourceId = bestSource.id;
+                else if (!taskBuild.run(creep)) taskUpgrade.run(creep);
             }
-        } else { // Creep está cheio de energia
+        } else {
             const suppliersInRoom = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === creep.room.name);
 
             if (suppliersInRoom.length > 0) {
-                // Logic for when suppliers ARE present (current behavior: container near source or drop)
+                // When suppliers are present, fill nearby containers or drop
                 const assignedSource = Game.getObjectById(creep.memory.sourceId as Id<Source>);
                 let depositTarget: StructureContainer | null = null; 
 
-                // Prioridade: Containers (próximos à fonte, até 3 tiles)
                 if (assignedSource) {
                     const containersInRange = assignedSource.pos.findInRange(FIND_STRUCTURES, 3, { 
                         filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
                     }) as StructureContainer[];
 
                     if (containersInRange.length > 0) {
-                        depositTarget = containersInRange.sort((a, b) => 
-                            creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b) ||
-                            a.store.getFreeCapacity(RESOURCE_ENERGY) - b.store.getFreeCapacity(RESOURCE_ENERGY)
-                        )[0];
+                        depositTarget = _.minBy(containersInRange, c => creep.pos.getRangeTo(c)) || null;
                     }
                 }
 
@@ -143,28 +104,11 @@ const roleHarvester = {
                     creep.drop(RESOURCE_ENERGY);
                 }
             } else {
-                // Logic for when NO suppliers are present (deliver to spawn, then extensions)
-                let depositTarget: StructureSpawn | StructureExtension | null = null;
-
-                // Prioridade 1: Spawn
-                depositTarget = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                    filter: (s) => s.structureType === STRUCTURE_SPAWN && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-                }) as StructureSpawn | null;
-
-                // Prioridade 2: Extensions
-                if (!depositTarget) {
-                    depositTarget = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                        filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-                    }) as StructureExtension | null;
-                }
-
-                if (depositTarget) {
-                    if (creep.transfer(depositTarget, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(depositTarget, { visualizePathStyle: { stroke: '#ffffff' } });
+                // EMERGENCY: No suppliers, harvester must deliver energy
+                if (!taskDeliver.run(creep)) {
+                    if (!taskBuild.run(creep)) {
+                        taskUpgrade.run(creep);
                     }
-                } else {
-                    // If no spawn or extension needs energy, drop it
-                    creep.drop(RESOURCE_ENERGY);
                 }
             }
         }
