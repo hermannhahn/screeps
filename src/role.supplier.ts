@@ -6,7 +6,7 @@ import { findSourceContainer, findControllerContainer } from './blueprints/utils
 
 const roleSupplier = {
     run: function(creep: Creep) {
-        // Toggle state: if full, deliver. If empty, collect.
+        // Toggle state: if empty, go collect. If full OR has energy and no more space, go deliver.
         if (creep.memory.delivering && creep.store.getUsedCapacity() === 0) {
             creep.memory.delivering = false;
             delete creep.memory.deliveryTargetId;
@@ -16,6 +16,17 @@ const roleSupplier = {
             creep.memory.delivering = true;
             delete creep.memory.targetEnergyId;
             creep.say('📦 deliver');
+        }
+
+        // Emergency state fix: if creep has energy but not in delivering state AND no energy found to collect
+        // it should probably switch to delivering to avoid being stuck.
+        if (!creep.memory.delivering && creep.store.getUsedCapacity() > 0) {
+            // Check if there is even energy to collect
+            // This is a bit expensive but helps prevent being stuck
+            // For now, let's just allow it to switch if it has some energy and no target
+            if (!creep.memory.targetEnergyId) {
+                 // We don't force it here yet, let the normal logic try to find energy first
+            }
         }
 
         if (!creep.memory.delivering) {
@@ -116,6 +127,10 @@ const roleSupplier = {
                         } else if (collectResult === OK || collectResult === ERR_FULL) {
                             delete creep.memory.targetEnergyId;
                         }
+                    } else if (creep.store.getUsedCapacity() > 0) {
+                        // Fallback: If no energy to collect but has some energy, go deliver
+                        creep.memory.delivering = true;
+                        creep.say('📦 force deliver');
                     }
                 } else {
             let target = null;
