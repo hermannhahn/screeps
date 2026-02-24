@@ -11,7 +11,7 @@ Este repositório contém um script robusto e escalável para o jogo **Screeps**
 
 ## 📦 Fluxo de Desenvolvimento
 
-O código fonte reside na pasta `src/` e é compilado para a pasta `dist/`.
+O código fonte reside na pasta `src/` e é compilado para a pasta `dist/`. Para entender a lógica detalhada de cada módulo, consulte a [Documentação Técnica](docs/README.md).
 
 ### Comandos Disponíveis
 
