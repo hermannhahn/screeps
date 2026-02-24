@@ -1,16 +1,33 @@
 # Documentação Técnica - Automação Screeps
 
-Esta pasta contém a documentação detalhada da lógica de funcionamento do bot.
+Este guia detalha o funcionamento interno de cada componente do sistema de automação.
 
-## Seções
+## 👥 [Roles (Papéis)](roles/)
+Comportamentos individuais de cada tipo de creep:
+- [Harvester](roles/harvester.md) - Mineração de energia.
+- [Supplier](roles/supplier.md) - Logística e transporte.
+- [Upgrader](roles/upgrader.md) - Aprimoramento do Controller.
+- [Builder](roles/builder.md) - Construção de estruturas.
+- [Repairer](roles/repairer.md) - Manutenção de infraestrutura.
+- [Archer](roles/archer.md) - Combate à distância.
+- [Guard](roles/guard.md) - Combate corpo-a-corpo.
 
-1. **[Planner](planner.md)**: Explica como a inteligência de planejamento organiza a sala e decide as construções.
-2. **[Roles (Papéis)](roles.md)**: Detalha o comportamento de cada tipo de unidade (creep).
-3. **[Tasks (Tarefas)](tasks.md)**: Descreve os módulos de lógica reutilizáveis.
+## 🛠️ [Tasks (Tarefas)](tasks/)
+Lógicas modulares reutilizáveis:
+- [Collect Energy](tasks/collectEnergy.md) - Busca universal de recursos.
+- [Build](tasks/build.md) - Execução de obras.
+- [Repair](tasks/repair.md) - Manutenção de vida de estruturas.
+- [Upgrade](tasks/upgrade.md) - Upgrade do controlador.
 
----
+## 🏗️ [Blueprints (Construções)](blueprints/)
+Estratégias de planejamento de layout:
+- [Extensions](blueprints/extensions.md) - Expansão de capacidade energética.
+- [Source Containers](blueprints/sourceContainers.md) - Armazenamento em fontes.
+- [Controller Container](blueprints/controllerContainer.md) - Suporte para upgrade.
+- [Towers](blueprints/towers.md) - Defesa e reparo automático.
+- [Roads](blueprints/roads.md) - Infraestrutura viária.
+- [Storage & Links](blueprints/storage_links.md) - Logística avançada.
+- [Walls & Ramparts](blueprints/walls_ramparts.md) - Defesas estáticas.
 
-### Guia de Desenvolvimento
-- As roles e tasks estão localizadas em `src/`.
-- A lógica de planejamento central está em `src/manager.planner.ts`.
-- Os desenhos das estruturas estão em `src/blueprints/`.
+## 🧠 Gerenciamento Global
+- **[Manager Planner](planner.md)**: O orquestrador que decide qual blueprint executar e quando.
