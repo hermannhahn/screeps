@@ -14,7 +14,7 @@ import linksBlueprint from './blueprints/links'; // Novo import
 
 const managerPlanner = {
     run: function(room: Room) {
-        if (Game.time % 100 !== 0) return;
+        if (Game.time % 20 !== 0) return;
 
         const hostileCreepsInRoom = room.find(FIND_HOSTILE_CREEPS);
         const damagedStructures = room.find(FIND_MY_STRUCTURES, {
@@ -43,10 +43,10 @@ const managerPlanner = {
             sourceContainersBlueprint,
             controllerContainerBlueprint,
             firstTowerBlueprint,
-            storageBlueprint,       // Adicionado aqui
+            storageBlueprint,
             secondTowerBlueprint,
             rampartsWallsBlueprint,
-            linksBlueprint, // Nova blueprint adicionada
+            linksBlueprint,
         ];
         const MAX_BLUEPRINT_STAGES = BLUEPRINTS_ORDER.length;
 
@@ -55,10 +55,9 @@ const managerPlanner = {
         const spawn = spawns[0];
 
         const constructionSites = room.find(FIND_CONSTRUCTION_SITES);
-        if (constructionSites.length > 0) { 
-            // We still want to prioritize rebuilding, but if CS exist, we wait for them
-            // to avoid hitting the 100 CS limit and to keep builders focused.
-            // However, we can still print what we are waiting for.
+        if (constructionSites.length > 20) { 
+            // Avoid flooding the room with too many sites at once.
+            // 20 is a safe limit to keep builders busy but focused.
             return;
         }
 
