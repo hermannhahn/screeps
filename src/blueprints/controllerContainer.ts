@@ -19,16 +19,14 @@ const controllerContainerBlueprint: Blueprint = {
             return 0;
         }
 
-        // Find a suitable position for the container 2-3 blocks away from the controller
-        // This gives space for upgraders to stand near the controller
+        // Find a suitable position for the container exactly 1 block away from the controller
         let foundPos: RoomPosition | null = null;
-        for (let r = 2; r <= 3; r++) {
-            for (let dx = -r; dx <= r; dx++) {
-                for (let dy = -r; dy <= r; dy++) {
-                    if (Math.abs(dx) < r && Math.abs(dy) < r) continue; // Only check the outer ring of the current radius
-                    
-                    const x = room.controller.pos.x + dx;
-                    const y = room.controller.pos.y + dy;
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue;
+                
+                const x = room.controller.pos.x + dx;
+                const y = room.controller.pos.y + dy;
 
                     if (x < 2 || x > 47 || y < 2 || y > 47) continue;
                     const pos = new RoomPosition(x, y, room.name);
@@ -42,17 +40,11 @@ const controllerContainerBlueprint: Blueprint = {
                     const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
                     if (constructionSites.length > 0) continue;
 
-                    // Ensure there's a path to this position
-                    const path = spawn.pos.findPathTo(pos, { ignoreCreeps: true });
-                    if (path.length === 0) continue;
-
                     foundPos = pos;
                     break;
                 }
                 if (foundPos) break;
             }
-            if (foundPos) break;
-        }
 
         if (foundPos) {
             if (room.createConstructionSite(foundPos, STRUCTURE_CONTAINER) === OK) {
@@ -67,9 +59,9 @@ const controllerContainerBlueprint: Blueprint = {
     isComplete: function(room: Room, spawn: StructureSpawn): boolean {
         if (!room.controller) return true;
         
-        const containerOrCS = room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
+        const containerOrCS = room.controller.pos.findInRange(FIND_STRUCTURES, 1, {
             filter: (s) => s.structureType === STRUCTURE_CONTAINER
-        }).length > 0 || room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
+        }).length > 0 || room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 1, {
             filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_CONTAINER
         }).length > 0;
 
