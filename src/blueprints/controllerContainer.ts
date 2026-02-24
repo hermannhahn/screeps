@@ -1,10 +1,11 @@
 import { Blueprint } from './blueprintInterface';
+import { isSafePosition } from './utils';
 
 const controllerContainerBlueprint: Blueprint = {
     name: "Controller Container",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
-        if (!room.controller) return 0;
+        if (!room.controller || !isSafePosition(room.controller.pos)) return 0;
 
         // Check if a container already exists or is planned near the controller
         const existingContainer = room.controller.pos.findInRange(FIND_STRUCTURES, 3, {

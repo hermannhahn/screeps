@@ -56,7 +56,10 @@ export function findSourceContainer(source: Source): StructureContainer | Constr
 
 export function isSafePosition(pos: RoomPosition): boolean {
     const enemiesInRange = pos.findInRange(FIND_HOSTILE_CREEPS, 5); // 5 tiles radius
-    return enemiesInRange.length === 0;
+    if (enemiesInRange.length > 0) return false;
+
+    const hostileStructuresInRange = pos.findInRange(FIND_HOSTILE_STRUCTURES, 5);
+    return hostileStructuresInRange.length === 0;
 }
 
 export function findControllerContainer(room: Room): StructureContainer | ConstructionSite | null {

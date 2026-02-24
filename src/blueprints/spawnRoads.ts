@@ -1,9 +1,11 @@
 import { Blueprint } from './blueprintInterface';
+import { isSafePosition } from './utils';
 
 const spawnRoads: Blueprint = {
     name: "Spawn Roads",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
+        if (!isSafePosition(spawn.pos)) return 0;
         let sitesCreated = 0;
         const distance = 1; // From original planRoadRing
         const centerPos = spawn.pos;

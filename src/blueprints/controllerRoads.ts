@@ -1,11 +1,11 @@
 import { Blueprint } from './blueprintInterface';
-import { planRoadsFromToNearestRoad } from './utils'; // Import the helper function
+import { planRoadsFromToNearestRoad, isSafePosition } from './utils'; // Import the helper function
 
 const controllerRoadsBlueprint: Blueprint = {
     name: "Controller Roads",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
-        if (!room.controller) return 0;
+        if (!room.controller || !isSafePosition(room.controller.pos)) return 0;
         return planRoadsFromToNearestRoad(room, room.controller.pos);
     },
 

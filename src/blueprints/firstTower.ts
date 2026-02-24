@@ -1,9 +1,11 @@
 import { Blueprint } from './blueprintInterface';
+import { isSafePosition } from './utils';
 
 const firstTowerBlueprint: Blueprint = {
     name: "First Tower",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
+        if (!isSafePosition(spawn.pos)) return 0;
         // Check if a tower (or CS) already exists
         const existingTower = room.find(FIND_MY_STRUCTURES, {
             filter: (s) => s.structureType === STRUCTURE_TOWER

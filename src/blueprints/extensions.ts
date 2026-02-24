@@ -1,10 +1,12 @@
 import { Blueprint } from './blueprintInterface';
+import { isSafePosition } from './utils';
 
 const extensionsBlueprint: Blueprint = {
     name: "Extensions",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
         if (!room.controller || room.controller.level < 2) return 0;
+        if (!isSafePosition(spawn.pos)) return 0; // If even the spawn isn't safe, don't plan extensions nearby
 
         let plannedCount = 0;
         let sitesCreated = 0;
