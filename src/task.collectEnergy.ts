@@ -51,8 +51,8 @@ const taskCollectEnergy = {
                 creep.memory.targetEnergyId = droppedEnergy[0].id as Id<any>;
             }
 
-            // Priority 1.5: Controller Container (especially for upgraders)
-            if (!creep.memory.targetEnergyId) {
+            // Priority 1.5: Controller Container (ONLY for upgraders as high priority)
+            if (!creep.memory.targetEnergyId && creep.memory.role === 'upgrader') {
                 const controllerContainer = findControllerContainer(creep.room);
                 if (controllerContainer && 'store' in controllerContainer && controllerContainer.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
                     creep.memory.targetEnergyId = controllerContainer.id as Id<any>;
@@ -81,6 +81,14 @@ const taskCollectEnergy = {
                 const storage = creep.room.storage;
                 if (storage && storage.store[RESOURCE_ENERGY] > 0) {
                     creep.memory.targetEnergyId = storage.id as Id<any>;
+                }
+            }
+
+            // Priority 4: Controller Container (Fallback for everyone else)
+            if (!creep.memory.targetEnergyId) {
+                const controllerContainer = findControllerContainer(creep.room);
+                if (controllerContainer && 'store' in controllerContainer && controllerContainer.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+                    creep.memory.targetEnergyId = controllerContainer.id as Id<any>;
                 }
             }
         }
