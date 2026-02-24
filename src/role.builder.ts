@@ -16,9 +16,7 @@ const roleBuilder = {
         }
 
         if (creep.memory.building) {
-            // Prioridade 1: Construir
             if (!taskBuild.run(creep)) {
-                // Fallback: Upgrade
                 taskUpgrade.run(creep);
             }
         } else {

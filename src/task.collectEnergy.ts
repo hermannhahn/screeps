@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import { findControllerContainer } from './blueprints/utils';
+import { getIncomingCollection } from './utils.creep';
 
 const taskCollectEnergy = {
     run: function(creep: Creep) {
@@ -10,109 +11,62 @@ const taskCollectEnergy = {
                     creep.moveTo(supplier, { visualizePathStyle: { stroke: '#ffaa00' } });
                 }
                 return;
-            } else {
-                delete creep.memory.assignedSupplier;
             }
+            delete creep.memory.assignedSupplier;
         }
 
-        // Validate existing targetEnergyId
-        if (creep.memory.targetEnergyId) {
-            const target = Game.getObjectById(creep.memory.targetEnergyId as Id<any>);
-            if (!target) { // If target doesn't exist
+        let target = creep.memory.targetEnergyId ? Game.getObjectById(creep.memory.targetEnergyId as Id<any>) : null;
+        
+        if (target) {
+            const hasEnergy = 'store' in target ? target.store[RESOURCE_ENERGY] > 0 : (target instanceof Resource ? target.amount > 0 : false);
+            if (!hasEnergy) {
                 delete creep.memory.targetEnergyId;
-            } else if (target instanceof Resource) { // If it's a dropped resource
-                if (target.amount === 0) {
-                    delete creep.memory.targetEnergyId;
-                }
-            } else if ('store' in target) { // If it's a structure with a store
-                if ((target as any).store[RESOURCE_ENERGY] === 0) {
-                    delete creep.memory.targetEnergyId;
-                }
-            } else { // It's an object that is not a Resource and does not have a store (e.g., a Source, Controller, or unknown structure type)
-                delete creep.memory.targetEnergyId; // Invalidate target if it's not a valid energy source
+                target = null;
             }
         }
 
-        if (!creep.memory.targetEnergyId) {
-            const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
-                if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetEnergyId) {
-                    return c.memory.targetEnergyId;
-                }
-                return null;
-            })) as Id<any>[];
-
+        if (!target) {
             // Priority 1: Dropped Energy
-            const droppedEnergy = creep.room.find(FIND_DROPPED_RESOURCES, {
-                filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 0 &&
-                    !targetedByOthers.includes(r.id)
-            }).sort((a, b) => b.amount - a.amount);
+            const dropped = creep.room.find(FIND_DROPPED_RESOURCES, {
+                filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > getIncomingCollection(r.id)
+            });
+            if (dropped.length > 0) target = _.maxBy(dropped, (r: Resource) => r.amount) || null;
 
-            if (droppedEnergy.length > 0) {
-                creep.memory.targetEnergyId = droppedEnergy[0].id as Id<any>;
-            }
-
-            // Priority 1.5: Controller Container (ONLY for upgraders as high priority)
-            if (!creep.memory.targetEnergyId && creep.memory.role === 'upgrader') {
-                const controllerContainer = findControllerContainer(creep.room);
-                if (controllerContainer && 'store' in controllerContainer && controllerContainer.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
-                    creep.memory.targetEnergyId = controllerContainer.id as Id<any>;
-                }
-            }
-
-            // Priority 2: Containers near Sources
-            if (!creep.memory.targetEnergyId) {
+            // Priority 2: Source Containers
+            if (!target) {
                 const containers = creep.room.find(FIND_STRUCTURES, {
-                    filter: (s) => (s.structureType === STRUCTURE_CONTAINER) &&
-                        s.store.getUsedCapacity(RESOURCE_ENERGY) > 0 &&
-                        !targetedByOthers.includes(s.id)
-                }) as StructureContainer[];
-
-                const containersNearSources = containers.filter(container => {
-                    return creep.room.find(FIND_SOURCES).some(source => container.pos.getRangeTo(source) <= 3);
-                }).sort((a, b) => creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b));
-
-                if (containersNearSources.length > 0) {
-                    creep.memory.targetEnergyId = containersNearSources[0].id as Id<any>;
-                }
+                    filter: (s) => s.structureType === STRUCTURE_CONTAINER &&
+                        s.store.getUsedCapacity(RESOURCE_ENERGY) > getIncomingCollection(s.id) &&
+                        creep.room.find(FIND_SOURCES).some(src => s.pos.getRangeTo(src) <= 3)
+                });
+                if (containers.length > 0) target = creep.pos.findClosestByRange(containers);
             }
 
             // Priority 3: Storage
-            if (!creep.memory.targetEnergyId) {
-                const storage = creep.room.storage;
-                if (storage && storage.store[RESOURCE_ENERGY] > 0) {
-                    creep.memory.targetEnergyId = storage.id as Id<any>;
+            if (!target && creep.room.storage && creep.room.storage.store[RESOURCE_ENERGY] > getIncomingCollection(creep.room.storage.id)) {
+                target = creep.room.storage;
+            }
+
+            // Priority 4: Controller Container
+            if (!target) {
+                const ctrlContainer = findControllerContainer(creep.room);
+                if (ctrlContainer && 'store' in ctrlContainer && ctrlContainer.store.getUsedCapacity(RESOURCE_ENERGY) > getIncomingCollection(ctrlContainer.id)) {
+                    target = ctrlContainer;
                 }
             }
 
-            // Priority 4: Controller Container (Fallback for everyone else)
-            if (!creep.memory.targetEnergyId) {
-                const controllerContainer = findControllerContainer(creep.room);
-                if (controllerContainer && 'store' in controllerContainer && controllerContainer.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
-                    creep.memory.targetEnergyId = controllerContainer.id as Id<any>;
-                }
-            }
+            if (target) creep.memory.targetEnergyId = target.id;
         }
 
-        if (creep.memory.targetEnergyId) {
-            const energyTarget = Game.getObjectById(creep.memory.targetEnergyId as Id<any>);
-            if (energyTarget) {
-                let result;
-                if (energyTarget instanceof Resource) {
-                    result = creep.pickup(energyTarget);
-                } else {
-                    result = creep.withdraw(energyTarget, RESOURCE_ENERGY);
-                }
-
-                if (result === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(energyTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
-                } else if (result === OK || result === ERR_FULL) {
-                    delete creep.memory.targetEnergyId;
-                }
-            } else {
+        if (target) {
+            const result = target instanceof Resource ? creep.pickup(target) : creep.withdraw(target, RESOURCE_ENERGY);
+            if (result === ERR_NOT_IN_RANGE) {
+                creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
+            } else if (result === OK || result === ERR_FULL) {
                 delete creep.memory.targetEnergyId;
             }
         } else {
-            if (creep.room.controller && creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
+            if (creep.room.controller && creep.pos.getRangeTo(creep.room.controller) > 3) {
                 creep.moveTo(creep.room.controller);
             }
         }

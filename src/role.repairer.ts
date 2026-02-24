@@ -1,11 +1,9 @@
-import _ from 'lodash';
 import taskRepair from './task.repair';
 import taskCollectEnergy from './task.collectEnergy';
 import taskUpgrade from './task.upgrade';
 
 const roleRepairer = {
     run: function(creep: Creep) {
-        // Estado: repairing ou gathering
         if (creep.memory.repairing && creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
             creep.memory.repairing = false;
             delete creep.memory.targetRepairId;
@@ -19,11 +17,9 @@ const roleRepairer = {
 
         if (creep.memory.repairing) {
             if (!taskRepair.run(creep)) {
-                // Se não houver nada para reparar, upar o controller para não ficar ocioso
                 taskUpgrade.run(creep);
             }
         } else {
-            // Coletar energia
             taskCollectEnergy.run(creep);
         }
     }

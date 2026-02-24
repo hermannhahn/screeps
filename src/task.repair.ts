@@ -1,41 +1,33 @@
 import _ from 'lodash';
+import { getIncomingWork } from './utils.creep';
 
 const taskRepair = {
     run: function(creep: Creep): boolean {
-        let target: AnyStructure | null = null;
+        let target = creep.memory.targetRepairId ? Game.getObjectById(creep.memory.targetRepairId as Id<AnyStructure>) : null;
 
-        // Try to recover target from memory
-        if (creep.memory.targetRepairId) {
-            target = Game.getObjectById(creep.memory.targetRepairId as Id<AnyStructure>);
-            // If target is fully repaired or gone, clear it
-            if (!target || target.hits >= target.hitsMax) {
-                delete creep.memory.targetRepairId;
-                target = null;
-            }
+        if (target && target.hits >= target.hitsMax) {
+            delete creep.memory.targetRepairId;
+            target = null;
         }
 
         if (!target) {
-            const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
-                if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetRepairId) {
-                    return c.memory.targetRepairId;
-                }
-                return null;
-            })) as Id<any>[];
-
             const targets = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    const isDamaged = structure.hits < structure.hitsMax * 0.6;
-                    const isNotWallOrRampart = structure.structureType !== STRUCTURE_WALL && structure.structureType !== STRUCTURE_RAMPART;
-                    const isWallOrRampartLow = (structure.structureType === STRUCTURE_WALL || structure.structureType === STRUCTURE_RAMPART) && structure.hits < 10000;
+                filter: (s) => {
+                    const isDamaged = s.hits < s.hitsMax * 0.8;
+                    const isWallOrRampart = s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART;
+                    const wallThreshold = 30000;
                     
-                    return isDamaged && (isNotWallOrRampart || isWallOrRampartLow) && !targetedByOthers.includes(structure.id);
+                    if (isWallOrRampart && s.hits >= wallThreshold) return false;
+                    if (!isDamaged && !isWallOrRampart) return false;
+
+                    const incomingWork = getIncomingWork(s.id, 'targetRepairId');
+                    return isWallOrRampart ? incomingWork < 10 : incomingWork === 0;
                 }
             });
 
             if (targets.length > 0) {
-                targets.sort((a, b) => (a.hits / a.hitsMax) - (b.hits / b.hitsMax));
-                target = targets[0];
-                creep.memory.targetRepairId = target.id;
+                target = _.minBy(targets, (s: AnyStructure) => s.hits / s.hitsMax) || null;
+                if (target) creep.memory.targetRepairId = target.id;
             }
         }
 
