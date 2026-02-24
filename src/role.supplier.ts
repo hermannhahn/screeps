@@ -10,6 +10,8 @@ const roleSupplier = {
         if (creep.memory.delivering && creep.store.getUsedCapacity() === 0) {
             creep.memory.delivering = false;
             delete creep.memory.deliveryTargetId;
+            delete creep.memory.targetRepairId;
+            delete creep.memory.targetBuildId;
             creep.say('🔄 collect');
         }
         if (!creep.memory.delivering && creep.store.getFreeCapacity() === 0) {
@@ -136,7 +138,17 @@ const roleSupplier = {
             let target = null;
             if (creep.memory.deliveryTargetId) {
                 target = Game.getObjectById(creep.memory.deliveryTargetId as Id<any>);
-                if (!target || (target.store && target.store.getFreeCapacity(RESOURCE_ENERGY) === 0)) {
+                // Validate target: exists, has capacity, and if it's a creep, it still needs energy
+                let isValid = !!target;
+                if (target) {
+                    if ('store' in target) {
+                        isValid = target.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                    } else if (target instanceof Creep) {
+                        isValid = target.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                    }
+                }
+                
+                if (!isValid) {
                     delete creep.memory.deliveryTargetId;
                     target = null;
                 }

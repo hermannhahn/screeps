@@ -11,9 +11,13 @@ interface CreepMemory {
     working?: boolean;
     sourceId?: Id<Source>;
     targetEnergyId?: Id<any>;
+    targetRepairId?: Id<AnyStructure>;
+    targetBuildId?: Id<ConstructionSite>;
     deliveryTargetId?: Id<any>;
     assignedSupplier?: Id<Creep>;
     delivering?: boolean;
+    building?: boolean;
+    repairing?: boolean;
 }
 
 // Global Memory
