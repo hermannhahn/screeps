@@ -44,7 +44,7 @@ const taskCollectEnergy = {
             // Priority 1: Dropped Energy
             const droppedEnergy = creep.room.find(FIND_DROPPED_RESOURCES, {
                 filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 0 &&
-                    (!targetedByOthers.includes(r.id) || r.amount >= creep.store.getCapacity() * 4)
+                    !targetedByOthers.includes(r.id)
             }).sort((a, b) => b.amount - a.amount);
 
             if (droppedEnergy.length > 0) {
@@ -64,7 +64,7 @@ const taskCollectEnergy = {
                 const containers = creep.room.find(FIND_STRUCTURES, {
                     filter: (s) => (s.structureType === STRUCTURE_CONTAINER) &&
                         s.store.getUsedCapacity(RESOURCE_ENERGY) > 0 &&
-                        (!targetedByOthers.includes(s.id) || s.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4)
+                        !targetedByOthers.includes(s.id)
                 }) as StructureContainer[];
 
                 const containersNearSources = containers.filter(container => {

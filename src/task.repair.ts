@@ -1,3 +1,5 @@
+import _ from 'lodash';
+
 const taskRepair = {
     run: function(creep: Creep): boolean {
         let target: AnyStructure | null = null;
@@ -13,13 +15,20 @@ const taskRepair = {
         }
 
         if (!target) {
+            const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
+                if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetRepairId) {
+                    return c.memory.targetRepairId;
+                }
+                return null;
+            })) as Id<any>[];
+
             const targets = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
                     const isDamaged = structure.hits < structure.hitsMax * 0.6;
                     const isNotWallOrRampart = structure.structureType !== STRUCTURE_WALL && structure.structureType !== STRUCTURE_RAMPART;
                     const isWallOrRampartLow = (structure.structureType === STRUCTURE_WALL || structure.structureType === STRUCTURE_RAMPART) && structure.hits < 10000;
                     
-                    return isDamaged && (isNotWallOrRampart || isWallOrRampartLow);
+                    return isDamaged && (isNotWallOrRampart || isWallOrRampartLow) && !targetedByOthers.includes(structure.id);
                 }
             });
 

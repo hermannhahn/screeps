@@ -1,3 +1,5 @@
+import _ from 'lodash';
+
 const taskBuild = {
     run: function(creep: Creep): boolean {
         let target: ConstructionSite | null = null;
@@ -10,7 +12,16 @@ const taskBuild = {
         }
 
         if (!target) {
-            const targets = creep.room.find(FIND_CONSTRUCTION_SITES);
+            const targetedByOthers = _.compact(_.map(Game.creeps, (c: Creep) => {
+                if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.targetBuildId) {
+                    return c.memory.targetBuildId;
+                }
+                return null;
+            })) as Id<any>[];
+
+            const targets = creep.room.find(FIND_CONSTRUCTION_SITES, {
+                filter: (cs) => !targetedByOthers.includes(cs.id)
+            });
             if (targets.length > 0) {
                 targets.sort((a, b) => {
                     const progressA = a.progress / a.progressTotal;

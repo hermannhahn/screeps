@@ -90,7 +90,7 @@ const roleSupplier = {
                                                             if (sourceContainer && sourceContainer.structureType === STRUCTURE_CONTAINER && ('store' in sourceContainer) ) { // Check if it's a built container WITH a store
                                                                 const builtContainer = sourceContainer as StructureContainer;
                                                                 if (builtContainer.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity()) {
-                                                                    if (!targetedByOthers.includes(builtContainer.id) || builtContainer.store.getUsedCapacity(RESOURCE_ENERGY) >= creep.store.getCapacity() * 4) {
+                                                                    if (!targetedByOthers.includes(builtContainer.id)) {
                                                                         targetEnergy = builtContainer;
                                                                         break;
                                                                     }
@@ -154,11 +154,19 @@ const roleSupplier = {
                 }
             }
 
+            const targetedByOthersDelivery = _.compact(_.map(Game.creeps, (c: Creep) => {
+                if (c.id !== creep.id && c.room.name === creep.room.name && c.memory.deliveryTargetId) {
+                    return c.memory.deliveryTargetId;
+                }
+                return null;
+            })) as Id<any>[];
+
             if (!target) {
                 // Prioritize spawns
                 target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                     filter: (s) => s.structureType === STRUCTURE_SPAWN &&
-                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 &&
+                        !targetedByOthersDelivery.includes(s.id)
                 });
             }
 
@@ -166,7 +174,8 @@ const roleSupplier = {
                 // Then extensions
                 target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                     filter: (s) => s.structureType === STRUCTURE_EXTENSION &&
-                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 &&
+                        !targetedByOthersDelivery.includes(s.id)
                 });
             }
 
@@ -174,7 +183,8 @@ const roleSupplier = {
                 target = creep.pos.findClosestByRange(FIND_CREEPS, {
                     filter: (c) => c.memory && (c.memory.role === 'upgrader' || c.memory.role === 'builder') &&
                         c.store[RESOURCE_ENERGY] === 0 &&
-                        !c.memory.assignedSupplier
+                        !c.memory.assignedSupplier &&
+                        !targetedByOthersDelivery.includes(c.id as any)
                 });
 
                 if (target) {
@@ -185,19 +195,24 @@ const roleSupplier = {
 
             if (!target) {
                 target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                    filter: (s) => s.structureType === STRUCTURE_TOWER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                    filter: (s) => s.structureType === STRUCTURE_TOWER && 
+                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 &&
+                        !targetedByOthersDelivery.includes(s.id)
                 });
             }
 
             if (!target) {
                 // Finally, fill the Controller Container
                 const controllerContainer = findControllerContainer(creep.room);
-                if (controllerContainer && 'store' in controllerContainer && controllerContainer.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                if (controllerContainer && 'store' in controllerContainer && 
+                    controllerContainer.store.getFreeCapacity(RESOURCE_ENERGY) > 0 &&
+                    !targetedByOthersDelivery.includes(controllerContainer.id)) {
                     target = controllerContainer;
                 }
             }
 
             if (target) {
+                creep.memory.deliveryTargetId = target.id;
                 const transferResult = creep.transfer(target, RESOURCE_ENERGY);
                 if (transferResult === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
