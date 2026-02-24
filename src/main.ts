@@ -182,8 +182,18 @@ export const loop = () => {
 
     // Pixel generation logic for official server
     if (Game.cpu.bucket >= 10000) {
-        Game.cpu.generatePixel();
-        console.log("[Main] Generated a Pixel! 💎");
+        // Suspend pixel generation if any room is under attack
+        const anyRoomUnderAttack = _.some(Game.rooms, (room) => {
+            const hostiles = room.find(FIND_HOSTILE_CREEPS);
+            return hostiles.length > 0;
+        });
+
+        if (!anyRoomUnderAttack) {
+            Game.cpu.generatePixel();
+            console.log("[Main] Generated a Pixel! 💎");
+        } else {
+            console.log("[Main] Suspending pixel generation: Room(s) under attack! ⚔️");
+        }
     }
 
     for (const name in Memory.creeps) {
