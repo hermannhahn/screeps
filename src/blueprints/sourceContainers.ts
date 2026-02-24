@@ -20,35 +20,41 @@ const sourceContainersBlueprint: Blueprint = {
                 continue;
             }
 
-            // Find a suitable position for the container 1 block away from the source
-            // Prefer positions that are not walls or existing structures
+            // Find a suitable position for the container up to 2 blocks away from the source
+            // Containers are very high priority, so we search range 1 then range 2.
             let foundPos: RoomPosition | null = null;
-            for (let dx = -1; dx <= 1; dx++) { // Alterado para -1 a 1
-                for (let dy = -1; dy <= 1; dy++) { // Alterado para -1 a 1
-                    if (dx === 0 && dy === 0) continue; // Não pode ser a própria fonte
-                    const x = source.pos.x + dx;
-                    const y = source.pos.y + dy;
+            for (let range = 1; range <= 2; range++) {
+                for (let dx = -range; dx <= range; dx++) {
+                    for (let dy = -range; dy <= range; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        if (Math.abs(dx) < range && Math.abs(dy) < range && range > 1) continue; // Already checked inner range
 
-                    if (x < 0 || x > 49 || y < 0 || y > 49) continue;
-                    const pos = new RoomPosition(x, y, room.name);
+                        const x = source.pos.x + dx;
+                        const y = source.pos.y + dy;
 
-                    const terrain = room.getTerrain().get(x, y);
-                    if (terrain === TERRAIN_MASK_WALL) continue;
+                        if (x < 0 || x > 49 || y < 0 || y > 49) continue;
+                        const pos = new RoomPosition(x, y, room.name);
 
-                    // Check if position is occupied by another structure or construction site
-                    const structures = pos.lookFor(LOOK_STRUCTURES);
-                    if (structures.length > 0) continue;
-                    const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-                    if (constructionSites.length > 0) continue;
+                        if (room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) continue;
 
-                    foundPos = pos;
-                    break;
+                        // Check if position is occupied by another structure (ignore roads)
+                        const structures = pos.lookFor(LOOK_STRUCTURES).filter(s => s.structureType !== STRUCTURE_ROAD);
+                        if (structures.length > 0) continue;
+                        
+                        const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES).filter(cs => cs.structureType !== STRUCTURE_ROAD);
+                        if (constructionSites.length > 0) continue;
+
+                        foundPos = pos;
+                        break;
+                    }
+                    if (foundPos) break;
                 }
                 if (foundPos) break;
             }
 
             if (foundPos) {
                 if (room.createConstructionSite(foundPos, STRUCTURE_CONTAINER) === OK) {
+                    console.log(`[ManagerPlanner] Created Source Container CS at ${foundPos}`);
                     sitesCreated++;
                 }
             }

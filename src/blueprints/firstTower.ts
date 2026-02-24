@@ -5,7 +5,9 @@ const firstTowerBlueprint: Blueprint = {
     name: "First Tower",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
+        if (!room.controller || room.controller.level < 3) return 0;
         if (!isSafePosition(spawn.pos)) return 0;
+        
         // Check if a tower (or CS) already exists
         const existingTower = room.find(FIND_MY_STRUCTURES, {
             filter: (s) => s.structureType === STRUCTURE_TOWER
@@ -71,6 +73,8 @@ const firstTowerBlueprint: Blueprint = {
     },
 
     isComplete: function(room: Room, spawn: StructureSpawn): boolean {
+        if (!room.controller || room.controller.level < 3) return true;
+
         // Check if at least one tower structure exists
         const existingTower = room.find(FIND_MY_STRUCTURES, {
             filter: (s) => s.structureType === STRUCTURE_TOWER
@@ -80,7 +84,7 @@ const firstTowerBlueprint: Blueprint = {
             filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_TOWER
         }).length > 0;
 
-        return existingTower && !existingTowerCS; // Complete if at least one tower is built and no CS for towers
+        return existingTower || existingTowerCS;
     }
 };
 

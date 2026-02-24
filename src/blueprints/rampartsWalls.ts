@@ -79,8 +79,7 @@ const rampartsWallsBlueprint: Blueprint = {
         }).length;
 
         // A blueprint está completa se o número total de ramparts (construídos + CS) atingir o máximo
-        // E não houver construction sites pendentes.
-        return (builtRamparts + rampartConstructionSites >= maxRamparts) && (rampartConstructionSites === 0);
+        return (builtRamparts + rampartConstructionSites >= maxRamparts);
     }
 };
 

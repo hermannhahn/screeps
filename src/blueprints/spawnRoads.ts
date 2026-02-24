@@ -33,9 +33,8 @@ const spawnRoads: Blueprint = {
         const builtRoads = room.find(FIND_STRUCTURES, {
             filter: (s: AnyStructure) => s.structureType === STRUCTURE_ROAD && s.pos.getRangeTo(spawn.pos) <= 1
         }).length;
-        // Assuming 8 roads for a complete ring around a spawn at distance 1
-        // (3x3 square, minus center, minus 4 corners, so 8 positions)
-        return roadConstructionSitesInRing === 0 && builtRoads >= 8;
+        
+        return (builtRoads + roadConstructionSitesInRing) >= 8;
     }
 };
 

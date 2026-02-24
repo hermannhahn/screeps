@@ -58,15 +58,19 @@ const extensionsBlueprint: Blueprint = {
 
     isComplete: function(room: Room, spawn: StructureSpawn): boolean {
         if (!room.controller || room.controller.level < 2) return true; // Not applicable or too early
-        const extensionConstructionSites = room.find(FIND_CONSTRUCTION_SITES, {
-            filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_EXTENSION
-        }).length;
+
         const builtExtensions = room.find(FIND_MY_STRUCTURES, {
             filter: (s: AnyStructure) => s.structureType === STRUCTURE_EXTENSION
         }).length;
+        const extensionConstructionSites = room.find(FIND_CONSTRUCTION_SITES, {
+            filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_EXTENSION
+        }).length;
+
         const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level];
-        const targetExtensions = maxExtensionsForRCL; // Plan for all extensions available at current RCL
-        return extensionConstructionSites === 0 && builtExtensions >= targetExtensions;
+        const targetExtensions = maxExtensionsForRCL;
+
+        // Stage is considered complete if we have built or are building the target number of extensions
+        return (builtExtensions + extensionConstructionSites) >= targetExtensions;
     }
 };
 

@@ -23,15 +23,8 @@ const managerPlanner = {
         const isRoomActivelyUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
 
         if (isRoomActivelyUnderAttack) {
-            console.log(`Room ${room.name} actively under attack, suspending planning.`);
+            console.log(`[ManagerPlanner] Room ${room.name} actively under attack, suspending planning.`);
             return;
-        }
-
-        if (room.memory.maxBlueprintStageCompleted === undefined) {
-            room.memory.maxBlueprintStageCompleted = -1; // -1 indicates no blueprint has been completed yet
-        }
-        if (room.memory.currentBlueprintStage === undefined) {
-            room.memory.currentBlueprintStage = 0; // Start checking from blueprint 0
         }
 
         const BLUEPRINTS_ORDER: Blueprint[] = [
@@ -54,38 +47,36 @@ const managerPlanner = {
         if (spawns.length === 0) return;
         const spawn = spawns[0];
 
-        const constructionSites = room.find(FIND_CONSTRUCTION_SITES);
-        if (constructionSites.length > 20) { 
-            // Avoid flooding the room with too many sites at once.
-            // 20 is a safe limit to keep builders busy but focused.
-            return;
-        }
+        const totalConstructionSites = room.find(FIND_CONSTRUCTION_SITES).length;
 
-        // NEW LOGIC: Iterate through blueprints. Plan the first one that is incomplete and CAN be planned.
-        let plannedSomething = false;
-
+        // SEQUENTIAL REVIEW: Check every blueprint from the start.
         for (let i = 0; i < MAX_BLUEPRINT_STAGES; i++) {
             const currentBlueprint = BLUEPRINTS_ORDER[i];
             
-            if (!currentBlueprint.isComplete(room, spawn)) {
-                // Stage is incomplete, try to plan it
-                let sitesCreated = currentBlueprint.plan(room, spawn);
-                
-                if (sitesCreated > 0) {
-                    console.log(`[ManagerPlanner] Planned ${sitesCreated} sites for stage ${i}: ${currentBlueprint.name}`);
-                    room.memory.currentBlueprintStage = i;
-                    plannedSomething = true;
-                    break; // Stop after planning one blueprint to avoid flooding
-                } else {
-                    // Stage is incomplete but couldn't be planned (e.g. unsafe)
-                    // We continue the loop to check if later stages can be planned
-                    // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) is incomplete but could not be planned. Checking next stages...`);
-                }
+            // If the blueprint is already 'Complete' (built, planned, or N/A due to RCL), move to next
+            if (currentBlueprint.isComplete(room, spawn)) {
+                continue;
             }
-        }
 
-        if (!plannedSomething) {
-            // console.log(`[ManagerPlanner] No planning needed or possible in Room ${room.name}`);
+            // Blueprint is NOT complete. Try to plan it.
+            if (totalConstructionSites >= 20) {
+                // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) is incomplete, but room has too many construction sites (${totalConstructionSites}). Waiting...`);
+                break; // Stop reviewing once we hit a block
+            }
+
+            let sitesCreated = currentBlueprint.plan(room, spawn);
+            
+            if (sitesCreated > 0) {
+                console.log(`[ManagerPlanner] Planned ${sitesCreated} sites for stage ${i}: ${currentBlueprint.name}`);
+                room.memory.currentBlueprintStage = i;
+                break; // Stop after planning one blueprint to avoid flooding and maintain order
+            } else {
+                // Stage is incomplete but could not be planned.
+                // This could be due to RCL, unsafe conditions, or no valid spots found.
+                // We STOP here to maintain sequential integrity: don't build stage N+1 if stage N is broken and unfixable.
+                // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) is incomplete and could not be planned. Sequential stop.`);
+                break;
+            }
         }
     }
 };

@@ -59,9 +59,9 @@ const controllerContainerBlueprint: Blueprint = {
     isComplete: function(room: Room, spawn: StructureSpawn): boolean {
         if (!room.controller) return true;
         
-        const containerOrCS = room.controller.pos.findInRange(FIND_STRUCTURES, 1, {
+        const containerOrCS = room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
             filter: (s) => s.structureType === STRUCTURE_CONTAINER
-        }).length > 0 || room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 1, {
+        }).length > 0 || room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
             filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_CONTAINER
         }).length > 0;
 
