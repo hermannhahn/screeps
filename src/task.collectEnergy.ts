@@ -3,7 +3,7 @@ import { findControllerContainer } from './blueprints/utils';
 import { getIncomingCollection } from './utils.creep';
 
 const taskCollectEnergy = {
-    run: function(creep: Creep) {
+    run: function(creep: Creep, options: { prioritizeContainers?: boolean } = {}) {
         if (creep.memory.assignedSupplier) {
             const supplier = Game.getObjectById(creep.memory.assignedSupplier as Id<Creep>);
             if (supplier && supplier.store[RESOURCE_ENERGY] > 0) {
@@ -44,12 +44,25 @@ const taskCollectEnergy = {
                 return (available * available) / Math.max(distance, 1);
             };
 
+            // Priority 0: Closest Container if prioritized
+            if (options.prioritizeContainers) {
+                const containers = creep.room.find(FIND_STRUCTURES, {
+                    filter: (s) => s.structureType === STRUCTURE_CONTAINER &&
+                        (s.store.getUsedCapacity(RESOURCE_ENERGY) - getIncomingCollection(s.id)) > 0
+                });
+                if (containers.length > 0) {
+                    target = creep.pos.findClosestByRange(containers);
+                }
+            }
+
             // Priority 1: Dropped Energy (High priority because it decays)
-            const dropped = creep.room.find(FIND_DROPPED_RESOURCES, {
-                filter: (r) => r.resourceType === RESOURCE_ENERGY && (r.amount - getIncomingCollection(r.id)) > 0
-            });
-            if (dropped.length > 0) {
-                target = _.maxBy(dropped, (r) => getScore(r)) || null;
+            if (!target) {
+                const dropped = creep.room.find(FIND_DROPPED_RESOURCES, {
+                    filter: (r) => r.resourceType === RESOURCE_ENERGY && (r.amount - getIncomingCollection(r.id)) > 0
+                });
+                if (dropped.length > 0) {
+                    target = _.maxBy(dropped, (r) => getScore(r)) || null;
+                }
             }
 
             // Priority 2: Source Containers

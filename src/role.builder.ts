@@ -20,7 +20,7 @@ const roleBuilder = {
                 taskUpgrade.run(creep);
             }
         } else {
-            taskCollectEnergy.run(creep);
+            taskCollectEnergy.run(creep, { prioritizeContainers: true });
         }
     }
 };
