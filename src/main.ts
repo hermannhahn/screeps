@@ -33,6 +33,7 @@ declare global {
         building?: boolean;
         state?: string;
         repairing?: boolean;
+        targetRoom?: string;
     }
     interface RoomPosition {
         isWalkable(creepLooking?: Creep): boolean;
@@ -44,6 +45,7 @@ declare global {
         uuid: number;
         log: any;
         primaryHostileTargetId?: Id<Creep> | null;
+        roomsToExplore?: { [roomName: string]: boolean };
     }
 }
 

@@ -404,10 +404,9 @@ const managerSpawner = {
         const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === room.name);
         const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === room.name);
         const builders = _.filter(Game.creeps, (c) => c.memory.role === 'builder' && c.room.name === room.name);
-        // Novos contadores para as roles de defesa
         const guards = _.filter(Game.creeps, (c) => c.memory.role === 'guard' && c.room.name === room.name);
         const archers = _.filter(Game.creeps, (c) => c.memory.role === 'archer' && c.room.name === room.name);
-        const repairers = _.filter(Game.creeps, (c) => c.memory.role === 'repairer' && c.room.name === room.name); // Novo contador
+        const repairers = _.filter(Game.creeps, (c) => c.memory.role === 'repairer' && c.room.name === room.name);
         
         const damagedStructures = room.find(FIND_MY_STRUCTURES, {
             filter: (s) => s.hits < s.hitsMax
@@ -439,7 +438,7 @@ const managerSpawner = {
                 if (harvestersAtSource.length < targetHarvestersPerSource) {
                     const body = harvesters.length === 0 ? getHarvesterBody(energyAvailable, rcl) : getHarvesterBody(energyCapacity, rcl);
                     if (body.length > 0 && spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } }) === OK) {
-                        return; // Spawned a harvester, stop for this tick
+                        return;
                     }
                 }
             }
@@ -450,8 +449,8 @@ const managerSpawner = {
             filter: { structureType: STRUCTURE_EXTENSION }
         });
         const hasEnoughExtensionsForCombat = extensions.length >= 15;
-        const targetGuards = (isUnderAttack && hasEnoughExtensionsForCombat) ? 1 : 0; // 1 Guard se estiver sob ataque e tiver 15+ extensões
-        const targetArchers = (isUnderAttack && hasEnoughExtensionsForCombat) ? 2 : 0; // 2 Archers se estiver sob ataque e tiver 15+ extensões
+        const targetGuards = (isUnderAttack && hasEnoughExtensionsForCombat) ? 1 : 0;
+        const targetArchers = (isUnderAttack && hasEnoughExtensionsForCombat) ? 2 : 0;
 
         if (guards.length < targetGuards) {
             const body = getGuardBody(energyCapacity);
@@ -472,70 +471,23 @@ const managerSpawner = {
         if (suppliers.length < targetSuppliers) {
             const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } }) === OK) {
-                return; // Spawned a supplier, stop for this tick
+                return;
             }
         }
         
-        // Priority 4: Scouts (for exploration)
-        if (rcl >= 4) { // Only spawn scouts from RCL 4 onwards
-            const scouts = _.filter(Game.creeps, (c) => c.memory.role === 'scout');
-            let targetRoomForScout: string | null = null;
-
-            // Find a room to explore from Memory.roomsToExplore
-            for (const roomName in Memory.roomsToExplore) {
-                if (Memory.roomsToExplore[roomName]) { // If room needs exploration
-                    // Check if a scout is already assigned to this room
-                    const assignedScout = _.find(scouts, (s) => s.memory.targetRoom === roomName);
-                    if (!assignedScout) {
-                        targetRoomForScout = roomName;
-                        break;
-                    }
-                }
-            }
-
-            if (targetRoomForScout) {
-                const body = getScoutBody(energyAvailable);
-                if (body.length > 0 && spawn.spawnCreep(body, 'Scout' + Game.time, {
-                    memory: {
-                        role: 'scout',
-                        targetRoom: targetRoomForScout
-                        // scoutTarget is removed as flags are no longer used for targeting
-                    }
-                }) === OK) {
-                    Memory.roomsToExplore[targetRoomForScout] = false; // Mark as being explored
-                    console.log(`Spawning new scout for target room ${targetRoomForScout}`);
-                    return;
-                }
-            }
-        }
-        
-        // Priority 5: Remote Harvesters (for remote energy collection)
+        // Priority 4: Remote Harvesters
         const remoteHarvesters = _.filter(Game.creeps, (c) => c.memory.role === 'remoteHarvester');
         const remoteHarvestFlags = _.filter(Game.flags, (f) => f.name.toLowerCase().startsWith('remoteharvest'));
-
         if (remoteHarvestFlags.length > 0) {
             for (const flag of remoteHarvestFlags) {
-                // Parse flag name: remoteHarvest_ROOMNAME_SOURCEID
                 const parts = flag.name.split('_');
                 if (parts.length === 3) {
                     const targetRoomName = parts[1];
-                    const sourceIdFromFlag = parts[2]; // This is a string, not an actual ID
-
-                    const assignedRemoteHarvester = _.find(remoteHarvesters, (rh) => 
-                        rh.memory.targetRoom === targetRoomName && rh.memory.remoteSourceId === sourceIdFromFlag
-                    );
-
+                    const sourceIdFromFlag = parts[2];
+                    const assignedRemoteHarvester = _.find(remoteHarvesters, (rh) => rh.memory.targetRoom === targetRoomName && rh.memory.remoteSourceId === sourceIdFromFlag);
                     if (!assignedRemoteHarvester) {
-                        const body = getRemoteHarvesterBody(energyCapacity); // Use full capacity for remote
-                        if (body.length > 0 && spawn.spawnCreep(body, 'RemoteHarvester' + Game.time, {
-                            memory: {
-                                role: 'remoteHarvester',
-                                homeRoom: room.name,
-                                targetRoom: targetRoomName,
-                                remoteSourceId: sourceIdFromFlag as Id<Source> // Cast as Id<Source>
-                            }
-                        }) === OK) {
-                            console.log(`Spawning new remoteHarvester for target ${flag.name} in room ${targetRoomName}`);
+                        const body = getRemoteHarvesterBody(energyCapacity);
+                        if (body.length > 0 && spawn.spawnCreep(body, 'RemoteHarvester' + Game.time, { memory: { role: 'remoteHarvester', homeRoom: room.name, targetRoom: targetRoomName, remoteSourceId: sourceIdFromFlag as Id<Source> } }) === OK) {
                             return;
                         }
                     }
@@ -543,33 +495,19 @@ const managerSpawner = {
             }
         }
         
-        // Priority 6: Carriers (for transporting remote energy)
+        // Priority 5: Carriers
         const carriers = _.filter(Game.creeps, (c) => c.memory.role === 'carrier');
         const carrierFlags = _.filter(Game.flags, (f) => f.name.toLowerCase().startsWith('carrier'));
-
         if (carrierFlags.length > 0) {
             for (const flag of carrierFlags) {
-                // Parse flag name: carrier_ROOMNAME_CONTAINERID
                 const parts = flag.name.split('_');
                 if (parts.length === 3) {
                     const targetRoomName = parts[1];
-                    const containerIdFromFlag = parts[2]; // This is a string, not an actual ID
-
-                    const assignedCarrier = _.find(carriers, (c) => 
-                        c.memory.targetRoom === targetRoomName && c.memory.remoteContainerId === containerIdFromFlag
-                    );
-
+                    const containerIdFromFlag = parts[2];
+                    const assignedCarrier = _.find(carriers, (c) => c.memory.targetRoom === targetRoomName && c.memory.remoteContainerId === containerIdFromFlag);
                     if (!assignedCarrier) {
-                        const body = getCarrierBody(energyCapacity); // Use full capacity for remote
-                        if (body.length > 0 && spawn.spawnCreep(body, 'Carrier' + Game.time, {
-                            memory: {
-                                role: 'carrier',
-                                homeRoom: room.name,
-                                targetRoom: targetRoomName,
-                                remoteContainerId: containerIdFromFlag as Id<StructureContainer> // Cast as Id<StructureContainer>
-                            }
-                        }) === OK) {
-                            console.log(`Spawning new carrier for target ${flag.name} in room ${targetRoomName}`);
+                        const body = getCarrierBody(energyCapacity);
+                        if (body.length > 0 && spawn.spawnCreep(body, 'Carrier' + Game.time, { memory: { role: 'carrier', homeRoom: room.name, targetRoom: targetRoomName, remoteContainerId: containerIdFromFlag as Id<StructureContainer> } }) === OK) {
                             return;
                         }
                     }
@@ -577,30 +515,18 @@ const managerSpawner = {
             }
         }
         
-        // Priority 7: Reservers (for reserving remote room controllers)
+        // Priority 6: Reservers
         const reservers = _.filter(Game.creeps, (c) => c.memory.role === 'reserver');
         const reserverFlags = _.filter(Game.flags, (f) => f.name.toLowerCase().startsWith('reserver'));
-
         if (reserverFlags.length > 0) {
             for (const flag of reserverFlags) {
-                // Parse flag name: reserver_ROOMNAME
                 const parts = flag.name.split('_');
                 if (parts.length === 2) {
                     const targetRoomName = parts[1];
-
-                    const assignedReserver = _.find(reservers, (r) => 
-                        r.memory.targetRoom === targetRoomName
-                    );
-
+                    const assignedReserver = _.find(reservers, (r) => r.memory.targetRoom === targetRoomName);
                     if (!assignedReserver) {
-                        const body = getReserverBody(energyCapacity); // Use full capacity for remote
-                        if (body.length > 0 && spawn.spawnCreep(body, 'Reserver' + Game.time, {
-                            memory: {
-                                role: 'reserver',
-                                targetRoom: targetRoomName
-                            }
-                        }) === OK) {
-                            console.log(`Spawning new reserver for target ${flag.name} in room ${targetRoomName}`);
+                        const body = getReserverBody(energyCapacity);
+                        if (body.length > 0 && spawn.spawnCreep(body, 'Reserver' + Game.time, { memory: { role: 'reserver', targetRoom: targetRoomName } }) === OK) {
                             return;
                         }
                     }
@@ -608,25 +534,21 @@ const managerSpawner = {
             }
         }
         
-        // Priority 8: Upgraders
+        // Priority 7: Upgraders
         let targetUpgraders = 1;
-        if (rcl >= 4) { // Em RCL 4+
-            if (room.storage && room.storage.store[RESOURCE_ENERGY] > 50000) { // Se tiver um storage com bastante energia
-                targetUpgraders = 2;
-            }
-            if (room.storage && room.storage.store[RESOURCE_ENERGY] > 100000) { // Com ainda mais energia
-                targetUpgraders = 3;
-            }
+        if (rcl >= 4) {
+            if (room.storage && room.storage.store[RESOURCE_ENERGY] > 50000) targetUpgraders = 2;
+            if (room.storage && room.storage.store[RESOURCE_ENERGY] > 100000) targetUpgraders = 3;
         }
         if (upgraders.length < targetUpgraders) {
             const body = upgraders.length === 0 ? getUpgraderBody(energyAvailable) : getUpgraderBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } }) === OK) {
-                return; // Spawned an upgrader, stop for this tick
+                return;
             }
         }
 
-        // Priority 5: Repairers (Manter as estruturas em ordem) - Antes dos builders
-        const targetRepairers = (damagedStructures.length > 5 && rcl >= 3) ? 1 : 0; // 1 repairer se houver mais de 5 estruturas danificadas e RCL >= 3
+        // Priority 8: Repairers
+        const targetRepairers = (damagedStructures.length > 5 && rcl >= 3) ? 1 : 0;
         if (repairers.length < targetRepairers) {
             const body = repairers.length === 0 ? getRepairerBody(energyAvailable) : getRepairerBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Repairer' + Game.time, { memory: { role: 'repairer', repairing: false } }) === OK) {
@@ -634,11 +556,33 @@ const managerSpawner = {
             }
         }
 
-        // Priority 6: Builders (Novas construções)
-        if (builders.length < 1) { // Builders target is 1
+        // Priority 9: Builders
+        if (builders.length < 1) {
             const body = builders.length === 0 ? getBuilderBody(energyAvailable) : getBuilderBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Builder' + Game.time, { memory: { role: 'builder' } }) === OK) {
-                return; // Spawned a builder, stop for this tick
+                return;
+            }
+        }
+
+        // Priority 10: Scouts (Lowest priority and strictly limited)
+        if (rcl >= 4) {
+            const allScouts = _.filter(Game.creeps, (c) => c.memory.role === 'scout');
+            if (allScouts.length < 1) {
+                let targetRoomForScout: string | null = null;
+                for (const roomName in Memory.roomsToExplore) {
+                    if (Memory.roomsToExplore[roomName]) {
+                        targetRoomForScout = roomName;
+                        break;
+                    }
+                }
+                if (targetRoomForScout) {
+                    const body = getScoutBody(energyAvailable);
+                    if (body.length > 0 && spawn.spawnCreep(body, 'Scout' + Game.time, { memory: { role: 'scout', targetRoom: targetRoomForScout } }) === OK) {
+                        Memory.roomsToExplore[targetRoomForScout] = false;
+                        console.log(`Spawning new scout for target room ${targetRoomForScout}`);
+                        return;
+                    }
+                }
             }
         }
     }
