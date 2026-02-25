@@ -18,6 +18,8 @@ interface CreepMemory {
     delivering?: boolean;
     building?: boolean;
     repairing?: boolean;
+    targetRoom?: string;
+    scoutTarget?: string;
 }
 
 // Global Memory

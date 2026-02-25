@@ -237,6 +237,14 @@ function getArcherBody(energyLimit: number): BodyPartConstant[] {
 }
 
 
+function getScoutBody(energyLimit: number): BodyPartConstant[] {
+    if (energyLimit < 50) {
+        return [];
+    }
+    return [MOVE];
+}
+
+
 function getRepairerBody(energyLimit: number): BodyPartConstant[] {
     const parts: BodyPartConstant[] = [];
     let currentCost = 0;
@@ -355,7 +363,30 @@ const managerSpawner = {
             }
         }
         
-        // Priority 4: Upgraders
+        // Priority 4: Scouts (for exploration)
+        const scouts = _.filter(Game.creeps, (c) => c.memory.role === 'scout');
+        const scoutFlags = _.filter(Game.flags, (f) => f.name.toLowerCase().startsWith('scout'));
+
+        if (scoutFlags.length > 0) {
+            for (const flag of scoutFlags) {
+                const assignedScout = _.find(scouts, (s) => s.memory.scoutTarget === flag.name);
+                if (!assignedScout) {
+                    const body = getScoutBody(energyAvailable);
+                    if (body.length > 0 && spawn.spawnCreep(body, 'Scout' + Game.time, {
+                        memory: {
+                            role: 'scout',
+                            targetRoom: flag.pos.roomName,
+                            scoutTarget: flag.name
+                        }
+                    }) === OK) {
+                        console.log(`Spawning new scout for target ${flag.name} in room ${flag.pos.roomName}`);
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // Priority 5: Upgraders
         let targetUpgraders = 1;
         if (rcl >= 4) { // Em RCL 4+
             if (room.storage && room.storage.store[RESOURCE_ENERGY] > 50000) { // Se tiver um storage com bastante energia

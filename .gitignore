@@ -5,3 +5,4 @@ screeps-steamless-client/
 *.tmp
 /COMMIT_MSG.tmp
 screeps.json
+TODO.md
