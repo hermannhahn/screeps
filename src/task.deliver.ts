@@ -33,8 +33,9 @@ const taskDeliver = {
                 if (available <= 0) return -1;
                 
                 const distance = creep.pos.getRangeTo(t);
-                // Score favors structures that need more energy and are closer
-                return available / Math.max(distance, 1);
+                const amountToDeliver = Math.min(myEnergy, available);
+                // Score favors structures where we can dump more energy and are closer
+                return amountToDeliver / Math.max(distance, 1);
             };
 
             // Priority 1: Spawns and Extensions
@@ -51,18 +52,18 @@ const taskDeliver = {
             if (!target) {
                 const towers = creep.room.find(FIND_STRUCTURES, {
                     filter: (s) => s.structureType === STRUCTURE_TOWER &&
-                        (s.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(s.id)) > 400
+                        (s.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(s.id)) > 100
                 });
                 if (towers.length > 0) {
                     target = _.maxBy(towers, (t) => getScore(t)) || null;
                 }
             }
 
-            // Priority 3: Creeps in need
+            // Priority 3: Creeps in need (Upgraders/Builders)
             if (!target) {
                 const needyCreeps = creep.room.find(FIND_CREEPS, {
                     filter: (c) => (c.memory.role === 'upgrader' || c.memory.role === 'builder') &&
-                        (c.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(c.id)) > 0 &&
+                        (c.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(c.id)) > 20 &&
                         !c.memory.assignedSupplier
                 });
                 if (needyCreeps.length > 0) {
@@ -73,12 +74,31 @@ const taskDeliver = {
                 }
             }
 
-            // Priority 4: Controller Container
+            // Priority 4: Storage (Primary buffer)
+            if (!target && creep.room.storage && (creep.room.storage.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(creep.room.storage.id)) > 0) {
+                target = creep.room.storage;
+            }
+
+            // Priority 5: Controller Container
             if (!target) {
                 const controllerContainer = findControllerContainer(creep.room);
                 if (controllerContainer && 'store' in controllerContainer && 
                     (controllerContainer.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(controllerContainer.id)) > 0) {
                     target = controllerContainer;
+                }
+            }
+
+            // Priority 6: General Containers (Exclude source containers as they are for collection)
+            if (!target) {
+                const sources = creep.room.find(FIND_SOURCES);
+                const generalContainers = creep.room.find(FIND_STRUCTURES, {
+                    filter: (s) => s.structureType === STRUCTURE_CONTAINER &&
+                        (s.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(s.id)) > 0 &&
+                        !sources.some(src => s.pos.getRangeTo(src) <= 3) && // Not a source container
+                        (creep.room.controller ? s.pos.getRangeTo(creep.room.controller) > 3 : true) // Not a controller container
+                });
+                if (generalContainers.length > 0) {
+                    target = _.maxBy(generalContainers, (c) => getScore(c)) || null;
                 }
             }
 
