@@ -12,12 +12,12 @@ const roleSupplier = {
         if (creep.memory.delivering && creep.store.getUsedCapacity() === 0) {
             creep.memory.delivering = false;
             delete creep.memory.deliveryTargetId;
-            creep.say('🔄 collect');
+            creep.say('🔄');
         }
         if (!creep.memory.delivering && creep.store.getFreeCapacity() === 0) {
             creep.memory.delivering = true;
             delete creep.memory.targetEnergyId;
-            creep.say('📦 deliver');
+            creep.say('📦');
         }
 
         if (creep.memory.delivering) {
@@ -54,6 +54,7 @@ const roleSupplier = {
                 if (creep.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
                 } else {
+                    creep.say('🔄');
                     delete creep.memory.targetEnergyId;
                 }
             } else {

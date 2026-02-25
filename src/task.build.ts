@@ -21,6 +21,8 @@ const taskBuild = {
         if (target) {
             if (creep.build(target) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+            } else {
+                creep.say('🚧');
             }
             return true;
         }

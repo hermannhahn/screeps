@@ -89,8 +89,11 @@ const taskCollectEnergy = {
             const result = target instanceof Resource ? creep.pickup(target) : creep.withdraw(target, RESOURCE_ENERGY);
             if (result === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00', opacity: 0.5 } });
-            } else if (result === OK || result === ERR_FULL || result === ERR_NOT_ENOUGH_RESOURCES) {
-                delete creep.memory.targetEnergyId;
+            } else {
+                creep.say('🔄');
+                if (result === OK || result === ERR_FULL || result === ERR_NOT_ENOUGH_RESOURCES) {
+                    delete creep.memory.targetEnergyId;
+                }
             }
         } else {
             // Idle behavior

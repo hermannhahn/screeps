@@ -34,6 +34,8 @@ const taskRepair = {
         if (target) {
             if (creep.repair(target) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000' } });
+            } else {
+                creep.say('🛠️');
             }
             return true;
         }
