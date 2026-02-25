@@ -1,5 +1,5 @@
 import { Blueprint } from './blueprintInterface';
-import { planRoadsFromToNearestRoad, isSafePosition } from './utils'; // Import the helper function
+import { planRoadsFromToNearestRoad, isSafePosition, isRoadPathComplete } from './utils'; // Import the helper function
 
 const controllerRoadsBlueprint: Blueprint = {
     name: "Controller Roads",
@@ -11,13 +11,20 @@ const controllerRoadsBlueprint: Blueprint = {
 
     isComplete: function(room: Room, spawn: StructureSpawn): boolean {
         if (!room.controller) return true; // No controller
-        const controllerRoadCS = room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 5, {
+        
+        // Find existing roads or sites
+        const roads = room.find(FIND_STRUCTURES, {
+            filter: (s) => s.structureType === STRUCTURE_ROAD
+        }).concat(room.find(FIND_CONSTRUCTION_SITES, {
             filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD
-        }).length > 0;
-        if (controllerRoadCS) return false;
+        } as any) as any);
 
-        // Check if controller has a road connection
-        return true; // Placeholder, needs more robust check
+        if (roads.length === 0) return false;
+
+        const nearestRoad = room.controller.pos.findClosestByPath(roads);
+        if (!nearestRoad) return false;
+
+        return isRoadPathComplete(room, room.controller.pos, nearestRoad.pos);
     }
 };
 

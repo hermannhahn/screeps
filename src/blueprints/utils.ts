@@ -62,6 +62,22 @@ export function isSafePosition(pos: RoomPosition): boolean {
     return hostileStructuresInRange.length === 0;
 }
 
+export function isRoadPathComplete(room: Room, startPos: RoomPosition, endPos: RoomPosition): boolean {
+    const path = room.findPath(startPos, endPos, {
+        ignoreCreeps: true, swampCost: 1, plainCost: 1, maxOps: 2000
+    });
+
+    if (path.length === 0) return true;
+
+    return path.every(segment => {
+        const pos = room.getPositionAt(segment.x, segment.y);
+        if (!pos) return false;
+        const hasRoad = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_ROAD);
+        const hasRoadCS = pos.lookFor(LOOK_CONSTRUCTION_SITES).some(cs => cs.structureType === STRUCTURE_ROAD);
+        return hasRoad || hasRoadCS;
+    });
+}
+
 export function findControllerContainer(room: Room): StructureContainer | ConstructionSite | null {
     if (!room.controller) return null;
 
