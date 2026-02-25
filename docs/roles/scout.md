@@ -7,15 +7,16 @@ O `scout` é uma unidade de exploração barata e rápida, projetada para explor
 - **Alvo Principal:** O `scout` se move para uma sala designada em sua memória (`creep.memory.targetRoom`).
 - **Movimento:**
   1. Se não estiver na sala de destino, ele se moverá em direção ao centro da sala alvo.
-  2. Uma vez na sala correta, ele procurará por uma bandeira cujo nome corresponda ao seu `creep.memory.scoutTarget`.
-  3. Se uma bandeira for encontrada, ele se moverá em direção a ela.
-  4. Se nenhuma bandeira for encontrada, ele se moverá em direção ao `controller` da sala para revelar sua posição e estado.
+  2. Uma vez na sala correta, ele inspecionará os `exits` da sala e adicionará novas salas não exploradas a uma lista global (`Memory.roomsToExplore`).
+  3. Ele então se moverá em direção ao `controller` da sala para dar visão e, se o controller estiver assinado por outro jogador, tentará assinar.
+  4. Se não houver controller na sala, ele fará um movimento aleatório para cobrir mais terreno.
 - **Custo:** É uma unidade extremamente barata, consistindo apenas de uma parte `MOVE`, para maximizar a eficiência de custo na exploração.
 
 ## Lógica de Spawn
-- O `manager.spawner` procurará por bandeiras no mapa com nomes que começam com `scout` (por exemplo, `scout_W1N1`, `scout_exploration`).
-- Para cada bandeira encontrada, o spawner verificará se já existe um `scout` atribuído a ela.
-- Se não houver, um novo `scout` será criado e terá sua memória configurada para o alvo (`targetRoom` e `scoutTarget`).
+- O `manager.spawner` criará `scouts` apenas a partir do **RCL 4**.
+- Em vez de bandeiras, o spawner verificará a lista global `Memory.roomsToExplore`.
+- Se uma sala nessa lista estiver marcada como `true` (precisando de exploração) e nenhum `scout` estiver atribuído a ela, um novo `scout` será spawnado e direcionado para essa sala.
+- A sala explorada ou em exploração será marcada como `false` em `Memory.roomsToExplore`.
 
 ## Propósito Estratégico
 O `scout` é o primeiro passo para qualquer operação inter-sala. Ele permite:

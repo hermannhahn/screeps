@@ -30,4 +30,5 @@ interface Memory {
     uuid: number;
     log: any;
     primaryHostileTargetId?: Id<Creep> | null; // Adicionado para o foco de fogo das torres
+    roomsToExplore: { [roomName: string]: boolean };
 }

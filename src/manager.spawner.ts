@@ -415,6 +415,19 @@ const managerSpawner = {
         const isUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
         const rcl = room.controller?.level || 1;
 
+        // Initialize Memory.roomsToExplore
+        if (!Memory.roomsToExplore) {
+            Memory.roomsToExplore = {};
+        }
+        // Add current room's exits to roomsToExplore if not already present
+        const exits = Game.map.describeExits(room.name);
+        for (const direction in exits) {
+            const exitRoomName = exits[direction as ExitKey];
+            if (exitRoomName && !Memory.roomsToExplore[exitRoomName]) {
+                Memory.roomsToExplore[exitRoomName] = true; // Mark as needing exploration
+            }
+        }
+
         // --- Spawning Logic ---
         
         // Priority 1: Harvesters (Most critical for energy production)
@@ -464,24 +477,34 @@ const managerSpawner = {
         }
         
         // Priority 4: Scouts (for exploration)
-        const scouts = _.filter(Game.creeps, (c) => c.memory.role === 'scout');
-        const scoutFlags = _.filter(Game.flags, (f) => f.name.toLowerCase().startsWith('scout'));
+        if (rcl >= 4) { // Only spawn scouts from RCL 4 onwards
+            const scouts = _.filter(Game.creeps, (c) => c.memory.role === 'scout');
+            let targetRoomForScout: string | null = null;
 
-        if (scoutFlags.length > 0) {
-            for (const flag of scoutFlags) {
-                const assignedScout = _.find(scouts, (s) => s.memory.scoutTarget === flag.name);
-                if (!assignedScout) {
-                    const body = getScoutBody(energyAvailable);
-                    if (body.length > 0 && spawn.spawnCreep(body, 'Scout' + Game.time, {
-                        memory: {
-                            role: 'scout',
-                            targetRoom: flag.pos.roomName,
-                            scoutTarget: flag.name
-                        }
-                    }) === OK) {
-                        console.log(`Spawning new scout for target ${flag.name} in room ${flag.pos.roomName}`);
-                        return;
+            // Find a room to explore from Memory.roomsToExplore
+            for (const roomName in Memory.roomsToExplore) {
+                if (Memory.roomsToExplore[roomName]) { // If room needs exploration
+                    // Check if a scout is already assigned to this room
+                    const assignedScout = _.find(scouts, (s) => s.memory.targetRoom === roomName);
+                    if (!assignedScout) {
+                        targetRoomForScout = roomName;
+                        break;
                     }
+                }
+            }
+
+            if (targetRoomForScout) {
+                const body = getScoutBody(energyAvailable);
+                if (body.length > 0 && spawn.spawnCreep(body, 'Scout' + Game.time, {
+                    memory: {
+                        role: 'scout',
+                        targetRoom: targetRoomForScout
+                        // scoutTarget is removed as flags are no longer used for targeting
+                    }
+                }) === OK) {
+                    Memory.roomsToExplore[targetRoomForScout] = false; // Mark as being explored
+                    console.log(`Spawning new scout for target room ${targetRoomForScout}`);
+                    return;
                 }
             }
         }

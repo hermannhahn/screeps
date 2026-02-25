@@ -14,24 +14,31 @@ const roleScout = {
             return;
         }
 
-        // Se o scout estiver na sala alvo, mova-se para a bandeira alvo ou para o controller.
-        const scoutTargetFlag = creep.memory.scoutTarget ? Game.flags[creep.memory.scoutTarget] : null;
-
-        if (scoutTargetFlag) {
-            // Se houver uma bandeira alvo, mova-se para ela.
-            if (!creep.pos.isNearTo(scoutTargetFlag.pos)) {
-                creep.moveTo(scoutTargetFlag, { reusePath: 10, visualizePathStyle: { stroke: '#ffffff' } });
-                // console.log(`${creep.name} moving to flag ${scoutTargetFlag.name} in ${creep.room.name}.`);
+        // Se o scout estiver na sala alvo, explore seus exits e mova-se para o controller.
+        // Adicionar os exits da sala atual para Memory.roomsToExplore
+        const exits = Game.map.describeExits(creep.room.name);
+        for (const direction in exits) {
+            const exitRoomName = exits[direction as ExitKey];
+            // Certifica-se de que a sala não é controlada por outro jogador antes de adicionar para exploração
+            // E que não é um setor de corredor ("highway") que não é de interesse inicial
+            if (exitRoomName && !Memory.roomsToExplore[exitRoomName] && !Game.map.isRoomProtected(exitRoomName) && !(exitRoomName.includes('W') && exitRoomName.includes('E') && exitRoomName.includes('N') && exitRoomName.includes('S'))) {
+                Memory.roomsToExplore[exitRoomName] = true;
+                console.log(`Scout ${creep.name} added room ${exitRoomName} to roomsToExplore.`);
             }
-        } else if (creep.room.controller) {
-            // Caso contrário, mova-se para o controller da sala.
+        }
+
+        // Move para o controller para dar visão e talvez assinar (se tiver o corpo)
+        if (creep.room.controller) {
             if (!creep.pos.isNearTo(creep.room.controller.pos)) {
                 creep.moveTo(creep.room.controller, { reusePath: 10, visualizePathStyle: { stroke: '#ffffff' } });
                 // console.log(`${creep.name} moving to controller in ${creep.room.name}.`);
+            } else if (creep.room.controller.sign && creep.room.controller.sign.username !== creep.owner.username) {
+                // Se houver uma assinatura de outro jogador, tente assinar
+                creep.signController(creep.room.controller, "This room is being explored by Hermann's empire.");
             }
         } else {
-            // Se não houver controller, apenas vagueie um pouco para dar visão.
-            // Movimento aleatório simples
+            // Se não houver controller (sala sem controller), apenas vagueie um pouco para dar visão.
+            // Movimento aleatório simples para cobrir mais terreno
             const direction = Math.floor(Math.random() * 8) + 1 as DirectionConstant;
             creep.move(direction);
         }
