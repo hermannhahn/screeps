@@ -1,5 +1,7 @@
 import taskUpgrade from './task.upgrade';
 import taskCollectEnergy from './task.collectEnergy';
+import { findControllerContainer } from './blueprints/utils';
+import { getIncomingCollection } from './utils.creep';
 
 const roleUpgrader = {
     run: function(creep: Creep) {
@@ -34,15 +36,16 @@ const roleUpgrader = {
                     creep.moveTo(link, { visualizePathStyle: { stroke: '#ffaa00' } });
                 }
             } else {
-            // Priority 1: Controller Container (Last resort for collection, usually for upgraders)
-            if (!target) {
+                // Priority 1: Controller Container (Prefer this for upgraders)
                 const ctrlContainer = findControllerContainer(creep.room);
                 if (ctrlContainer && 'store' in ctrlContainer && (ctrlContainer.store.getUsedCapacity(RESOURCE_ENERGY) - getIncomingCollection(ctrlContainer.id)) > 0) {
-                    target = ctrlContainer;
+                    if (creep.withdraw(ctrlContainer as StructureContainer, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                        creep.moveTo(ctrlContainer, { visualizePathStyle: { stroke: '#ffaa00' } });
+                    }
+                } else {
+                    // Fallback to general collection logic which respects reservations
+                    taskCollectEnergy.run(creep);
                 }
-            }
-                // Fallback to general collection logic which respects reservations
-                taskCollectEnergy.run(creep);
             }
         }
     }
