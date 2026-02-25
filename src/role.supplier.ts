@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import taskDeliver from './task.deliver';
 import taskCollectEnergy from './task.collectEnergy';
 import taskRepair from './task.repair';
