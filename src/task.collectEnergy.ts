@@ -90,7 +90,7 @@ const taskCollectEnergy = {
             if (result === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00', opacity: 0.5 } });
             } else {
-                creep.say('🔄');
+                creep.say('🔌');
                 if (result === OK || result === ERR_FULL || result === ERR_NOT_ENOUGH_RESOURCES) {
                     delete creep.memory.targetEnergyId;
                 }
