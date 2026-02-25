@@ -4,9 +4,10 @@ import { getIncomingCollection } from './utils.creep';
 /**
  * GENERIC ENERGY COLLECTION TASK
  * Priorities:
- * 1. Dropped Energy (Decays, so high priority)
+ * 1. Immediate Proximity (Any source within range 3)
  * 2. General Containers (Closest available)
  * 3. Storage
+ * 4. Dropped Energy (Score based)
  */
 const taskCollectEnergy = {
     run: function(creep: Creep) {
@@ -37,28 +38,25 @@ const taskCollectEnergy = {
         }
 
         if (!target) {
-            const getScore = (t: any) => {
+            // Helper to check availability considering incoming
+            const getAvailable = (t: any) => {
                 const amount = 'store' in t ? t.store[RESOURCE_ENERGY] : (t instanceof Resource ? t.amount : 0);
-                const available = amount - getIncomingCollection(t.id);
-                if (available <= 0) return -1;
-                
-                const distance = creep.pos.getRangeTo(t);
-                return (available * available) / Math.max(distance, 1);
+                return amount - getIncomingCollection(t.id);
             };
 
-            // Priority 1: Dropped Energy
-            const dropped = creep.room.find(FIND_DROPPED_RESOURCES, {
-                filter: (r) => r.resourceType === RESOURCE_ENERGY && (r.amount - getIncomingCollection(r.id)) > 0
+            // Priority 1: Immediate Proximity (If something is right next to us, take it)
+            const nearby = creep.pos.findInRange(FIND_STRUCTURES, 3, {
+                filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_STORAGE) &&
+                    getAvailable(s) > (myFreeCapacity * 0.5) // At least half of what we need
             });
-            if (dropped.length > 0) {
-                target = _.maxBy(dropped, (r) => getScore(r)) || null;
+            if (nearby.length > 0) {
+                target = creep.pos.findClosestByRange(nearby);
             }
 
             // Priority 2: General Containers (Closest)
             if (!target) {
                 const containers = creep.room.find(FIND_STRUCTURES, {
-                    filter: (s) => s.structureType === STRUCTURE_CONTAINER &&
-                        (s.store.getUsedCapacity(RESOURCE_ENERGY) - getIncomingCollection(s.id)) > 0
+                    filter: (s) => s.structureType === STRUCTURE_CONTAINER && getAvailable(s) > 0
                 });
                 if (containers.length > 0) {
                     target = creep.pos.findClosestByRange(containers);
@@ -66,8 +64,22 @@ const taskCollectEnergy = {
             }
 
             // Priority 3: Storage
-            if (!target && creep.room.storage && (creep.room.storage.store[RESOURCE_ENERGY] - getIncomingCollection(creep.room.storage.id)) > 0) {
+            if (!target && creep.room.storage && getAvailable(creep.room.storage) > 0) {
                 target = creep.room.storage;
+            }
+
+            // Priority 4: Dropped Energy (Fallback with balanced score)
+            if (!target) {
+                const dropped = creep.room.find(FIND_DROPPED_RESOURCES, {
+                    filter: (r) => r.resourceType === RESOURCE_ENERGY && getAvailable(r) > 50 // Don't cross the map for 10 energy
+                });
+                if (dropped.length > 0) {
+                    target = _.maxBy(dropped, (r) => {
+                        const available = getAvailable(r);
+                        const distance = creep.pos.getRangeTo(r);
+                        return available / Math.max(distance, 1);
+                    }) || null;
+                }
             }
 
             if (target) creep.memory.targetEnergyId = target.id;
