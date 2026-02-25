@@ -27,14 +27,28 @@ const spawnRoads: Blueprint = {
     },
 
     isComplete: function(room: Room, spawn: StructureSpawn): boolean {
-        const roadConstructionSitesInRing = room.find(FIND_CONSTRUCTION_SITES, {
-            filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD && cs.pos.getRangeTo(spawn.pos) <= 1
-        }).length;
-        const builtRoads = room.find(FIND_STRUCTURES, {
-            filter: (s: AnyStructure) => s.structureType === STRUCTURE_ROAD && s.pos.getRangeTo(spawn.pos) <= 1
-        }).length;
+        let potentialRoads = 0;
+        let existingRoadsOrCS = 0;
+
+        for (let x = spawn.pos.x - 1; x <= spawn.pos.x + 1; x++) {
+            for (let y = spawn.pos.y - 1; y <= spawn.pos.y + 1; y++) {
+                if (x === spawn.pos.x && y === spawn.pos.y) continue;
+                if (x < 0 || x > 49 || y < 0 || y > 49) continue;
+
+                const terrain = room.getTerrain().get(x, y);
+                if (terrain !== TERRAIN_MASK_WALL) {
+                    potentialRoads++;
+                    const pos = new RoomPosition(x, y, room.name);
+                    const hasRoad = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_ROAD);
+                    const hasRoadCS = pos.lookFor(LOOK_CONSTRUCTION_SITES).some(cs => cs.structureType === STRUCTURE_ROAD);
+                    if (hasRoad || hasRoadCS) {
+                        existingRoadsOrCS++;
+                    }
+                }
+            }
+        }
         
-        return (builtRoads + roadConstructionSitesInRing) >= 8;
+        return existingRoadsOrCS >= potentialRoads;
     }
 };
 
