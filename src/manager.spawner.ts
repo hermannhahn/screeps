@@ -179,6 +179,43 @@ function getSupplierBody(energyLimit: number): BodyPartConstant[] {
     return parts;
 }
 
+function getRemoteHarvesterBody(energyLimit: number): BodyPartConstant[] {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // Base: 1 WORK, 1 CARRY, 1 MOVE
+    const basicCreepCost = BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    if (energyLimit < basicCreepCost) {
+        return [];
+    }
+    parts.push(WORK, CARRY, MOVE);
+    currentCost += basicCreepCost;
+
+    // Adicionar mais WORK, CARRY, MOVE em pares balanceados, priorizando MOVE para viagens longas
+    // Uma proporção boa para remote harvesters é 1 WORK, 1 CARRY, 2 MOVE para equilíbrio entre colheita, transporte e velocidade.
+    // Ou simplesmente adicionar o máximo de CARRY e MOVE que pudermos após o WORK.
+
+    const maxWorkParts = 3; // Não precisamos de muitos WORK para um remote harvester
+    while (currentCost + BODYPART_COST[WORK] <= energyLimit && parts.filter(p => p === WORK).length < maxWorkParts && parts.length < 48) {
+        parts.push(WORK);
+        currentCost += BODYPART_COST[WORK];
+    }
+    
+    // Adicionar CARRY e MOVE em pares, priorizando MOVE
+    const partPairCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    const maxPairs = 10;
+    let currentPairs = 0;
+
+    while (currentCost + partPairCost <= energyLimit && currentPairs < maxPairs && parts.length < 48) {
+        parts.push(CARRY, MOVE);
+        currentCost += partPairCost;
+        currentPairs++;
+    }
+
+    return parts;
+}
+
+
 function getGuardBody(energyLimit: number): BodyPartConstant[] {
     const parts: BodyPartConstant[] = [];
     let currentCost = 0;
@@ -386,7 +423,41 @@ const managerSpawner = {
             }
         }
         
-        // Priority 5: Upgraders
+        // Priority 5: Remote Harvesters (for remote energy collection)
+        const remoteHarvesters = _.filter(Game.creeps, (c) => c.memory.role === 'remoteHarvester');
+        const remoteHarvestFlags = _.filter(Game.flags, (f) => f.name.toLowerCase().startsWith('remoteharvest'));
+
+        if (remoteHarvestFlags.length > 0) {
+            for (const flag of remoteHarvestFlags) {
+                // Parse flag name: remoteHarvest_ROOMNAME_SOURCEID
+                const parts = flag.name.split('_');
+                if (parts.length === 3) {
+                    const targetRoomName = parts[1];
+                    const sourceIdFromFlag = parts[2]; // This is a string, not an actual ID
+
+                    const assignedRemoteHarvester = _.find(remoteHarvesters, (rh) => 
+                        rh.memory.targetRoom === targetRoomName && rh.memory.remoteSourceId === sourceIdFromFlag
+                    );
+
+                    if (!assignedRemoteHarvester) {
+                        const body = getRemoteHarvesterBody(energyCapacity); // Use full capacity for remote
+                        if (body.length > 0 && spawn.spawnCreep(body, 'RemoteHarvester' + Game.time, {
+                            memory: {
+                                role: 'remoteHarvester',
+                                homeRoom: room.name,
+                                targetRoom: targetRoomName,
+                                remoteSourceId: sourceIdFromFlag as Id<Source> // Cast as Id<Source>
+                            }
+                        }) === OK) {
+                            console.log(`Spawning new remoteHarvester for target ${flag.name} in room ${targetRoomName}`);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Priority 6: Upgraders
         let targetUpgraders = 1;
         if (rcl >= 4) { // Em RCL 4+
             if (room.storage && room.storage.store[RESOURCE_ENERGY] > 50000) { // Se tiver um storage com bastante energia

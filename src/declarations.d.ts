@@ -20,6 +20,8 @@ interface CreepMemory {
     repairing?: boolean;
     targetRoom?: string;
     scoutTarget?: string;
+    homeRoom?: string;
+    remoteSourceId?: Id<Source>;
 }
 
 // Global Memory
