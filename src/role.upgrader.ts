@@ -34,6 +34,13 @@ const roleUpgrader = {
                     creep.moveTo(link, { visualizePathStyle: { stroke: '#ffaa00' } });
                 }
             } else {
+            // Priority 1: Controller Container (Last resort for collection, usually for upgraders)
+            if (!target) {
+                const ctrlContainer = findControllerContainer(creep.room);
+                if (ctrlContainer && 'store' in ctrlContainer && (ctrlContainer.store.getUsedCapacity(RESOURCE_ENERGY) - getIncomingCollection(ctrlContainer.id)) > 0) {
+                    target = ctrlContainer;
+                }
+            }
                 // Fallback to general collection logic which respects reservations
                 taskCollectEnergy.run(creep);
             }
