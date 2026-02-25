@@ -1,4 +1,5 @@
 interface RoomMemory {
+    travelTimes?: { [key: string]: number };
     blueprintStage?: number; // Made optional to match previous usage
     maxBlueprintStageCompleted: number;
     currentBlueprintStage: number;
@@ -18,11 +19,20 @@ interface CreepMemory {
     delivering?: boolean;
     building?: boolean;
     repairing?: boolean;
+    upgrading?: boolean;
+    state?: string;
     targetRoom?: string;
     scoutTarget?: string;
     homeRoom?: string;
     remoteSourceId?: Id<Source>;
     remoteContainerId?: Id<StructureContainer>;
+}
+
+interface RoomPosition {
+    isWalkable(creepLooking?: Creep): boolean;
+    getAdjacentPositions(): RoomPosition[];
+    hasCreep(): boolean;
+    findAdjacentWalkableSpot(): RoomPosition | null;
 }
 
 // Global Memory
