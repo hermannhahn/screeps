@@ -9,6 +9,7 @@ import roleRepairer from './role.repairer';
 import roleScout from './role.scout';
 import roleRemoteHarvester from './role.remoteHarvester';
 import roleCarrier from './role.carrier';
+import roleReserver from './role.reserver';
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
 import { managerTower } from './manager.tower';
@@ -148,6 +149,7 @@ function displayCreepCounts(room: Room) {
     const scouts = _.filter(Game.creeps, (c) => c.memory.role === 'scout' && c.room.name === room.name); // Adicionado para scouts
     const remoteHarvesters = _.filter(Game.creeps, (c) => c.memory.role === 'remoteHarvester' && c.room.name === room.name); // Adicionado para remoteHarvesters
     const carriers = _.filter(Game.creeps, (c) => c.memory.role === 'carrier' && c.room.name === room.name); // Adicionado para carriers
+    const reservers = _.filter(Game.creeps, (c) => c.memory.role === 'reserver' && c.room.name === room.name); // Adicionado para reservers
 
     // Calculate targets (similar to manager.spawner.ts)
     const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
@@ -166,6 +168,7 @@ function displayCreepCounts(room: Room) {
     // const targetScouts = // Scouts target is dynamic based on flags, so we just display current count for now.
     // const targetRemoteHarvesters = // Remote Harvesters target is dynamic based on flags, so we just display current count for now.
     // const targetCarriers = // Carriers target is dynamic based on flags, so we just display current count for now.
+    // const targetReservers = // Reservers target is dynamic based on flags, so we just display current count for now.
 
     const lineOffset = 0.9;
     let y = 0.5; // Starting Y position
@@ -189,6 +192,8 @@ function displayCreepCounts(room: Room) {
     room.visual.text(`Remote Harvesters: ${remoteHarvesters.length}`, 49, y, { align: "right", opacity: 0.8 });
     y += lineOffset;
     room.visual.text(`Carriers: ${carriers.length}`, 49, y, { align: "right", opacity: 0.8 });
+    y += lineOffset;
+    room.visual.text(`Reservers: ${reservers.length}`, 49, y, { align: "right", opacity: 0.8 });
 }
 
 
@@ -265,5 +270,6 @@ export const loop = () => {
         if (creep.memory.role === 'scout') roleScout.run(creep);
         if (creep.memory.role === 'remoteHarvester') roleRemoteHarvester.run(creep);
         if (creep.memory.role === 'carrier') roleCarrier.run(creep);
+        if (creep.memory.role === 'reserver') roleReserver.run(creep);
     }
 };

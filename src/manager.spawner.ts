@@ -246,6 +246,39 @@ function getCarrierBody(energyLimit: number): BodyPartConstant[] {
 }
 
 
+function getReserverBody(energyLimit: number): BodyPartConstant[] {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // A reserver precisa de CLAIM e MOVE. CLAIM é caro (600 energy).
+    // O mínimo para um reserver funcional é 1 CLAIM e 1 MOVE.
+    const basicCreepCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE];
+    if (energyLimit < basicCreepCost) {
+        return []; // Não há energia suficiente para um creep básico
+    }
+    parts.push(CLAIM, MOVE);
+    currentCost += basicCreepCost;
+
+    // Adicionar mais MOVE parts para aumentar a velocidade, pois CLAIM parts pesam bastante.
+    // Uma boa proporção é 1 CLAIM para 2-3 MOVE.
+    const maxMoveParts = 3; // Limite razoável de MOVE parts
+    while (currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.filter(p => p === MOVE).length < maxMoveParts && parts.length < 48) {
+        parts.push(MOVE);
+        currentCost += BODYPART_COST[MOVE];
+    }
+    
+    // Se ainda houver energia, pode-se adicionar mais CLAIM para reservar mais rápido,
+    // mas 1 CLAIM já é suficiente para manter a reserva de 1 tick.
+    const maxClaimParts = 2; // Raramente necessário mais de 2 CLAIM parts
+    while (currentCost + BODYPART_COST[CLAIM] <= energyLimit && parts.filter(p => p === CLAIM).length < maxClaimParts && parts.length < 48) {
+        parts.push(CLAIM);
+        currentCost += BODYPART_COST[CLAIM];
+    }
+
+    return parts;
+}
+
+
 function getGuardBody(energyLimit: number): BodyPartConstant[] {
     const parts: BodyPartConstant[] = [];
     let currentCost = 0;
@@ -521,7 +554,38 @@ const managerSpawner = {
             }
         }
         
-        // Priority 7: Upgraders
+        // Priority 7: Reservers (for reserving remote room controllers)
+        const reservers = _.filter(Game.creeps, (c) => c.memory.role === 'reserver');
+        const reserverFlags = _.filter(Game.flags, (f) => f.name.toLowerCase().startsWith('reserver'));
+
+        if (reserverFlags.length > 0) {
+            for (const flag of reserverFlags) {
+                // Parse flag name: reserver_ROOMNAME
+                const parts = flag.name.split('_');
+                if (parts.length === 2) {
+                    const targetRoomName = parts[1];
+
+                    const assignedReserver = _.find(reservers, (r) => 
+                        r.memory.targetRoom === targetRoomName
+                    );
+
+                    if (!assignedReserver) {
+                        const body = getReserverBody(energyCapacity); // Use full capacity for remote
+                        if (body.length > 0 && spawn.spawnCreep(body, 'Reserver' + Game.time, {
+                            memory: {
+                                role: 'reserver',
+                                targetRoom: targetRoomName
+                            }
+                        }) === OK) {
+                            console.log(`Spawning new reserver for target ${flag.name} in room ${targetRoomName}`);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Priority 8: Upgraders
         let targetUpgraders = 1;
         if (rcl >= 4) { // Em RCL 4+
             if (room.storage && room.storage.store[RESOURCE_ENERGY] > 50000) { // Se tiver um storage com bastante energia
