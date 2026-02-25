@@ -12,12 +12,10 @@ const roleSupplier = {
         if (creep.memory.delivering && creep.store.getUsedCapacity() === 0) {
             creep.memory.delivering = false;
             delete creep.memory.deliveryTargetId;
-            creep.say('🔌');
         }
         if (!creep.memory.delivering && creep.store.getFreeCapacity() === 0) {
             creep.memory.delivering = true;
             delete creep.memory.targetEnergyId;
-            creep.say('📦');
         }
 
         if (creep.memory.delivering) {

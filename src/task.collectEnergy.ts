@@ -82,7 +82,10 @@ const taskCollectEnergy = {
                 }
             }
 
-            if (target) creep.memory.targetEnergyId = target.id;
+            if (target) {
+                creep.memory.targetEnergyId = target.id;
+                creep.say('🔌');
+            }
         }
 
         if (target) {
@@ -90,7 +93,6 @@ const taskCollectEnergy = {
             if (result === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00', opacity: 0.5 } });
             } else {
-                creep.say('🔌');
                 if (result === OK || result === ERR_FULL || result === ERR_NOT_ENOUGH_RESOURCES) {
                     delete creep.memory.targetEnergyId;
                 }

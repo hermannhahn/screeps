@@ -59,8 +59,6 @@ const roleHarvester = {
             if (source) {
                 if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
-                } else {
-                    creep.say('⛏️');
                 }
             } else {
                 const safeSources = creep.room.find(FIND_SOURCES).filter(s => isSourceSafe(s, creep.room.find(FIND_HOSTILE_STRUCTURES), hostileCreepsInRoom));
@@ -77,7 +75,10 @@ const roleHarvester = {
                     }
                 }
 
-                if (bestSource) creep.memory.sourceId = bestSource.id;
+                if (bestSource) {
+                    creep.memory.sourceId = bestSource.id;
+                    creep.say('⛏️');
+                }
                 else if (!taskBuild.run(creep)) taskUpgrade.run(creep);
             }
         } else {
@@ -101,12 +102,9 @@ const roleHarvester = {
                 if (depositTarget) {
                     if (creep.transfer(depositTarget, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                         creep.moveTo(depositTarget, { visualizePathStyle: { stroke: '#ffffff' } });
-                    } else {
-                        creep.say('📦');
                     }
                 } else {
                     creep.drop(RESOURCE_ENERGY);
-                    creep.say('📦');
                 }
             } else {
                 // EMERGENCY: No suppliers, harvester must deliver energy

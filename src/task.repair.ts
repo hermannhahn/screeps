@@ -27,15 +27,16 @@ const taskRepair = {
 
             if (targets.length > 0) {
                 target = _.minBy(targets, (s: AnyStructure) => s.hits / s.hitsMax) || null;
-                if (target) creep.memory.targetRepairId = target.id;
+                if (target) {
+                    creep.memory.targetRepairId = target.id;
+                    creep.say('🛠️');
+                }
             }
         }
 
         if (target) {
             if (creep.repair(target) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000' } });
-            } else {
-                creep.say('🛠️');
             }
             return true;
         }

@@ -34,8 +34,6 @@ const roleUpgrader = {
             if (link) {
                 if (creep.withdraw(link, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(link, { visualizePathStyle: { stroke: '#ffaa00' } });
-                } else {
-                    creep.say('🔌');
                 }
             } else {
                 // Priority 1: Controller Container (Prefer this for upgraders)
@@ -43,8 +41,6 @@ const roleUpgrader = {
                 if (ctrlContainer && 'store' in ctrlContainer && (ctrlContainer.store.getUsedCapacity(RESOURCE_ENERGY) - getIncomingCollection(ctrlContainer.id)) > 0) {
                     if (creep.withdraw(ctrlContainer as StructureContainer, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                         creep.moveTo(ctrlContainer, { visualizePathStyle: { stroke: '#ffaa00' } });
-                    } else {
-                        creep.say('🔌');
                     }
                 } else {
                     // Fallback to general collection logic which respects reservations

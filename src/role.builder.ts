@@ -7,12 +7,10 @@ const roleBuilder = {
         if (creep.memory.building && creep.store[RESOURCE_ENERGY] === 0) {
             creep.memory.building = false;
             delete creep.memory.targetBuildId;
-            creep.say('🔌');
         }
         if (!creep.memory.building && creep.store.getFreeCapacity() === 0) {
             creep.memory.building = true;
             delete creep.memory.targetEnergyId;
-            creep.say('🚧');
         }
 
         if (creep.memory.building) {

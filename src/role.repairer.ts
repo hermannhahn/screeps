@@ -7,12 +7,10 @@ const roleRepairer = {
         if (creep.memory.repairing && creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
             creep.memory.repairing = false;
             delete creep.memory.targetRepairId;
-            creep.say('🔌');
         }
         if (!creep.memory.repairing && creep.store.getFreeCapacity() === 0) {
             creep.memory.repairing = true;
             delete creep.memory.targetEnergyId;
-            creep.say('🛠️');
         }
 
         if (creep.memory.repairing) {

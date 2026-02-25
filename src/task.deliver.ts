@@ -104,6 +104,7 @@ const taskDeliver = {
 
             if (target) {
                 creep.memory.deliveryTargetId = target.id;
+                creep.say('📦');
             }
         }
 
@@ -111,14 +112,11 @@ const taskDeliver = {
             const result = creep.transfer(target, RESOURCE_ENERGY);
             if (result === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.5 } });
-            } else {
-                creep.say('📦');
-                if (result === OK || result === ERR_FULL || result === ERR_INVALID_TARGET) {
-                    if (target instanceof Creep && target.memory.assignedSupplier === creep.id) {
-                        delete target.memory.assignedSupplier;
-                    }
-                    delete creep.memory.deliveryTargetId;
+            } else if (result === OK || result === ERR_FULL || result === ERR_INVALID_TARGET) {
+                if (target instanceof Creep && target.memory.assignedSupplier === creep.id) {
+                    delete target.memory.assignedSupplier;
                 }
+                delete creep.memory.deliveryTargetId;
             }
             return true;
         }

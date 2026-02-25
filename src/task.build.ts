@@ -14,15 +14,16 @@ const taskBuild = {
 
             if (targets.length > 0) {
                 target = _.maxBy(targets, (t: ConstructionSite) => t.progress / t.progressTotal) || null;
-                if (target) creep.memory.targetBuildId = target.id;
+                if (target) {
+                    creep.memory.targetBuildId = target.id;
+                    creep.say('🚧');
+                }
             }
         }
 
         if (target) {
             if (creep.build(target) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
-            } else {
-                creep.say('🚧');
             }
             return true;
         }
