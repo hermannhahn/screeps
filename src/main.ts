@@ -8,6 +8,7 @@ import roleArcher from './role.archer';
 import roleRepairer from './role.repairer';
 import roleScout from './role.scout';
 import roleRemoteHarvester from './role.remoteHarvester';
+import roleCarrier from './role.carrier';
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
 import { managerTower } from './manager.tower';
@@ -146,6 +147,7 @@ function displayCreepCounts(room: Room) {
     const repairers = _.filter(Game.creeps, (c) => c.memory.role === 'repairer' && c.room.name === room.name);
     const scouts = _.filter(Game.creeps, (c) => c.memory.role === 'scout' && c.room.name === room.name); // Adicionado para scouts
     const remoteHarvesters = _.filter(Game.creeps, (c) => c.memory.role === 'remoteHarvester' && c.room.name === room.name); // Adicionado para remoteHarvesters
+    const carriers = _.filter(Game.creeps, (c) => c.memory.role === 'carrier' && c.room.name === room.name); // Adicionado para carriers
 
     // Calculate targets (similar to manager.spawner.ts)
     const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
@@ -163,6 +165,7 @@ function displayCreepCounts(room: Room) {
     const targetRepairers = (damagedStructures.length > 5 && rcl >= 3) ? 1 : 0;
     // const targetScouts = // Scouts target is dynamic based on flags, so we just display current count for now.
     // const targetRemoteHarvesters = // Remote Harvesters target is dynamic based on flags, so we just display current count for now.
+    // const targetCarriers = // Carriers target is dynamic based on flags, so we just display current count for now.
 
     const lineOffset = 0.9;
     let y = 0.5; // Starting Y position
@@ -184,6 +187,8 @@ function displayCreepCounts(room: Room) {
     room.visual.text(`Scouts: ${scouts.length}`, 49, y, { align: "right", opacity: 0.8 });
     y += lineOffset;
     room.visual.text(`Remote Harvesters: ${remoteHarvesters.length}`, 49, y, { align: "right", opacity: 0.8 });
+    y += lineOffset;
+    room.visual.text(`Carriers: ${carriers.length}`, 49, y, { align: "right", opacity: 0.8 });
 }
 
 
@@ -259,5 +264,6 @@ export const loop = () => {
         if (creep.memory.role === 'repairer') roleRepairer.run(creep);
         if (creep.memory.role === 'scout') roleScout.run(creep);
         if (creep.memory.role === 'remoteHarvester') roleRemoteHarvester.run(creep);
+        if (creep.memory.role === 'carrier') roleCarrier.run(creep);
     }
 };

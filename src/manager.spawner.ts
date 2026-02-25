@@ -216,6 +216,36 @@ function getRemoteHarvesterBody(energyLimit: number): BodyPartConstant[] {
 }
 
 
+function getCarrierBody(energyLimit: number): BodyPartConstant[] {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // Carrier needs to prioritize CARRY and MOVE parts.
+    // A good ratio is 2 CARRY for every 1 MOVE, but ensure sufficient MOVE for speed.
+    // Start with 1 CARRY, 1 MOVE as base.
+    const basicCreepCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    if (energyLimit < basicCreepCost) {
+        return [];
+    }
+    parts.push(CARRY, MOVE);
+    currentCost += basicCreepCost;
+
+    // Add CARRY and MOVE in pairs, aiming for 2 CARRY per 1 MOVE, or similar efficiency.
+    // Let's add CARRY and MOVE in 1:1 ratio until we hit limits.
+    const pairCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    const maxPairs = 10; // To prevent excessively large creeps, adjust as needed
+    let currentPairs = 0;
+
+    while (currentCost + pairCost <= energyLimit && currentPairs < maxPairs && parts.length < 48) {
+        parts.push(CARRY, MOVE);
+        currentCost += pairCost;
+        currentPairs++;
+    }
+
+    return parts;
+}
+
+
 function getGuardBody(energyLimit: number): BodyPartConstant[] {
     const parts: BodyPartConstant[] = [];
     let currentCost = 0;
@@ -457,7 +487,41 @@ const managerSpawner = {
             }
         }
         
-        // Priority 6: Upgraders
+        // Priority 6: Carriers (for transporting remote energy)
+        const carriers = _.filter(Game.creeps, (c) => c.memory.role === 'carrier');
+        const carrierFlags = _.filter(Game.flags, (f) => f.name.toLowerCase().startsWith('carrier'));
+
+        if (carrierFlags.length > 0) {
+            for (const flag of carrierFlags) {
+                // Parse flag name: carrier_ROOMNAME_CONTAINERID
+                const parts = flag.name.split('_');
+                if (parts.length === 3) {
+                    const targetRoomName = parts[1];
+                    const containerIdFromFlag = parts[2]; // This is a string, not an actual ID
+
+                    const assignedCarrier = _.find(carriers, (c) => 
+                        c.memory.targetRoom === targetRoomName && c.memory.remoteContainerId === containerIdFromFlag
+                    );
+
+                    if (!assignedCarrier) {
+                        const body = getCarrierBody(energyCapacity); // Use full capacity for remote
+                        if (body.length > 0 && spawn.spawnCreep(body, 'Carrier' + Game.time, {
+                            memory: {
+                                role: 'carrier',
+                                homeRoom: room.name,
+                                targetRoom: targetRoomName,
+                                remoteContainerId: containerIdFromFlag as Id<StructureContainer> // Cast as Id<StructureContainer>
+                            }
+                        }) === OK) {
+                            console.log(`Spawning new carrier for target ${flag.name} in room ${targetRoomName}`);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Priority 7: Upgraders
         let targetUpgraders = 1;
         if (rcl >= 4) { // Em RCL 4+
             if (room.storage && room.storage.store[RESOURCE_ENERGY] > 50000) { // Se tiver um storage com bastante energia

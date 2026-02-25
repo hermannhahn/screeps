@@ -22,6 +22,7 @@ interface CreepMemory {
     scoutTarget?: string;
     homeRoom?: string;
     remoteSourceId?: Id<Source>;
+    remoteContainerId?: Id<StructureContainer>;
 }
 
 // Global Memory
