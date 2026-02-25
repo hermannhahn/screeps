@@ -18,7 +18,7 @@ const roleReserver = {
         if (creep.room.controller) {
             if (creep.reserveController(creep.room.controller) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(creep.room.controller, { reusePath: 50, visualizePathStyle: { stroke: '#00ff00' } });
-            } else if (creep.reserveController(creep.room.controller) === ERR_NO_CLAIM_PARTS) {
+            } else if (creep.reserveController(creep.room.controller) === ERR_NO_BODYPART) {
                 console.log(`${creep.name} has no CLAIM parts to reserve controller.`);
                 // Pode se autodestruir ou esperar ser substituído por um com CLAIM parts.
             }
