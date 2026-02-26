@@ -11,6 +11,10 @@ Comportamentos individuais de cada tipo de creep:
 - [Repairer](roles/repairer.md) - Manutenção de infraestrutura.
 - [Archer](roles/archer.md) - Combate à distância.
 - [Guard](roles/guard.md) - Combate corpo-a-corpo.
+- [Scout](roles/scout.md) - Exploração de novas salas.
+- [Remote Harvester](roles/remoteHarvester.md) - Coleta de energia em salas adjacentes.
+- [Carrier](roles/carrier.md) - Transporte de energia remota.
+- [Reserver](roles/reserver.md) - Reserva de controladores remotos.
 
 ## 🛠️ [Tasks (Tarefas)](tasks/)
 Lógicas modulares reutilizáveis:

@@ -9,7 +9,7 @@ Script de automação para o jogo de estratégia MMO **Screeps**. O código é f
 - **Linguagem:** TypeScript (compilado para ES2018).
 - **Build System:** Webpack para minificação e empacotamento em um único `main.js`.
 - **Estrutura:** Modular baseada em Roles (Papéis) em arquivos `.ts`.
-- **Gerenciamento de Spawn:** Spawner inteligente com reposição antecipada de creeps (pre-spawning). Unidades de combate (Guards/Archers) só são spawnadas com 15+ extensões.
+- **Gerenciamento de Spawn:** Spawner inteligente com reposição antecipada de creeps (pre-spawning). Unidades de combate (Guards/Archers) só são spawnadas com 15+ extensões. Limite global de 1 Scout com prioridade mínima para evitar travamentos econômicos.
 - **Logística:** Mineração estática (Harvesters), logística dinâmica (Suppliers) e armazenamento dedicado para upgrade (Controller Container).
 
 ## 📁 Estrutura de Arquivos

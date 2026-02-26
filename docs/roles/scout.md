@@ -14,8 +14,10 @@ O `scout` é uma unidade de exploração barata e rápida, projetada para explor
 
 ## Lógica de Spawn
 - O `manager.spawner` criará `scouts` apenas a partir do **RCL 4**.
+- **Limite Global:** Para evitar consumo excessivo de CPU e recursos, o sistema mantém apenas **1 scout** ativo globalmente por vez.
+- **Prioridade:** O `scout` possui a **menor prioridade** de spawn. Ele só será criado se todas as outras necessidades da colônia (economia, defesa e construção) estiverem atendidas.
 - Em vez de bandeiras, o spawner verificará a lista global `Memory.roomsToExplore`.
-- Se uma sala nessa lista estiver marcada como `true` (precisando de exploração) e nenhum `scout` estiver atribuído a ela, um novo `scout` será spawnado e direcionado para essa sala.
+- Se uma sala nessa lista estiver marcada como `true` (precisando de exploração) e nenhum `scout` estiver ativo, um novo `scout` será spawnado e direcionado para a próxima sala da fila.
 - A sala explorada ou em exploração será marcada como `false` em `Memory.roomsToExplore`.
 
 ## Propósito Estratégico
