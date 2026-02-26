@@ -13,7 +13,7 @@ const taskBuild = {
             });
 
             if (targets.length > 0) {
-                target = _.maxBy(targets, (t: ConstructionSite) => t.progress / t.progressTotal) || null;
+                target = creep.pos.findClosestByPath(targets) || null;
                 if (target) {
                     creep.memory.targetBuildId = target.id;
                     creep.say('🚧');
