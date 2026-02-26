@@ -59,10 +59,18 @@ export const managerTower = {
                     }
 
                     if (!structureToRepair) {
-                        // Prioridade 2: Walls e Ramparts até o limite definido
+                        // Prioridade 2: Walls e Ramparts até o limite definido escalável por RCL
+                        const rcl = room.controller?.level || 1;
+                        let wallThreshold = 10000;
+                        if (rcl === 4) wallThreshold = 50000;
+                        else if (rcl === 5) wallThreshold = 100000;
+                        else if (rcl === 6) wallThreshold = 250000;
+                        else if (rcl === 7) wallThreshold = 500000;
+                        else if (rcl >= 8) wallThreshold = 1000000;
+
                         const defensiveStructures = room.find(FIND_STRUCTURES, {
                             filter: (s) => (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART)
-                                          && s.hits < 10000 // Nosso limite atual
+                                          && s.hits < wallThreshold
                         });
                         if (defensiveStructures.length > 0) {
                             defensiveStructures.sort((a, b) => a.hits - b.hits);

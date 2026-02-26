@@ -15,7 +15,14 @@ const taskRepair = {
                 filter: (s) => {
                     const isDamaged = s.hits < s.hitsMax * 0.8;
                     const isWallOrRampart = s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART;
-                    const wallThreshold = 30000;
+                    
+                    const rcl = creep.room.controller?.level || 1;
+                    let wallThreshold = 10000;
+                    if (rcl === 4) wallThreshold = 50000;
+                    else if (rcl === 5) wallThreshold = 100000;
+                    else if (rcl === 6) wallThreshold = 250000;
+                    else if (rcl === 7) wallThreshold = 500000;
+                    else if (rcl >= 8) wallThreshold = 1000000;
                     
                     if (isWallOrRampart && s.hits >= wallThreshold) return false;
                     if (!isDamaged && !isWallOrRampart) return false;
