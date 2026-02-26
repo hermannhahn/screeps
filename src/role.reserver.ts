@@ -16,11 +16,22 @@ const roleReserver = {
 
         // Se o creep estiver na sala alvo, tente reservar o controller.
         if (creep.room.controller) {
+            const reservation = creep.room.controller.reservation;
+            
+            // Se a reserva já estiver quase no máximo (5000), podemos economizar CPU e apenas esperar se estivermos perto
+            if (reservation && reservation.ticksToEnd >= 4999) {
+                if (!creep.pos.isNearTo(creep.room.controller)) {
+                    creep.moveTo(creep.room.controller, { reusePath: 50, visualizePathStyle: { stroke: '#00ff00' } });
+                } else {
+                    creep.say('⚡'); // Indica que está mantendo a reserva cheia
+                }
+                return;
+            }
+
             if (creep.reserveController(creep.room.controller) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(creep.room.controller, { reusePath: 50, visualizePathStyle: { stroke: '#00ff00' } });
             } else if (creep.reserveController(creep.room.controller) === ERR_NO_BODYPART) {
                 console.log(`${creep.name} has no CLAIM parts to reserve controller.`);
-                // Pode se autodestruir ou esperar ser substituído por um com CLAIM parts.
             }
         } else {
             console.log(`${creep.name} in room ${creep.memory.targetRoom} found no controller to reserve.`);
