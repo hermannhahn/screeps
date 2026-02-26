@@ -402,6 +402,7 @@ const managerSpawner = {
         const sources = allSources.filter(source => isSourceSafe(source, hostileStructures, hostileCreepsInRoom));
         const energyAvailable = room.energyAvailable;
         const energyCapacity = room.energyCapacityAvailable;
+        
         const harvesters = _.filter(Game.creeps, (c) => c.memory.role === 'harvester' && c.room.name === room.name);
         const suppliers = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === room.name);
         const upgraders = _.filter(Game.creeps, (c) => c.memory.role === 'upgrader' && c.room.name === room.name);
@@ -418,16 +419,38 @@ const managerSpawner = {
             Memory.roomsToExplore = {};
         }
 
-        // Priority 1: Harvesters (Most critical for energy production)
+        // --- ABSOLUTE PRIORITY: Harvesters and Suppliers (Interleaved 1:2) ---
         const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
-        for (const source of sources) {
-            const harvestersForSource = _.filter(harvesters, (c) => c.memory.sourceId === source.id);
-            if (harvestersForSource.length < targetHarvestersPerSource) {
-                const body = (harvesters.length === 0 || suppliers.length === 0) ? getHarvesterBody(energyAvailable, rcl) : getHarvesterBody(energyCapacity, rcl);
-                if (body.length > 0 && spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: source.id } }) === OK) {
+        const totalTargetHarvesters = sources.length * targetHarvestersPerSource;
+        const targetSuppliers = totalTargetHarvesters * 2;
+
+        if (harvesters.length < totalTargetHarvesters || suppliers.length < targetSuppliers) {
+            // Priority Rule: 1 Harvester -> 2 Suppliers
+            if (suppliers.length < harvesters.length * 2 && suppliers.length < targetSuppliers) {
+                // Need Supplier
+                const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
+                if (body.length > 0 && spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } }) === OK) {
+                    return;
+                }
+            } else if (harvesters.length < totalTargetHarvesters) {
+                // Need Harvester
+                for (const source of sources) {
+                    const harvestersForSource = _.filter(harvesters, (c) => c.memory.sourceId === source.id);
+                    if (harvestersForSource.length < targetHarvestersPerSource) {
+                        const body = (harvesters.length === 0 || suppliers.length === 0) ? getHarvesterBody(energyAvailable, rcl) : getHarvesterBody(energyCapacity, rcl);
+                        if (body.length > 0 && spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: source.id } }) === OK) {
+                            return;
+                        }
+                    }
+                }
+            } else if (suppliers.length < targetSuppliers) {
+                // All harvesters done, but still need suppliers
+                const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
+                if (body.length > 0 && spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } }) === OK) {
                     return;
                 }
             }
+            return; // BLOCK all other professions until H and S are satisfied
         }
         
         // Priority 2: Defense (If under attack)
@@ -446,15 +469,6 @@ const managerSpawner = {
         if (archers.length < targetArchers) {
             const body = getArcherBody(energyCapacity);
             if (body.length > 0 && spawn.spawnCreep(body, 'Archer' + Game.time, { memory: { role: 'archer' } }) === OK) {
-                return;
-            }
-        }
-        
-        // Priority 3: Suppliers (Critical for energy distribution)
-        const targetSuppliers = 2 * sources.length;
-        if (suppliers.length < targetSuppliers) {
-            const body = suppliers.length === 0 ? getSupplierBody(energyAvailable) : getSupplierBody(energyCapacity);
-            if (body.length > 0 && spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } }) === OK) {
                 return;
             }
         }
