@@ -9,6 +9,25 @@ const roleRemoteHarvester = {
             return;
         }
 
+        // Lógica de detecção de inimigos (em qualquer sala)
+        const hostileCreeps = creep.room.find(FIND_HOSTILE_CREEPS, {
+            filter: (c) => c.getActiveBodyparts(ATTACK) > 0 || c.getActiveBodyparts(RANGED_ATTACK) > 0
+        });
+
+        if (hostileCreeps.length > 0) {
+            // Se houver inimigos, fugir para a homeRoom
+            const pos = new RoomPosition(25, 25, creep.memory.homeRoom);
+            creep.moveTo(pos, { reusePath: 10, visualizePathStyle: { stroke: '#ff0000' } });
+            creep.say('😱');
+            
+            // Se estiver na sala alvo, marcar como insegura na memória do RemoteManager
+            if (creep.room.name === creep.memory.targetRoom && Memory.remoteRooms && Memory.remoteRooms[creep.room.name]) {
+                Memory.remoteRooms[creep.room.name].safe = false;
+                Memory.remoteRooms[creep.room.name].lastScouted = Game.time;
+            }
+            return;
+        }
+
         // Se o creep estiver na sala de origem (homeRoom) e tiver energia, entregue-a.
         if (creep.room.name === creep.memory.homeRoom) {
             if (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
