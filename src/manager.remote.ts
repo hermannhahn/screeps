@@ -58,8 +58,9 @@ const managerRemote = {
         const exitDir = room.findExitTo(homeRoomName);
         if (exitDir === ERR_INVALID_ARGS || exitDir === ERR_NO_PATH) return;
 
-        const exit = room.find(exitDir as ExitKey)[0];
-        if (!exit) return;
+        const exits = room.find(exitDir as any);
+        if (exits.length === 0) return;
+        const exit = exits[0];
 
         for (const source of sources) {
             // 1. Planejar Container perto da fonte
@@ -74,7 +75,8 @@ const managerRemote = {
             }
 
             // 2. Planejar Estrada da fonte até a saída
-            const path = room.findPath(source.pos, exit.pos, { ignoreCreeps: true, swampCost: 1, plainCost: 1 });
+            const exitPos = (exit as any).pos || exit; // Handle different return types of room.find
+            const path = room.findPath(source.pos, exitPos, { ignoreCreeps: true, swampCost: 1, plainCost: 1 });
             for (const step of path) {
                 room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD);
             }
@@ -82,7 +84,8 @@ const managerRemote = {
 
         // 3. Planejar Estrada do controller até a saída (para reservers)
         if (room.controller) {
-            const path = room.findPath(room.controller.pos, exit.pos, { ignoreCreeps: true, swampCost: 1, plainCost: 1 });
+            const exitPos = (exit as any).pos || exit;
+            const path = room.findPath(room.controller.pos, exitPos, { ignoreCreeps: true, swampCost: 1, plainCost: 1 });
             for (const step of path) {
                 room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD);
             }
