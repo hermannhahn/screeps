@@ -37,19 +37,33 @@ const rampartsWallsBlueprint: Blueprint = {
             const adjacentPositions = structure.pos.getAdjacentPositions(); // Usar a função de protótipo
 
             for (const pos of adjacentPositions) {
-                if (sitesCreated + currentRamparts + currentRampartCS >= maxRamparts) break; // Não exceder o limite
+                // Verificar se já existe um Rampart, Wall ou CS correspondente na posição
+                const existingStructure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_RAMPART || s.structureType === STRUCTURE_WALL);
+                const existingCS = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(cs => cs.structureType === STRUCTURE_RAMPART || cs.structureType === STRUCTURE_WALL);
 
-                // Verificar se já existe um Rampart ou CS de Rampart na posição
-                const existingRampart = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_RAMPART);
-                const existingRampartCS = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(cs => cs.structureType === STRUCTURE_RAMPART);
-
-                if (existingRampart || existingRampartCS) {
-                    continue; // Já tem um rampart ou CS aqui
+                if (existingStructure || existingCS) {
+                    continue; // Já tem uma estrutura defensiva ou CS aqui
                 }
 
-                // Criar Construction Site para Rampart
-                if (room.createConstructionSite(pos, STRUCTURE_RAMPART) === OK) {
+                // Decidir entre Wall ou Rampart: se houver uma estrada, DEVE ser um Rampart
+                const hasRoad = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_ROAD);
+                const structureType = hasRoad ? STRUCTURE_RAMPART : STRUCTURE_WALL;
+
+                // Se for planejar um Rampart, verificar se não excedemos o limite do RCL
+                if (structureType === STRUCTURE_RAMPART) {
+                    if (sitesCreated + currentRamparts + currentRampartCS >= maxRamparts) {
+                        // Se não puder planejar rampart, tentamos wall (se não bloquear caminhos essenciais, mas wall bloqueia)
+                        // Por simplicidade agora, apenas pulamos se for estrada e não houver cota de rampart
+                        continue; 
+                    }
+                }
+
+                // Criar Construction Site
+                if (room.createConstructionSite(pos, structureType) === OK) {
                     sitesCreated++;
+                    if (structureType === STRUCTURE_RAMPART) {
+                        currentRampartCS++;
+                    }
                 }
             }
         }
