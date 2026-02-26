@@ -42,6 +42,49 @@ const managerRemote = {
                     safe: hostiles.length === 0,
                     hasEnemyStructures: hostileStructures.length > 0
                 };
+
+                // Planejar infraestrutura se for seguro
+                if (hostiles.length === 0 && hostileStructures.length === 0) {
+                    this.planRemoteInfrastructure(room, creep.memory.homeRoom);
+                }
+            }
+        }
+    },
+
+    planRemoteInfrastructure: function(room: Room, homeRoomName?: string) {
+        if (!homeRoomName) return;
+
+        const sources = room.find(FIND_SOURCES);
+        const exitDir = room.findExitTo(homeRoomName);
+        if (exitDir === ERR_INVALID_ARGS || exitDir === ERR_NO_PATH) return;
+
+        const exit = room.find(exitDir as ExitKey)[0];
+        if (!exit) return;
+
+        for (const source of sources) {
+            // 1. Planejar Container perto da fonte
+            const hasContainer = source.pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } }).length > 0;
+            const hasContainerCS = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 2, { filter: { structureType: STRUCTURE_CONTAINER } }).length > 0;
+
+            if (!hasContainer && !hasContainerCS) {
+                const spot = source.pos.findAdjacentWalkableSpot();
+                if (spot) {
+                    room.createConstructionSite(spot, STRUCTURE_CONTAINER);
+                }
+            }
+
+            // 2. Planejar Estrada da fonte até a saída
+            const path = room.findPath(source.pos, exit.pos, { ignoreCreeps: true, swampCost: 1, plainCost: 1 });
+            for (const step of path) {
+                room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD);
+            }
+        }
+
+        // 3. Planejar Estrada do controller até a saída (para reservers)
+        if (room.controller) {
+            const path = room.findPath(room.controller.pos, exit.pos, { ignoreCreeps: true, swampCost: 1, plainCost: 1 });
+            for (const step of path) {
+                room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD);
             }
         }
     },
