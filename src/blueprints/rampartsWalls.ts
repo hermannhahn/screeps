@@ -52,8 +52,6 @@ const rampartsWallsBlueprint: Blueprint = {
                 // Se for planejar um Rampart, verificar se não excedemos o limite do RCL
                 if (structureType === STRUCTURE_RAMPART) {
                     if (sitesCreated + currentRamparts + currentRampartCS >= maxRamparts) {
-                        // Se não puder planejar rampart, tentamos wall (se não bloquear caminhos essenciais, mas wall bloqueia)
-                        // Por simplicidade agora, apenas pulamos se for estrada e não houver cota de rampart
                         continue; 
                     }
                 }
@@ -67,6 +65,51 @@ const rampartsWallsBlueprint: Blueprint = {
                 }
             }
         }
+
+        // --- DEFESA DE PERÍMETRO (CHOKE POINTS) ---
+        // Identifica saídas e planeja bloqueios a 2 tiles de distância
+        if (sitesCreated < 10) { // Só planeja perímetro se não tiver muitos CS ativos
+            const terrain = room.getTerrain();
+            const exits = room.find(FIND_EXIT);
+            const blockedPositions = new Set<string>();
+
+            for (const exitPos of exits) {
+                // Determina a direção do bloqueio (2 tiles para dentro da sala)
+                let bx = exitPos.x;
+                let by = exitPos.y;
+
+                if (bx === 0) bx = 2;
+                else if (bx === 49) bx = 47;
+                if (by === 0) by = 2;
+                else if (by === 49) by = 47;
+
+                const pos = new RoomPosition(bx, by, room.name);
+                const key = `${pos.x},${pos.y}`;
+                if (blockedPositions.has(key)) continue;
+
+                // Verifica se a posição é passável antes de bloquear
+                if (terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
+                    const existingStructure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_RAMPART || s.structureType === STRUCTURE_WALL);
+                    const existingCS = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(cs => cs.structureType === STRUCTURE_RAMPART || cs.structureType === STRUCTURE_WALL);
+
+                    if (!existingStructure && !existingCS) {
+                        const hasRoad = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_ROAD);
+                        const type = hasRoad ? STRUCTURE_RAMPART : STRUCTURE_WALL;
+
+                        if (type === STRUCTURE_RAMPART && (sitesCreated + currentRamparts + currentRampartCS >= maxRamparts)) {
+                            continue;
+                        }
+
+                        if (room.createConstructionSite(pos, type) === OK) {
+                            sitesCreated++;
+                            if (type === STRUCTURE_RAMPART) currentRampartCS++;
+                            blockedPositions.add(key);
+                        }
+                    }
+                }
+            }
+        }
+
         return sitesCreated;
     },
 
