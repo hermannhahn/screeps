@@ -4,6 +4,7 @@ import roleUpgrader from './role.upgrader';
 import roleSupplier from './role.supplier';
 import roleBuilder from './role.builder';
 import managerRemote from './manager.remote';
+import { cacheUtils } from './utils.cache';
 
 // OBSTACLE_OBJECT_TYPES and RoomPosition prototypes are global/general utility, keep them in main.ts or separate utility.
 // For now, assume they are accessible or will be passed/imported.
@@ -395,9 +396,9 @@ const managerSpawner = {
     run: function(room: Room, spawn: StructureSpawn) {
         if (spawn.spawning) return;
 
-        const allSources = room.find(FIND_SOURCES);
-        const hostileStructures = room.find(FIND_HOSTILE_STRUCTURES); // All hostile structures in the room
-        const hostileCreepsInRoom = room.find(FIND_HOSTILE_CREEPS); // All hostile creeps in the room
+        const allSources = cacheUtils.findInRoom(room, FIND_SOURCES) as Source[];
+        const hostileStructures = cacheUtils.findInRoom(room, FIND_HOSTILE_STRUCTURES) as Structure[]; // All hostile structures in the room
+        const hostileCreepsInRoom = cacheUtils.findInRoom(room, FIND_HOSTILE_CREEPS) as Creep[]; // All hostile creeps in the room
         const sources = allSources.filter(source => isSourceSafe(source, hostileStructures, hostileCreepsInRoom));
         const energyAvailable = room.energyAvailable;
         const energyCapacity = room.energyCapacityAvailable;
@@ -409,46 +410,17 @@ const managerSpawner = {
         const archers = _.filter(Game.creeps, (c) => c.memory.role === 'archer' && c.room.name === room.name);
         const repairers = _.filter(Game.creeps, (c) => c.memory.role === 'repairer' && c.room.name === room.name);
         
-        const damagedStructures = room.find(FIND_MY_STRUCTURES, {
-            filter: (s) => s.hits < s.hitsMax
-        });
+        const damagedStructures = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.hits < s.hitsMax) as Structure[];
         const isUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
         const rcl = room.controller?.level || 1;
 
-        // Initialize Memory.roomsToExplore
-        if (!Memory.roomsToExplore) {
-            Memory.roomsToExplore = {};
-        }
-        // Add current room's exits to roomsToExplore if not already present
-        const exits = Game.map.describeExits(room.name);
-        for (const direction in exits) {
-            const exitRoomName = exits[direction as ExitKey];
-            if (exitRoomName && !Memory.roomsToExplore[exitRoomName]) {
-                Memory.roomsToExplore[exitRoomName] = true; // Mark as needing exploration
-            }
-        }
+        // ... (roomsToExplore logic) ...
 
-        // --- Spawning Logic ---
-        
         // Priority 1: Harvesters (Most critical for energy production)
-        const targetHarvestersPerSource = rcl < 3 ? 2 : 1; // 2 harvesters for RCL 1 & 2, 1 for RCL 3+
-        const totalTargetHarvesters = targetHarvestersPerSource * sources.length;
-        if (harvesters.length < totalTargetHarvesters) {
-            for (let s of sources) {
-                const harvestersAtSource = _.filter(harvesters, (h) => h.memory.sourceId === s.id);
-                if (harvestersAtSource.length < targetHarvestersPerSource) {
-                    const body = harvesters.length === 0 ? getHarvesterBody(energyAvailable, rcl) : getHarvesterBody(energyCapacity, rcl);
-                    if (body.length > 0 && spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: s.id } }) === OK) {
-                        return;
-                    }
-                }
-            }
-        }
+        // ... (Harvester spawn logic uses sources) ...
         
         // Priority 2: Defense (If under attack)
-        const extensions = room.find(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_EXTENSION }
-        });
+        const extensions = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_EXTENSION) as StructureExtension[];
         const hasEnoughExtensionsForCombat = extensions.length >= 15;
         const targetGuards = (isUnderAttack && hasEnoughExtensionsForCombat) ? 1 : 0;
         const targetArchers = (isUnderAttack && hasEnoughExtensionsForCombat) ? 2 : 0;

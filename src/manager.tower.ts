@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import { findPrioritizedHostileCreep } from './utils.combat';
+import { cacheUtils } from './utils.cache';
 
 export const managerTower = {
     run(room: Room): void {
@@ -8,9 +9,7 @@ export const managerTower = {
             room.memory.primaryHostileTargetId = null;
         }
 
-        const towers = room.find(FIND_MY_STRUCTURES, {
-            filter: (structure) => structure.structureType === STRUCTURE_TOWER
-        }) as StructureTower[];
+        const towers = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_TOWER) as StructureTower[];
 
         // Se houver torres na sala
         if (towers.length > 0) {
@@ -49,13 +48,13 @@ export const managerTower = {
 
                     // Prioridade 1: Estruturas CRÍTICAS em risco IMEDIATO
                     // Exemplos: Spawn, Controller, Containers
-                    const criticalStructures = room.find(FIND_STRUCTURES, {
-                        filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_CONTROLLER || s.structureType === STRUCTURE_CONTAINER)
-                                      && s.hits < s.hitsMax * 0.2 // Repara se abaixo de 20%
-                    });
+                    const criticalStructures = cacheUtils.findInRoom(room, FIND_STRUCTURES, (s) => 
+                        (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_CONTROLLER || s.structureType === STRUCTURE_CONTAINER)
+                        && s.hits < s.hitsMax * 0.2 // Repara se abaixo de 20%
+                    ) as Structure[];
+
                     if (criticalStructures.length > 0) {
-                        criticalStructures.sort((a, b) => a.hits - b.hits); // Repara o mais danificado
-                        structureToRepair = criticalStructures[0];
+                        structureToRepair = _.minBy(criticalStructures, (s) => s.hits) || null;
                     }
 
                     if (!structureToRepair) {
@@ -68,24 +67,24 @@ export const managerTower = {
                         else if (rcl === 7) wallThreshold = 500000;
                         else if (rcl >= 8) wallThreshold = 1000000;
 
-                        const defensiveStructures = room.find(FIND_STRUCTURES, {
-                            filter: (s) => (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART)
-                                          && s.hits < wallThreshold
-                        });
+                        const defensiveStructures = cacheUtils.findInRoom(room, FIND_STRUCTURES, (s) => 
+                            (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART)
+                            && s.hits < wallThreshold
+                        ) as Structure[];
+
                         if (defensiveStructures.length > 0) {
-                            defensiveStructures.sort((a, b) => a.hits - b.hits);
-                            structureToRepair = defensiveStructures[0];
+                            structureToRepair = _.minBy(defensiveStructures, (s) => s.hits) || null;
                         }
                     }
 
                     if (!structureToRepair) {
                         // Prioridade 3: Outras estruturas até 90%
-                        const otherDamagedStructures = room.find(FIND_STRUCTURES, {
-                            filter: (s) => s.hits < s.hitsMax * 0.9
-                        });
+                        const otherDamagedStructures = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => 
+                            s.hits < s.hitsMax * 0.9 && s.structureType !== STRUCTURE_WALL && s.structureType !== STRUCTURE_RAMPART
+                        ) as Structure[];
+
                         if (otherDamagedStructures.length > 0) {
-                            otherDamagedStructures.sort((a, b) => a.hits - b.hits);
-                            structureToRepair = otherDamagedStructures[0];
+                            structureToRepair = _.minBy(otherDamagedStructures, (s) => s.hits) || null;
                         }
                     }
 
