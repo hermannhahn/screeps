@@ -54,7 +54,7 @@ export const managerTower = {
                     ) as Structure[];
 
                     if (criticalStructures.length > 0) {
-                        structureToRepair = _.minBy(criticalStructures, (s) => s.hits) || null;
+                        structureToRepair = _.minBy(criticalStructures, (s) => s.hits) as AnyStructure | null;
                     }
 
                     if (!structureToRepair) {
@@ -73,7 +73,7 @@ export const managerTower = {
                         ) as Structure[];
 
                         if (defensiveStructures.length > 0) {
-                            structureToRepair = _.minBy(defensiveStructures, (s) => s.hits) || null;
+                            structureToRepair = _.minBy(defensiveStructures, (s) => s.hits) as AnyStructure | null;
                         }
                     }
 
@@ -84,7 +84,7 @@ export const managerTower = {
                         ) as Structure[];
 
                         if (otherDamagedStructures.length > 0) {
-                            structureToRepair = _.minBy(otherDamagedStructures, (s) => s.hits) || null;
+                            structureToRepair = _.minBy(otherDamagedStructures, (s) => s.hits) as AnyStructure | null;
                         }
                     }
 
