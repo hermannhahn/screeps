@@ -1,38 +1,5 @@
 import _ from 'lodash';
-
-// Função auxiliar para encontrar o creep hostil de maior prioridade
-function findPrioritizedHostile(room: Room, tower: StructureTower): Creep | null {
-    const hostiles = room.find(FIND_HOSTILE_CREEPS);
-    if (hostiles.length === 0) {
-        return null;
-    }
-
-    // Ordena os creeps com base na prioridade
-    hostiles.sort((a, b) => {
-        // Prioridade 1: ATTACK ou RANGED_ATTACK
-        const aHasAttack = a.getActiveBodyparts(ATTACK) > 0 || a.getActiveBodyparts(RANGED_ATTACK) > 0;
-        const bHasAttack = b.getActiveBodyparts(ATTACK) > 0 || b.getActiveBodyparts(RANGED_ATTACK) > 0;
-        if (aHasAttack && !bHasAttack) return -1;
-        if (!aHasAttack && bHasAttack) return 1;
-
-        // Prioridade 2: HEAL
-        const aHasHeal = a.getActiveBodyparts(HEAL) > 0;
-        const bHasHeal = b.getActiveBodyparts(HEAL) > 0;
-        if (aHasHeal && !bHasHeal) return -1;
-        if (!aHasHeal && bHasHeal) return 1;
-
-        // Prioridade 3: WORK
-        const aHasWork = a.getActiveBodyparts(WORK) > 0;
-        const bHasWork = b.getActiveBodyparts(WORK) > 0;
-        if (aHasWork && !bHasWork) return -1;
-        if (!aHasWork && bHasWork) return 1;
-
-        // Último critério: closestByRange
-        return tower.pos.getRangeTo(a) - tower.pos.getRangeTo(b);
-    });
-
-    return hostiles[0];
-}
+import { findPrioritizedHostileCreep } from './utils.combat';
 
 export const managerTower = {
     run(room: Room): void {
@@ -65,7 +32,7 @@ export const managerTower = {
                 // Usar a primeira torre para encontrar o alvo prioritário para toda a sala
                 // Isso garante que todas as torres ataquem o mesmo alvo
                 if (towers[0]) {
-                     primaryTarget = findPrioritizedHostile(room, towers[0]);
+                     primaryTarget = findPrioritizedHostileCreep(towers[0]);
                      if (primaryTarget) {
                          room.memory.primaryHostileTargetId = primaryTarget.id;
                      }

@@ -1,40 +1,5 @@
 import _ from 'lodash';
-
-// Reutilizar a função auxiliar de priorização de hostis, pois a lógica é a mesma
-// Para evitar duplicação em scripts diferentes, esta função deveria estar em um módulo de utilidade.
-// Mas para este escopo, a manterei aqui.
-function findPrioritizedHostileCreep(creep: Creep): Creep | null {
-    const hostiles = creep.room.find(FIND_HOSTILE_CREEPS);
-    if (hostiles.length === 0) {
-        return null;
-    }
-
-    hostiles.sort((a, b) => {
-        // Prioridade 1: ATTACK ou RANGED_ATTACK
-        const aHasAttack = a.getActiveBodyparts(ATTACK) > 0 || a.getActiveBodyparts(RANGED_ATTACK) > 0;
-        const bHasAttack = b.getActiveBodyparts(ATTACK) > 0 || b.getActiveBodyparts(RANGED_ATTACK) > 0;
-        if (aHasAttack && !bHasAttack) return -1;
-        if (!aHasAttack && bHasAttack) return 1;
-
-        // Prioridade 2: HEAL
-        const aHasHeal = a.getActiveBodyparts(HEAL) > 0;
-        const bHasHeal = b.getActiveBodyparts(HEAL) > 0;
-        if (aHasHeal && !bHasHeal) return -1;
-        if (!aHasHeal && bHasHeal) return 1;
-
-        // Prioridade 3: WORK
-        const aHasWork = a.getActiveBodyparts(WORK) > 0;
-        const bHasWork = b.getActiveBodyparts(WORK) > 0;
-        if (aHasWork && !bHasWork) return -1;
-        if (!aHasWork && bHasWork) return 1;
-
-        // Último critério: closestByRange
-        return creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b);
-    });
-
-    return hostiles[0];
-}
-
+import { findPrioritizedHostileCreep } from './utils.combat';
 
 const roleArcher = {
     run: function(creep: Creep) {
