@@ -4,9 +4,9 @@ const secondTowerBlueprint: Blueprint = {
     name: "Second Tower",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
-        // 1. Verificar se o RCL é pelo menos 4
-        if (!room.controller || room.controller.level < 4) {
-            return 0; // RCL 4 é necessário para a segunda torre
+        // 1. Verificar se o RCL é pelo menos 5
+        if (!room.controller || room.controller.level < 5) {
+            return 0; // RCL 5 é necessário para a segunda torre
         }
 
         // 2. Verificar se já existem 2 torres construídas ou em CONSTRUCTION_SITE
@@ -68,8 +68,8 @@ const secondTowerBlueprint: Blueprint = {
     },
 
     isComplete: function(room: Room, spawn: StructureSpawn): boolean {
-        // 1. Verificar se o RCL é pelo menos 4
-        if (!room.controller || room.controller.level < 4) {
+        // 1. Verificar se o RCL é pelo menos 5
+        if (!room.controller || room.controller.level < 5) {
             return true; // Não aplicável ou muito cedo, consideramos completa para não bloquear o planner
         }
 
