@@ -414,10 +414,21 @@ const managerSpawner = {
         const isUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
         const rcl = room.controller?.level || 1;
 
-        // ... (roomsToExplore logic) ...
+        if (!Memory.roomsToExplore) {
+            Memory.roomsToExplore = {};
+        }
 
         // Priority 1: Harvesters (Most critical for energy production)
-        // ... (Harvester spawn logic uses sources) ...
+        const targetHarvestersPerSource = rcl < 4 ? 2 : 1;
+        for (const source of sources) {
+            const harvestersForSource = _.filter(harvesters, (c) => c.memory.sourceId === source.id);
+            if (harvestersForSource.length < targetHarvestersPerSource) {
+                const body = (harvesters.length === 0 || suppliers.length === 0) ? getHarvesterBody(energyAvailable, rcl) : getHarvesterBody(energyCapacity, rcl);
+                if (body.length > 0 && spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester', sourceId: source.id } }) === OK) {
+                    return;
+                }
+            }
+        }
         
         // Priority 2: Defense (If under attack)
         const extensions = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_EXTENSION) as StructureExtension[];
