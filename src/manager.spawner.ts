@@ -3,6 +3,7 @@ import roleHarvester from './role.harvester';
 import roleUpgrader from './role.upgrader';
 import roleSupplier from './role.supplier';
 import roleBuilder from './role.builder';
+import managerRemote from './manager.remote';
 
 // OBSTACLE_OBJECT_TYPES and RoomPosition prototypes are global/general utility, keep them in main.ts or separate utility.
 // For now, assume they are accessible or will be passed/imported.
@@ -477,6 +478,22 @@ const managerSpawner = {
         
         // Priority 4: Remote Harvesters
         const remoteHarvesters = _.filter(Game.creeps, (c) => c.memory.role === 'remoteHarvester');
+        
+        // 4.1: Automated Remote Harvesting from ManagerRemote
+        const remoteHarvestTargets = managerRemote.getRemoteHarvestTargets(room);
+        for (const target of remoteHarvestTargets) {
+            const assignedRemoteHarvester = _.find(remoteHarvesters, (rh) => rh.memory.targetRoom === target.roomName && rh.memory.remoteSourceId === target.sourceId);
+            if (!assignedRemoteHarvester) {
+                const body = getRemoteHarvesterBody(energyCapacity);
+                if (body.length > 0 && spawn.spawnCreep(body, 'RemoteHarvester' + Game.time, { 
+                    memory: { role: 'remoteHarvester', homeRoom: room.name, targetRoom: target.roomName, remoteSourceId: target.sourceId } 
+                }) === OK) {
+                    return;
+                }
+            }
+        }
+
+        // 4.2: Legacy/Manual Remote Harvesting from Flags
         const remoteHarvestFlags = _.filter(Game.flags, (f) => f.name.toLowerCase().startsWith('remoteharvest'));
         if (remoteHarvestFlags.length > 0) {
             for (const flag of remoteHarvestFlags) {
@@ -517,6 +534,22 @@ const managerSpawner = {
         
         // Priority 6: Reservers
         const reservers = _.filter(Game.creeps, (c) => c.memory.role === 'reserver');
+
+        // 6.1: Automated Reserving based on scout data
+        for (const roomName in Memory.remoteRooms) {
+            const data = Memory.remoteRooms[roomName];
+            if (data.safe && !data.hasEnemyStructures && data.needsReserving) {
+                const assignedReserver = _.find(reservers, (r) => r.memory.targetRoom === roomName);
+                if (!assignedReserver) {
+                    const body = getReserverBody(energyCapacity);
+                    if (body.length > 0 && spawn.spawnCreep(body, 'Reserver' + Game.time, { memory: { role: 'reserver', targetRoom: roomName } }) === OK) {
+                        return;
+                    }
+                }
+            }
+        }
+
+        // 6.2: Legacy Reservers from Flags
         const reserverFlags = _.filter(Game.flags, (f) => f.name.toLowerCase().startsWith('reserver'));
         if (reserverFlags.length > 0) {
             for (const flag of reserverFlags) {

@@ -12,6 +12,7 @@ import roleCarrier from './role.carrier';
 import roleReserver from './role.reserver';
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
+import managerRemote from './manager.remote';
 import { managerTower } from './manager.tower';
 import Watcher from './watch-client';
 
@@ -167,6 +168,9 @@ function displayCreepCounts(room: Room) {
 
 export const loop = () => {
     Watcher();
+
+    // Run Remote Manager to update data from scouts
+    managerRemote.run();
 
     // Pixel generation logic for official server
     if (Game.cpu.generatePixel && Game.cpu.bucket >= 10000) {

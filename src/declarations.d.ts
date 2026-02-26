@@ -41,4 +41,14 @@ interface Memory {
     log: any;
     primaryHostileTargetId?: Id<Creep> | null; // Adicionado para o foco de fogo das torres
     roomsToExplore: { [roomName: string]: boolean };
+    remoteRooms: { [roomName: string]: RemoteRoomData };
+}
+
+interface RemoteRoomData {
+    sources: { id: Id<Source>; pos: { x: number; y: number } }[];
+    controllerPos?: { x: number; y: number };
+    needsReserving?: boolean;
+    lastScouted: number;
+    safe: boolean;
+    hasEnemyStructures: boolean;
 }
