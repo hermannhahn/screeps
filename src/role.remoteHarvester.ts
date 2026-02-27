@@ -28,6 +28,20 @@ const roleRemoteHarvester = {
             return;
         }
 
+        // Safety: If targetRoom IS homeRoom, this is a misconfiguration
+        if (targetRoom === homeRoom) {
+            creep.say('💀 Mistake');
+            const spawn = creep.pos.findClosestByRange(FIND_MY_SPAWNS);
+            if (spawn) {
+                if (spawn.recycleCreep(creep) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(spawn);
+                }
+            } else {
+                creep.suicide();
+            }
+            return;
+        }
+
         // Lógica de Fuga (Hostis na sala atual)
         const hostileCreeps = creep.room.find(FIND_HOSTILE_CREEPS, {
             filter: (c) => c.getActiveBodyparts(ATTACK) > 0 || c.getActiveBodyparts(RANGED_ATTACK) > 0

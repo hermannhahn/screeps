@@ -98,6 +98,9 @@ const managerRemote = {
         const targets: { roomName: string; sourceId: Id<Source> }[] = [];
         
         for (const roomName in Memory.remoteRooms) {
+            // Ignore the home room itself
+            if (roomName === homeRoom.name) continue;
+
             const data = Memory.remoteRooms[roomName] as RemoteRoomData;
             // Simplified logic: only take rooms that are safe and scouted recently
             if (data.safe && !data.hasEnemyStructures && (Game.time - data.lastScouted < 5000)) {
