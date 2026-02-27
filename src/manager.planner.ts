@@ -4,6 +4,7 @@ import extensionsBlueprint from './blueprints/extensions';
 import sourceRoadsBlueprint from './blueprints/sourceRoads';
 import controllerRoadsBlueprint from './blueprints/controllerRoads';
 import mineralRoadsBlueprint from './blueprints/mineralRoads';
+import exitRoadsBlueprint from './blueprints/exitRoads'; // Novo import
 import sourceContainersBlueprint from './blueprints/sourceContainers';
 import controllerContainerBlueprint from './blueprints/controllerContainer';
 import firstTowerBlueprint from './blueprints/firstTower';
@@ -39,6 +40,7 @@ const managerPlanner = {
             linksBlueprint,
             rampartsWallsBlueprint,
             mineralRoadsBlueprint, // Only really needed at RCL 6+
+            exitRoadsBlueprint, // Connect main network to exits
         ];
         const MAX_BLUEPRINT_STAGES = BLUEPRINTS_ORDER.length;
 

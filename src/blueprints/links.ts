@@ -27,15 +27,15 @@ const linksBlueprint: Blueprint = {
 
         let sitesCreated = 0;
 
-        // Planejar o Link do Controller
-        if (room.controller && totalLinksPlanned < maxLinks) {
+        // Planejar o Link do Controller - PRIORIDADE MÁXIMA
+        if (room.controller) {
             const hasControllerLink = room.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
                 filter: (s) => s.structureType === STRUCTURE_LINK
             }).length > 0 || room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 2, {
                 filter: (cs) => cs.structureType === STRUCTURE_LINK
             }).length > 0;
 
-            if (!hasControllerLink) {
+            if (!hasControllerLink && totalLinksPlanned < maxLinks) {
                 // Tenta encontrar um lugar livre em range 1 ou 2
                 let foundPos: RoomPosition | null = null;
                 const terrain = room.getTerrain();
@@ -77,6 +77,13 @@ const linksBlueprint: Blueprint = {
                 }
 
                 if (foundPos) {
+                    // Se houver uma estrada no local, destruí-la para dar lugar ao link
+                    const road = foundPos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_ROAD);
+                    if (road) {
+                        console.log(`[ManagerPlanner] Destroying road at ${foundPos} to place Link.`);
+                        road.destroy();
+                    }
+
                     if (room.createConstructionSite(foundPos, STRUCTURE_LINK) === OK) {
                         sitesCreated++;
                         totalLinksPlanned++;
@@ -136,6 +143,13 @@ const linksBlueprint: Blueprint = {
                     }
 
                     if (foundPos) {
+                        // Se houver uma estrada no local, destruí-la
+                        const road = foundPos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_ROAD);
+                        if (road) {
+                            console.log(`[ManagerPlanner] Destroying road at ${foundPos} to place Source Link.`);
+                            road.destroy();
+                        }
+
                         if (room.createConstructionSite(foundPos, STRUCTURE_LINK) === OK) {
                             sitesCreated++;
                             totalLinksPlanned++;
@@ -154,7 +168,18 @@ const linksBlueprint: Blueprint = {
             return true; // Não aplicável ou muito cedo, consideramos completa para não bloquear o planner
         }
 
-        // 2. Verificar se existem o número máximo de links construídos na sala (2 para RCL 5)
+        // 2. Verificar se o link do controller está presente ou planejado
+        const hasControllerLink = room.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
+            filter: (s) => s.structureType === STRUCTURE_LINK
+        }).length > 0 || room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 2, {
+            filter: (cs) => cs.structureType === STRUCTURE_LINK
+        }).length > 0;
+
+        if (!hasControllerLink) {
+            return false;
+        }
+
+        // 3. Verificar se existem o número máximo de links construídos na sala (2 para RCL 5)
         const builtLinks = room.find(FIND_MY_STRUCTURES, {
             filter: (s) => s.structureType === STRUCTURE_LINK
         });
@@ -164,7 +189,7 @@ const linksBlueprint: Blueprint = {
             return false; // Não atingiu o número máximo de links
         }
 
-        // 3. Verificar se não há CONSTRUCTION_SITE para STRUCTURE_LINK na sala
+        // 4. Verificar se não há CONSTRUCTION_SITE para STRUCTURE_LINK na sala
         const existingLinkCS = room.find(FIND_CONSTRUCTION_SITES, {
             filter: (cs) => cs.structureType === STRUCTURE_LINK
         });
@@ -175,6 +200,7 @@ const linksBlueprint: Blueprint = {
 
         return true; // Links construídos e sem construction sites pendentes
     }
+
 };
 
 export default linksBlueprint;

@@ -1,5 +1,5 @@
 import { Blueprint } from './blueprintInterface';
-import { planRoadsFromToNearestRoad, isSafePosition, isRoadPathComplete } from './utils';
+import { planRoadsFromToNearestRoad, isSafePosition, isRoadPathComplete, findTargetForRoadConnection } from './utils';
 
 const mineralRoadsBlueprint: Blueprint = {
     name: "Mineral Roads",
@@ -16,19 +16,10 @@ const mineralRoadsBlueprint: Blueprint = {
         const mineral = room.find(FIND_MINERALS)[0];
         if (!mineral) return true; // No mineral, so blueprint is "complete"
 
-        // Find existing roads or sites
-        const roads = room.find(FIND_STRUCTURES, {
-            filter: (s) => s.structureType === STRUCTURE_ROAD
-        }).concat(room.find(FIND_CONSTRUCTION_SITES, {
-            filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD
-        } as any) as any);
+        const targetPos = findTargetForRoadConnection(room, mineral.pos);
+        if (!targetPos) return true; // Cannot find target, assume "complete"
 
-        if (roads.length === 0) return false;
-
-        const nearestRoad = mineral.pos.findClosestByPath(roads);
-        if (!nearestRoad) return false;
-
-        return isRoadPathComplete(room, mineral.pos, nearestRoad.pos);
+        return isRoadPathComplete(room, mineral.pos, targetPos);
     }
 };
 

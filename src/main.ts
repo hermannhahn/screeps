@@ -31,18 +31,25 @@ RoomPosition.prototype.isWalkable = function(creepLooking?: Creep): boolean {
     if (terrain === 'wall') return false;
 
     const structures = this.lookFor(LOOK_STRUCTURES);
-    if (_.some(structures, (s) => OBSTACLE_OBJECT_TYPES.includes(s.structureType) && (!('my' in s) || !(s as OwnedStructure).my))) {
+    // Structures like roads and ramparts do not block movement or building other things (mostly)
+    // But for BUILDING planning, we usually want to avoid anything that isn't a road or rampart.
+    if (_.some(structures, (s) => OBSTACLE_OBJECT_TYPES.includes(s.structureType))) {
         return false;
     }
 
     const constructionSites = this.lookFor(LOOK_CONSTRUCTION_SITES);
-    if (_.some(constructionSites, (cs) => OBSTACLE_OBJECT_TYPES.includes(cs.structureType) && (!('my' in cs) || !(cs as any).my))) {
+    if (_.some(constructionSites, (cs) => OBSTACLE_OBJECT_TYPES.includes(cs.structureType))) {
         return false;
     }
     
-    const creeps = this.lookFor(LOOK_CREEPS);
-    if (creeps.length > 0 && (!creepLooking || creeps[0].id !== creepLooking.id)) { 
-        return false;
+    // For general walkability, creeps block. For planning, they should not.
+    // If creepLooking is provided, we check for other creeps.
+    // If NOT provided (like in planner), we ignore creeps.
+    if (creepLooking) {
+        const creeps = this.lookFor(LOOK_CREEPS);
+        if (creeps.length > 0 && creeps[0].id !== creepLooking.id) { 
+            return false;
+        }
     }
 
     return true;

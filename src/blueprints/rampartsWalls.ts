@@ -15,7 +15,7 @@ const rampartsWallsBlueprint: Blueprint = {
 
         // Limite de Ramparts para o RCL atual
         const rcl = room.controller?.level || 1;
-        const maxRamparts = CONTROLLER_STRUCTURES[STRUCTURE_RAMPART][rcl];
+        const maxRamparts = 100; // Limit for now to avoid flooding
         let currentRamparts = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_RAMPART).length;
         let currentRampartCS = cacheUtils.findInRoom(room, FIND_CONSTRUCTION_SITES, (cs) => cs.structureType === STRUCTURE_RAMPART).length;
 
@@ -100,12 +100,15 @@ const rampartsWallsBlueprint: Blueprint = {
         const towers = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_TOWER);
         if (towers.length === 0) return true;
 
-        const maxRamparts = CONTROLLER_STRUCTURES[STRUCTURE_RAMPART][room.controller?.level || 1];
-        const currentTotal = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_RAMPART).length +
-                             cacheUtils.findInRoom(room, FIND_CONSTRUCTION_SITES, (cs) => cs.structureType === STRUCTURE_RAMPART).length;
+        // Since there's no fixed limit for Ramparts/Walls in CONTROLLER_STRUCTURES,
+        // we use a heuristic: if we have at least some defenses and no new sites were created recently, we move on.
+        // For now, let's just say it's complete if we have at least 10 defenses or if we already planned some.
+        const currentTotal = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_RAMPART || s.structureType === STRUCTURE_WALL).length +
+                             cacheUtils.findInRoom(room, FIND_CONSTRUCTION_SITES, (cs) => cs.structureType === STRUCTURE_RAMPART || cs.structureType === STRUCTURE_WALL).length;
 
-        // Consideramos completo se chegarmos a 80% da cota ou se o planejamento não criou novos sites
-        return (currentTotal >= maxRamparts * 0.8);
+        // If we have at least 1 defense per exit (roughly), we can proceed to other blueprints.
+        // This avoids blocking the whole planner for defensive structures that can be expanded later.
+        return currentTotal >= 20; 
     }
 };
 
