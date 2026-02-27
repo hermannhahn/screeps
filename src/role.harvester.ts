@@ -2,6 +2,7 @@ import _ from 'lodash';
 import taskBuild from './task.build';
 import taskUpgrade from './task.upgrade';
 import taskDeliver from './task.deliver';
+import { cacheUtils } from './utils.cache';
 
 // Helper function to check if a source is safe from hostile structures and creeps
 function isSourceSafe(source: Source, hostileStructures: Structure[], hostileCreeps: Creep[]): boolean {
@@ -17,8 +18,8 @@ function isSourceSafe(source: Source, hostileStructures: Structure[], hostileCre
 
 const roleHarvester = {
     run: function(creep: Creep) {
-        const hostileCreepsInRoom = creep.room.find(FIND_HOSTILE_CREEPS);
-        const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } });
+        const hostileCreepsInRoom = cacheUtils.getHostiles(creep.room);
+        const extensions = cacheUtils.findInRoom(creep.room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_EXTENSION, 10);
         const hasEnoughExtensions = extensions.length >= 5;
 
         // Flee logic
@@ -36,14 +37,16 @@ const roleHarvester = {
                         roomCallback: (roomName) => {
                             let room = Game.rooms[roomName];
                             if (!room) return new PathFinder.CostMatrix();
-                            let costMatrix = new PathFinder.CostMatrix();
-                            room.find(FIND_HOSTILE_CREEPS).forEach(c => costMatrix.set(c.pos.x, c.pos.y, 255));
-                            room.find(FIND_STRUCTURES).forEach(struct => {
+                            
+                            // Use cache for CostMatrix or objects within the tick
+                            const cm = new PathFinder.CostMatrix();
+                            cacheUtils.getHostiles(room).forEach(c => cm.set(c.pos.x, c.pos.y, 255));
+                            cacheUtils.findInRoom(room, FIND_STRUCTURES, undefined, 10).forEach(struct => {
                                 if (struct.structureType !== STRUCTURE_ROAD && struct.structureType !== STRUCTURE_CONTAINER && struct.structureType !== STRUCTURE_RAMPART) {
-                                    costMatrix.set(struct.pos.x, struct.pos.y, 255);
+                                    cm.set(struct.pos.x, struct.pos.y, 255);
                                 }
                             });
-                            return costMatrix;
+                            return cm;
                         },
                     }
                 );
@@ -61,7 +64,8 @@ const roleHarvester = {
                     creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
                 }
             } else {
-                const safeSources = creep.room.find(FIND_SOURCES).filter(s => isSourceSafe(s, creep.room.find(FIND_HOSTILE_STRUCTURES), hostileCreepsInRoom));
+                const hostileStructures = cacheUtils.findInRoom(creep.room, FIND_HOSTILE_STRUCTURES, undefined, 10);
+                const safeSources = cacheUtils.getSources(creep.room).filter(s => isSourceSafe(s, hostileStructures, hostileCreepsInRoom));
                 const targetHarvestersPerSource = creep.room.controller && creep.room.controller.level < 4 ? 2 : 1;
 
                 let bestSource: Source | null = null;

@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import { cacheUtils } from './utils.cache';
 
 export interface RemoteRoomData {
     sources: { id: Id<Source>; pos: { x: number; y: number } }[];
@@ -26,13 +27,13 @@ const managerRemote = {
             if (creep.memory.role === 'scout' && creep.room.name === creep.memory.targetRoom) {
                 const room = creep.room;
                 
-                const sources = room.find(FIND_SOURCES).map(s => ({
+                const sources = cacheUtils.getSources(room).map(s => ({
                     id: s.id,
                     pos: { x: s.pos.x, y: s.pos.y }
                 }));
 
-                const hostiles = room.find(FIND_HOSTILE_CREEPS);
-                const hostileStructures = room.find(FIND_HOSTILE_STRUCTURES);
+                const hostiles = cacheUtils.getHostiles(room);
+                const hostileStructures = cacheUtils.findInRoom(room, FIND_HOSTILE_STRUCTURES, undefined, 100);
 
                 Memory.remoteRooms[room.name] = {
                     sources: sources,
@@ -54,11 +55,11 @@ const managerRemote = {
     planRemoteInfrastructure: function(room: Room, homeRoomName?: string) {
         if (!homeRoomName) return;
 
-        const sources = room.find(FIND_SOURCES);
+        const sources = cacheUtils.getSources(room);
         const exitDir = room.findExitTo(homeRoomName);
         if (exitDir === ERR_INVALID_ARGS || exitDir === ERR_NO_PATH) return;
 
-        const exits = room.find(exitDir as any);
+        const exits = cacheUtils.findInRoom(room, exitDir as any);
         if (exits.length === 0) return;
         const exit = exits[0];
 
