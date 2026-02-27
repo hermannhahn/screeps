@@ -72,9 +72,9 @@ const linksBlueprint: Blueprint = {
                 const terrain = room.getTerrain();
                 let foundPos: RoomPosition | null = null;
 
-                // Tentar encontrar uma posição livre em range 1 ou 2
-                // Para fontes, range 1 é preferível. Para Storage/Controller, 1 ou 2.
-                const maxRange = (target.name.startsWith("Source")) ? 1 : 2;
+                // Tentar encontrar uma posição livre em range 1 ou 2 (ou 3 para Storage/Controller se necessário)
+                const isSource = target.name.startsWith("Source");
+                const maxRange = isSource ? 1 : 3;
 
                 for (let r = 1; r <= maxRange; r++) {
                     for (let dx = -r; dx <= r; dx++) {
@@ -123,6 +123,8 @@ const linksBlueprint: Blueprint = {
                         sitesCreated++;
                         totalLinksPlanned++;
                     }
+                } else {
+                    console.log(`[ManagerPlanner] Could not find valid position for Link near ${target.name} at range ${maxRange}.`);
                 }
             }
         }

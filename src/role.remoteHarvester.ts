@@ -74,21 +74,6 @@ const roleRemoteHarvester = {
         if (creep.memory.working) {
             // ESTADO: ENTREGAR
             if (creep.room.name === homeRoom) {
-                // Prioridade 1: Links em range 3
-                const linksInRange = creep.pos.findInRange(FIND_MY_STRUCTURES, 3, {
-                    filter: (s) => s.structureType === STRUCTURE_LINK && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-                }) as StructureLink[];
-
-                if (linksInRange.length > 0) {
-                    const link = _.minBy(linksInRange, l => creep.pos.getRangeTo(l));
-                    if (link) {
-                        if (creep.transfer(link, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                            creep.moveTo(link, { visualizePathStyle: { stroke: '#ffffff' } });
-                        }
-                        return;
-                    }
-                }
-
                 // Na homeRoom, tenta entregar (Storage, Spawns, Extensions, etc)
                 const delivered = taskDeliver.run(creep);
                 if (!delivered) {
