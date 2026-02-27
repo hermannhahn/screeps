@@ -35,8 +35,8 @@ const rampartsWallsBlueprint: Blueprint = {
         for (const struct of vitalStructures) {
             if (currentRamparts + currentRampartCS + sitesCreated >= maxRamparts) break;
 
-            const existingRampart = struct.pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_RAMPART);
-            const existingCS = struct.pos.lookFor(LOOK_CONSTRUCTION_SITES).some(cs => cs.structureType === STRUCTURE_RAMPART);
+            const existingRampart = struct.pos.lookFor(LOOK_STRUCTURES).some((s: Structure) => s.structureType === STRUCTURE_RAMPART);
+            const existingCS = struct.pos.lookFor(LOOK_CONSTRUCTION_SITES).some((cs: ConstructionSite) => cs.structureType === STRUCTURE_RAMPART);
 
             if (!existingRampart && !existingCS) {
                 if (room.createConstructionSite(struct.pos, STRUCTURE_RAMPART) === OK) {
