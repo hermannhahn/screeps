@@ -27,34 +27,68 @@ const linksBlueprint: Blueprint = {
 
         let sitesCreated = 0;
 
-        // Planejar o Link do Controller - PRIORIDADE MÁXIMA
+        // 1. Obter fontes ordenadas por distância ao spawn
+        const sources = room.find(FIND_SOURCES);
+        const sortedSources = _.sortBy(sources, s => spawn.pos.getRangeTo(s));
+
+        // 2. Definir alvos na ordem de prioridade solicitada
+        // Prio 1: Primeira Fonte (mais próxima ao spawn)
+        // Prio 2: Storage
+        // Prio 3: Segunda Fonte (se existir)
+        // Prio 4: Controller
+        const priorityTargets: { pos: RoomPosition, name: string }[] = [];
+
+        // Adicionar Primeira Fonte
+        if (sortedSources.length > 0) {
+            priorityTargets.push({ pos: sortedSources[0].pos, name: "Source 0" });
+        }
+
+        // Adicionar Storage (RCL 4+ necessário para o Storage existir)
+        if (room.storage) {
+            priorityTargets.push({ pos: room.storage.pos, name: "Storage" });
+        }
+
+        // Adicionar Segunda Fonte
+        if (sortedSources.length > 1) {
+            priorityTargets.push({ pos: sortedSources[1].pos, name: "Source 1" });
+        }
+
+        // Adicionar Controller
         if (room.controller) {
-            const hasControllerLink = room.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
+            priorityTargets.push({ pos: room.controller.pos, name: "Controller" });
+        }
+
+        // 3. Tentar planejar links para os alvos na ordem de prioridade
+        for (const target of priorityTargets) {
+            if (totalLinksPlanned >= maxLinks) break;
+
+            const hasLink = target.pos.findInRange(FIND_MY_STRUCTURES, 2, {
                 filter: (s) => s.structureType === STRUCTURE_LINK
-            }).length > 0 || room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 2, {
+            }).length > 0 || target.pos.findInRange(FIND_CONSTRUCTION_SITES, 2, {
                 filter: (cs) => cs.structureType === STRUCTURE_LINK
             }).length > 0;
 
-            if (!hasControllerLink && totalLinksPlanned < maxLinks) {
-                // Tenta encontrar um lugar livre em range 1 ou 2
-                let foundPos: RoomPosition | null = null;
+            if (!hasLink) {
                 const terrain = room.getTerrain();
+                let foundPos: RoomPosition | null = null;
 
-                for (let r = 1; r <= 2; r++) {
+                // Tentar encontrar uma posição livre em range 1 ou 2
+                // Para fontes, range 1 é preferível. Para Storage/Controller, 1 ou 2.
+                const maxRange = (target.name.startsWith("Source")) ? 1 : 2;
+
+                for (let r = 1; r <= maxRange; r++) {
                     for (let dx = -r; dx <= r; dx++) {
                         for (let dy = -r; dy <= r; dy++) {
-                            // Only check perimeter of the range square to avoid redundant checks
                             if (r > 1 && Math.abs(dx) < r && Math.abs(dy) < r) continue;
 
-                            const x = room.controller.pos.x + dx;
-                            const y = room.controller.pos.y + dy;
+                            const x = target.pos.x + dx;
+                            const y = target.pos.y + dy;
                             if (x < 1 || x > 48 || y < 1 || y > 48) continue;
 
-                            // Check terrain
                             if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
 
                             const pos = new RoomPosition(x, y, room.name);
-                            
+
                             // Check for blocking structures (anything except roads and ramparts)
                             const structures = pos.lookFor(LOOK_STRUCTURES);
                             const hasBlockingStructure = _.some(structures, (s) => 
@@ -80,80 +114,14 @@ const linksBlueprint: Blueprint = {
                     // Se houver uma estrada no local, destruí-la para dar lugar ao link
                     const road = foundPos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_ROAD);
                     if (road) {
-                        console.log(`[ManagerPlanner] Destroying road at ${foundPos} to place Link.`);
+                        console.log(`[ManagerPlanner] Destroying road at ${foundPos} to place Link for ${target.name}.`);
                         road.destroy();
                     }
 
                     if (room.createConstructionSite(foundPos, STRUCTURE_LINK) === OK) {
+                        console.log(`[ManagerPlanner] Planned Link for ${target.name} at ${foundPos}`);
                         sitesCreated++;
                         totalLinksPlanned++;
-                    }
-                }
-            }
-        }
-
-        // Planejar Links para as Fontes
-        if (totalLinksPlanned < maxLinks) {
-            const sources = room.find(FIND_SOURCES);
-            // Ordenar fontes por distância ao spawn para priorizar a mais próxima
-            const sortedSources = _.sortBy(sources, s => spawn.pos.getRangeTo(s));
-
-            for (const source of sortedSources) {
-                if (totalLinksPlanned >= maxLinks) break;
-
-                const hasSourceLink = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {
-                    filter: (s) => s.structureType === STRUCTURE_LINK
-                }).length > 0 || source.pos.findInRange(FIND_CONSTRUCTION_SITES, 2, {
-                    filter: (cs) => cs.structureType === STRUCTURE_LINK
-                }).length > 0;
-
-                if (!hasSourceLink) {
-                    const terrain = room.getTerrain();
-                    let foundPos: RoomPosition | null = null;
-
-                    // Try range 1 around source
-                    for (let dx = -1; dx <= 1; dx++) {
-                        for (let dy = -1; dy <= 1; dy++) {
-                            if (dx === 0 && dy === 0) continue;
-                            const x = source.pos.x + dx;
-                            const y = source.pos.y + dy;
-                            if (x < 1 || x > 48 || y < 1 || y > 48) continue;
-
-                            if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
-
-                            const pos = new RoomPosition(x, y, room.name);
-
-                            // Check for blocking structures
-                            const structures = pos.lookFor(LOOK_STRUCTURES);
-                            const hasBlockingStructure = _.some(structures, (s) => 
-                                s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_RAMPART
-                            );
-                            if (hasBlockingStructure) continue;
-
-                            const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-                            const hasBlockingCS = _.some(constructionSites, (cs) => 
-                                cs.structureType !== STRUCTURE_ROAD && cs.structureType !== STRUCTURE_RAMPART
-                            );
-                            if (hasBlockingCS) continue;
-
-                            foundPos = pos;
-                            break;
-                        }
-                        if (foundPos) break;
-                    }
-
-                    if (foundPos) {
-                        // Se houver uma estrada no local, destruí-la
-                        const road = foundPos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_ROAD);
-                        if (road) {
-                            console.log(`[ManagerPlanner] Destroying road at ${foundPos} to place Source Link.`);
-                            road.destroy();
-                        }
-
-                        if (room.createConstructionSite(foundPos, STRUCTURE_LINK) === OK) {
-                            sitesCreated++;
-                            totalLinksPlanned++;
-                        }
                     }
                 }
             }
@@ -168,28 +136,36 @@ const linksBlueprint: Blueprint = {
             return true; // Não aplicável ou muito cedo, consideramos completa para não bloquear o planner
         }
 
-        // 2. Verificar se o link do controller está presente ou planejado
-        const hasControllerLink = room.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
-            filter: (s) => s.structureType === STRUCTURE_LINK
-        }).length > 0 || room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 2, {
-            filter: (cs) => cs.structureType === STRUCTURE_LINK
-        }).length > 0;
-
-        if (!hasControllerLink) {
-            return false;
-        }
-
-        // 3. Verificar se existem o número máximo de links construídos na sala (2 para RCL 5)
+        // 2. Contar links construídos
         const builtLinks = room.find(FIND_MY_STRUCTURES, {
             filter: (s) => s.structureType === STRUCTURE_LINK
         });
         const maxLinks = CONTROLLER_STRUCTURES[STRUCTURE_LINK][room.controller.level];
 
-        if (builtLinks.length < maxLinks) {
-            return false; // Não atingiu o número máximo de links
+        // 3. Obter alvos prioritários que deveriam ter links (limitados pelo maxLinks atual)
+        const sources = room.find(FIND_SOURCES);
+        const sortedSources = _.sortBy(sources, s => spawn.pos.getRangeTo(s));
+        
+        const priorityTargets: RoomPosition[] = [];
+        if (sortedSources.length > 0) priorityTargets.push(sortedSources[0].pos);
+        if (room.storage) priorityTargets.push(room.storage.pos);
+        if (sortedSources.length > 1) priorityTargets.push(sortedSources[1].pos);
+        if (room.controller) priorityTargets.push(room.controller.pos);
+
+        // Só verificamos os primeiros N alvos, onde N é maxLinks
+        const targetsToVerify = priorityTargets.slice(0, maxLinks);
+
+        for (const targetPos of targetsToVerify) {
+            const hasBuiltLink = targetPos.findInRange(FIND_MY_STRUCTURES, 2, {
+                filter: (s) => s.structureType === STRUCTURE_LINK
+            }).length > 0;
+
+            if (!hasBuiltLink) {
+                return false; // Falta um link prioritário
+            }
         }
 
-        // 4. Verificar se não há CONSTRUCTION_SITE para STRUCTURE_LINK na sala
+        // 4. Verificar se não há CONSTRUCTION_SITE pendente
         const existingLinkCS = room.find(FIND_CONSTRUCTION_SITES, {
             filter: (cs) => cs.structureType === STRUCTURE_LINK
         });
@@ -198,7 +174,7 @@ const linksBlueprint: Blueprint = {
             return false; // Ainda há construction sites para links
         }
 
-        return true; // Links construídos e sem construction sites pendentes
+        return true; 
     }
 
 };
