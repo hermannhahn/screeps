@@ -13,6 +13,7 @@ import roleReserver from './role.reserver';
 import managerPlanner from './manager.planner';
 import managerSpawner from './manager.spawner';
 import managerRemote from './manager.remote';
+import managerMarket from './manager.market';
 import { managerTower } from './manager.tower';
 import Watcher from './watch-client';
 import { cacheUtils } from './utils.cache';
@@ -166,6 +167,9 @@ export const loop = () => {
 
     // Run Remote Manager to update data from scouts
     managerRemote.run();
+
+    // Run Market Manager to handle excess resources
+    managerMarket.run();
 
     // Pixel generation logic
     if (Game.cpu.generatePixel && Game.cpu.bucket >= 10000) {

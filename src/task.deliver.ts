@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import { findControllerContainer } from './blueprints/utils';
 import { getIncomingEnergy } from './utils.creep';
+import { cacheUtils } from './utils.cache';
 
 const taskDeliver = {
     run: function(creep: Creep): boolean {
@@ -12,8 +13,6 @@ const taskDeliver = {
             if (target) {
                 const freeCapacity = target.store.getFreeCapacity(RESOURCE_ENERGY);
                 const incoming = getIncomingEnergy(target.id);
-                // Available capacity for me = Total free - (what others are bringing)
-                // We subtract our own contribution from 'incoming'
                 const availableForMe = freeCapacity - (incoming - myEnergy);
 
                 if (availableForMe <= 0) {
@@ -34,15 +33,14 @@ const taskDeliver = {
                 
                 const distance = creep.pos.getRangeTo(t);
                 const amountToDeliver = Math.min(myEnergy, available);
-                // Score favors structures where we can dump more energy and are closer
                 return amountToDeliver / Math.max(distance, 1);
             };
 
             // Priority 1: Spawns and Extensions
-            const coreStructures = creep.room.find(FIND_STRUCTURES, {
-                filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) &&
-                    (s.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(s.id)) > 0
-            });
+            const coreStructures = cacheUtils.findInRoom(creep.room, FIND_STRUCTURES, (s: any) => 
+                (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) &&
+                (s.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(s.id)) > 0
+            , 1);
 
             if (coreStructures.length > 0) {
                 target = _.maxBy(coreStructures, (s) => getScore(s)) || null;
@@ -50,10 +48,10 @@ const taskDeliver = {
 
             // Priority 2: Towers
             if (!target) {
-                const towers = creep.room.find(FIND_STRUCTURES, {
-                    filter: (s) => s.structureType === STRUCTURE_TOWER &&
-                        (s.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(s.id)) > 100
-                });
+                const towers = cacheUtils.findInRoom(creep.room, FIND_STRUCTURES, (s: any) => 
+                    s.structureType === STRUCTURE_TOWER &&
+                    (s.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(s.id)) > 100
+                , 1);
                 if (towers.length > 0) {
                     target = _.maxBy(towers, (t) => getScore(t)) || null;
                 }
@@ -61,11 +59,11 @@ const taskDeliver = {
 
             // Priority 3: Creeps in need (Upgraders/Builders)
             if (!target) {
-                const needyCreeps = creep.room.find(FIND_CREEPS, {
-                    filter: (c) => (c.memory.role === 'upgrader' || c.memory.role === 'builder') &&
-                        (c.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(c.id)) > 20 &&
-                        !c.memory.assignedSupplier
-                });
+                const needyCreeps = cacheUtils.findInRoom(creep.room, FIND_CREEPS, (c: any) => 
+                    (c.memory.role === 'upgrader' || c.memory.role === 'builder') &&
+                    (c.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(c.id)) > 20 &&
+                    !c.memory.assignedSupplier
+                , 1);
                 if (needyCreeps.length > 0) {
                     target = _.maxBy(needyCreeps, (c) => getScore(c)) || null;
                     if (target) {
@@ -79,7 +77,16 @@ const taskDeliver = {
                 target = creep.room.storage;
             }
 
-            // Priority 5: Controller Container
+            // Priority 5: Terminal (For market/shipping)
+            if (!target && creep.room.terminal && (creep.room.terminal.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(creep.room.terminal.id)) > 10000) {
+                // Only fill terminal if storage has a decent amount or terminal is very empty
+                const storageEnergy = creep.room.storage ? creep.room.storage.store[RESOURCE_ENERGY] : 0;
+                if (storageEnergy > 50000 || creep.room.terminal.store[RESOURCE_ENERGY] < 10000) {
+                    target = creep.room.terminal;
+                }
+            }
+
+            // Priority 6: Controller Container
             if (!target) {
                 const controllerContainer = findControllerContainer(creep.room);
                 if (controllerContainer && 'store' in controllerContainer && 
@@ -88,15 +95,15 @@ const taskDeliver = {
                 }
             }
 
-            // Priority 6: General Containers (Exclude source containers as they are for collection)
+            // Priority 7: General Containers
             if (!target) {
-                const sources = creep.room.find(FIND_SOURCES);
-                const generalContainers = creep.room.find(FIND_STRUCTURES, {
-                    filter: (s) => s.structureType === STRUCTURE_CONTAINER &&
-                        (s.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(s.id)) > 0 &&
-                        !sources.some(src => s.pos.getRangeTo(src) <= 3) && // Not a source container
-                        (creep.room.controller ? s.pos.getRangeTo(creep.room.controller) > 3 : true) // Not a controller container
-                });
+                const sources = cacheUtils.getSources(creep.room);
+                const generalContainers = cacheUtils.findInRoom(creep.room, FIND_STRUCTURES, (s: any) => 
+                    s.structureType === STRUCTURE_CONTAINER &&
+                    (s.store.getFreeCapacity(RESOURCE_ENERGY) - getIncomingEnergy(s.id)) > 0 &&
+                    !sources.some(src => s.pos.getRangeTo(src) <= 3) &&
+                    (creep.room.controller ? s.pos.getRangeTo(creep.room.controller) > 3 : true)
+                , 5);
                 if (generalContainers.length > 0) {
                     target = _.maxBy(generalContainers, (c) => getScore(c)) || null;
                 }
