@@ -89,7 +89,22 @@ const roleHarvester = {
             const suppliersInRoom = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === creep.room.name);
 
             if (suppliersInRoom.length > 0) {
-                // When suppliers are present, fill nearby containers or drop
+                // Prioridade 1: Links em range 3
+                const linksInRange = creep.pos.findInRange(FIND_MY_STRUCTURES, 3, {
+                    filter: (s) => s.structureType === STRUCTURE_LINK && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                }) as StructureLink[];
+
+                if (linksInRange.length > 0) {
+                    const link = _.minBy(linksInRange, l => creep.pos.getRangeTo(l));
+                    if (link) {
+                        if (creep.transfer(link, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                            creep.moveTo(link, { visualizePathStyle: { stroke: '#ffffff' } });
+                        }
+                        return;
+                    }
+                }
+
+                // Prioridade 2: Containers perto da fonte atribuída
                 const assignedSource = Game.getObjectById(creep.memory.sourceId as Id<Source>);
                 let depositTarget: StructureContainer | null = null; 
 
