@@ -87,17 +87,21 @@ RoomPosition.prototype.findAdjacentWalkableSpot = function(this: RoomPosition): 
             // Check if terrain is walkable
             if (room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) continue;
 
-            // Check for existing structures that block movement/construction
+            // Check for existing structures. 
+            // Most structures cannot be built on top of each other.
+            // We only allow building if the spot is empty of non-road/non-rampart structures.
             const structures = pos.lookFor(LOOK_STRUCTURES);
-            if (_.some(structures, (s) => OBSTACLE_OBJECT_TYPES.includes(s.structureType))) {
-                continue;
-            }
+            const hasBlockingStructure = _.some(structures, (s) => 
+                s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_RAMPART
+            );
+            if (hasBlockingStructure) continue;
 
-            // Check for existing construction sites that block movement/construction
+            // Check for existing construction sites
             const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-            if (_.some(constructionSites, (cs) => OBSTACLE_OBJECT_TYPES.includes(cs.structureType))) {
-                continue;
-            }
+            const hasBlockingCS = _.some(constructionSites, (cs) => 
+                cs.structureType !== STRUCTURE_ROAD && cs.structureType !== STRUCTURE_RAMPART
+            );
+            if (hasBlockingCS) continue;
 
             return pos; // Found a walkable and empty spot
         }

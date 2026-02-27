@@ -36,9 +36,42 @@ const linksBlueprint: Blueprint = {
             }).length > 0;
 
             if (!hasControllerLink) {
-                const controllerLinkPos = room.controller.pos.findAdjacentWalkableSpot();
-                if (controllerLinkPos) {
-                    if (room.createConstructionSite(controllerLinkPos, STRUCTURE_LINK) === OK) {
+                // Tenta encontrar um lugar livre em range 1 ou 2
+                let foundPos: RoomPosition | null = null;
+                for (let r = 1; r <= 2; r++) {
+                    for (let dx = -r; dx <= r; dx++) {
+                        for (let dy = -r; dy <= r; dy++) {
+                            if (Math.abs(dx) < r && Math.abs(dy) < r && r > 1) continue;
+                            const x = room.controller.pos.x + dx;
+                            const y = room.controller.pos.y + dy;
+                            if (x < 1 || x > 48 || y < 1 || y > 48) continue;
+
+                            const pos = new RoomPosition(x, y, room.name);
+                            if (pos.isWalkable()) {
+                                // Verificar se não tem construções impeditivas
+                                const structures = pos.lookFor(LOOK_STRUCTURES);
+                                const hasBlockingStructure = _.some(structures, (s) => 
+                                    s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_RAMPART
+                                );
+                                if (hasBlockingStructure) continue;
+
+                                const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+                                const hasBlockingCS = _.some(constructionSites, (cs) => 
+                                    cs.structureType !== STRUCTURE_ROAD && cs.structureType !== STRUCTURE_RAMPART
+                                );
+                                if (hasBlockingCS) continue;
+
+                                foundPos = pos;
+                                break;
+                            }
+                        }
+                        if (foundPos) break;
+                    }
+                    if (foundPos) break;
+                }
+
+                if (foundPos) {
+                    if (room.createConstructionSite(foundPos, STRUCTURE_LINK) === OK) {
                         sitesCreated++;
                         totalLinksPlanned++;
                     }
