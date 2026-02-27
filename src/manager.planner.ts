@@ -55,13 +55,17 @@ const managerPlanner = {
             
             // If the blueprint is already 'Complete', move to next
             if (currentBlueprint.isComplete(room, spawn)) {
+                // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) is complete.`);
                 continue;
             }
+
+            console.log(`[ManagerPlanner] Checking incomplete stage ${i}: ${currentBlueprint.name}`);
 
             // Blueprint is NOT complete. Try to plan it.
             // ROADS priority: Plan roads even if there are many CS (up to 80), to ensure logistics don't break.
             const csLimit = isRoadBlueprint ? 80 : 20;
             if (totalConstructionSites >= csLimit) {
+                console.log(`[ManagerPlanner] Too many CS (${totalConstructionSites}/${csLimit}). Stopping.`);
                 break; 
             }
 
