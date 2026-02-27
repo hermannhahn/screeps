@@ -46,5 +46,7 @@ As instruções detalhadas para configuração e uso do `screeps-multimeter` e s
 - [x] Implementar Role: **Repairer** para manutenção de estruturas.
 - [x] Blueprint: Posicionamento automático de Containers perto das fontes e do Controller.
 - [x] Persistência de alvos em memória para evitar oscilações de movimento.
+- [x] Suporte a estruturas de RCL 5 (Storage, Links, Segunda Torre).
+- [x] Otimização do Planner: Pular estágios não planejáveis para evitar bloqueios sequenciais.
 - [ ] Otimização de CPU: Caching de resultados de busca frequentes na memória global.
 - [ ] Implementar sistema de Market para venda de excesso de energia/minerais.
