@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import taskDeliver from './task.deliver';
 
 const roleRemoteHarvester = {
