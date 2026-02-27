@@ -27,29 +27,46 @@ const linksBlueprint: Blueprint = {
         let sitesCreated = 0;
 
         // Planejar o Link do Controller
-        // Tenta encontrar uma posição adjacente ao Controller
         if (room.controller && totalLinksPlanned < maxLinks) {
-            const controllerLinkPos = room.controller.pos.findAdjacentWalkableSpot();
-            if (controllerLinkPos) {
-                if (room.createConstructionSite(controllerLinkPos, STRUCTURE_LINK) === OK) {
-                    sitesCreated++;
-                    totalLinksPlanned++;
+            const hasControllerLink = room.controller.pos.findInRange(FIND_MY_STRUCTURES, 2, {
+                filter: (s) => s.structureType === STRUCTURE_LINK
+            }).length > 0 || room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 2, {
+                filter: (cs) => cs.structureType === STRUCTURE_LINK
+            }).length > 0;
+
+            if (!hasControllerLink) {
+                const controllerLinkPos = room.controller.pos.findAdjacentWalkableSpot();
+                if (controllerLinkPos) {
+                    if (room.createConstructionSite(controllerLinkPos, STRUCTURE_LINK) === OK) {
+                        sitesCreated++;
+                        totalLinksPlanned++;
+                    }
                 }
             }
         }
 
-        // Planejar o Link da Fonte (próxima ao spawn)
-        // Tenta encontrar uma posição adjacente à fonte mais próxima ao spawn
+        // Planejar Links para as Fontes
         if (totalLinksPlanned < maxLinks) {
             const sources = room.find(FIND_SOURCES);
-            const closestSource = spawn.pos.findClosestByPath(sources);
+            // Ordenar fontes por distância ao spawn para priorizar a mais próxima
+            const sortedSources = _.sortBy(sources, s => spawn.pos.getRangeTo(s));
 
-            if (closestSource) {
-                const sourceLinkPos = closestSource.pos.findAdjacentWalkableSpot();
-                if (sourceLinkPos) {
-                    if (room.createConstructionSite(sourceLinkPos, STRUCTURE_LINK) === OK) {
-                        sitesCreated++;
-                        totalLinksPlanned++;
+            for (const source of sortedSources) {
+                if (totalLinksPlanned >= maxLinks) break;
+
+                const hasSourceLink = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {
+                    filter: (s) => s.structureType === STRUCTURE_LINK
+                }).length > 0 || source.pos.findInRange(FIND_CONSTRUCTION_SITES, 2, {
+                    filter: (cs) => cs.structureType === STRUCTURE_LINK
+                }).length > 0;
+
+                if (!hasSourceLink) {
+                    const sourceLinkPos = source.pos.findAdjacentWalkableSpot();
+                    if (sourceLinkPos) {
+                        if (room.createConstructionSite(sourceLinkPos, STRUCTURE_LINK) === OK) {
+                            sitesCreated++;
+                            totalLinksPlanned++;
+                        }
                     }
                 }
             }
