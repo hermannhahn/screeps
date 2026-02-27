@@ -38,32 +38,38 @@ const linksBlueprint: Blueprint = {
             if (!hasControllerLink) {
                 // Tenta encontrar um lugar livre em range 1 ou 2
                 let foundPos: RoomPosition | null = null;
+                const terrain = room.getTerrain();
+
                 for (let r = 1; r <= 2; r++) {
                     for (let dx = -r; dx <= r; dx++) {
                         for (let dy = -r; dy <= r; dy++) {
-                            if (Math.abs(dx) < r && Math.abs(dy) < r && r > 1) continue;
+                            // Only check perimeter of the range square to avoid redundant checks
+                            if (r > 1 && Math.abs(dx) < r && Math.abs(dy) < r) continue;
+
                             const x = room.controller.pos.x + dx;
                             const y = room.controller.pos.y + dy;
                             if (x < 1 || x > 48 || y < 1 || y > 48) continue;
 
+                            // Check terrain
+                            if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+
                             const pos = new RoomPosition(x, y, room.name);
-                            if (pos.isWalkable()) {
-                                // Verificar se não tem construções impeditivas
-                                const structures = pos.lookFor(LOOK_STRUCTURES);
-                                const hasBlockingStructure = _.some(structures, (s) => 
-                                    s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_RAMPART
-                                );
-                                if (hasBlockingStructure) continue;
+                            
+                            // Check for blocking structures (anything except roads and ramparts)
+                            const structures = pos.lookFor(LOOK_STRUCTURES);
+                            const hasBlockingStructure = _.some(structures, (s) => 
+                                s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_RAMPART
+                            );
+                            if (hasBlockingStructure) continue;
 
-                                const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-                                const hasBlockingCS = _.some(constructionSites, (cs) => 
-                                    cs.structureType !== STRUCTURE_ROAD && cs.structureType !== STRUCTURE_RAMPART
-                                );
-                                if (hasBlockingCS) continue;
+                            const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+                            const hasBlockingCS = _.some(constructionSites, (cs) => 
+                                cs.structureType !== STRUCTURE_ROAD && cs.structureType !== STRUCTURE_RAMPART
+                            );
+                            if (hasBlockingCS) continue;
 
-                                foundPos = pos;
-                                break;
-                            }
+                            foundPos = pos;
+                            break;
                         }
                         if (foundPos) break;
                     }
@@ -95,9 +101,42 @@ const linksBlueprint: Blueprint = {
                 }).length > 0;
 
                 if (!hasSourceLink) {
-                    const sourceLinkPos = source.pos.findAdjacentWalkableSpot();
-                    if (sourceLinkPos) {
-                        if (room.createConstructionSite(sourceLinkPos, STRUCTURE_LINK) === OK) {
+                    const terrain = room.getTerrain();
+                    let foundPos: RoomPosition | null = null;
+
+                    // Try range 1 around source
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dy = -1; dy <= 1; dy++) {
+                            if (dx === 0 && dy === 0) continue;
+                            const x = source.pos.x + dx;
+                            const y = source.pos.y + dy;
+                            if (x < 1 || x > 48 || y < 1 || y > 48) continue;
+
+                            if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+
+                            const pos = new RoomPosition(x, y, room.name);
+
+                            // Check for blocking structures
+                            const structures = pos.lookFor(LOOK_STRUCTURES);
+                            const hasBlockingStructure = _.some(structures, (s) => 
+                                s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_RAMPART
+                            );
+                            if (hasBlockingStructure) continue;
+
+                            const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+                            const hasBlockingCS = _.some(constructionSites, (cs) => 
+                                cs.structureType !== STRUCTURE_ROAD && cs.structureType !== STRUCTURE_RAMPART
+                            );
+                            if (hasBlockingCS) continue;
+
+                            foundPos = pos;
+                            break;
+                        }
+                        if (foundPos) break;
+                    }
+
+                    if (foundPos) {
+                        if (room.createConstructionSite(foundPos, STRUCTURE_LINK) === OK) {
                             sitesCreated++;
                             totalLinksPlanned++;
                         }
