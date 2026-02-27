@@ -1,9 +1,8 @@
+import { cacheUtils } from '../utils.cache';
+
 export function planRoadsFromToNearestRoad(room: Room, startPos: RoomPosition): number {
-    const existingRoads = room.find(FIND_STRUCTURES, {
-        filter: (s: AnyStructure) => s.structureType === STRUCTURE_ROAD
-    }).concat(room.find(FIND_CONSTRUCTION_SITES, {
-        filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD
-    } as any) as any);
+    const existingRoads = cacheUtils.findInRoom(room, FIND_STRUCTURES, (s: AnyStructure) => s.structureType === STRUCTURE_ROAD)
+        .concat(cacheUtils.findInRoom(room, FIND_CONSTRUCTION_SITES, (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD));
 
     if (existingRoads.length === 0) return 0;
     const nearestRoad = startPos.findClosestByPath(existingRoads);
@@ -38,16 +37,12 @@ export function planRoadFromTo(room: Room, startPos: RoomPosition, endPos: RoomP
 
 export function findSourceContainer(source: Source): StructureContainer | ConstructionSite | null {
     // Check for existing container
-    const container = source.pos.findInRange(FIND_STRUCTURES, 3, {
-        filter: (s) => s.structureType === STRUCTURE_CONTAINER
-    })[0] as StructureContainer;
+    const container = source.pos.findInRange(cacheUtils.findInRoom(source.room, FIND_STRUCTURES, (s) => s.structureType === STRUCTURE_CONTAINER), 3)[0] as StructureContainer;
 
     if (container) return container;
 
     // Check for container construction site
-    const containerCS = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
-        filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_CONTAINER
-    })[0];
+    const containerCS = source.pos.findInRange(cacheUtils.findInRoom(source.room, FIND_CONSTRUCTION_SITES, (cs) => cs.structureType === STRUCTURE_CONTAINER), 3)[0] as ConstructionSite;
 
     if (containerCS) return containerCS;
 
@@ -55,10 +50,13 @@ export function findSourceContainer(source: Source): StructureContainer | Constr
 }
 
 export function isSafePosition(pos: RoomPosition): boolean {
-    const enemiesInRange = pos.findInRange(FIND_HOSTILE_CREEPS, 5); // 5 tiles radius
+    const room = Game.rooms[pos.roomName];
+    if (!room) return true;
+
+    const enemiesInRange = pos.findInRange(cacheUtils.getHostiles(room), 5); // 5 tiles radius
     if (enemiesInRange.length > 0) return false;
 
-    const hostileStructuresInRange = pos.findInRange(FIND_HOSTILE_STRUCTURES, 5);
+    const hostileStructuresInRange = pos.findInRange(cacheUtils.findInRoom(room, FIND_HOSTILE_STRUCTURES), 5);
     return hostileStructuresInRange.length === 0;
 }
 
@@ -82,16 +80,12 @@ export function findControllerContainer(room: Room): StructureContainer | Constr
     if (!room.controller) return null;
 
     // Check for existing container
-    const container = room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
-        filter: (s) => s.structureType === STRUCTURE_CONTAINER
-    })[0] as StructureContainer;
+    const container = room.controller.pos.findInRange(cacheUtils.findInRoom(room, FIND_STRUCTURES, (s) => s.structureType === STRUCTURE_CONTAINER), 3)[0] as StructureContainer;
 
     if (container) return container;
 
     // Check for container construction site
-    const containerCS = room.controller.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
-        filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_CONTAINER
-    })[0];
+    const containerCS = room.controller.pos.findInRange(cacheUtils.findInRoom(room, FIND_CONSTRUCTION_SITES, (cs) => cs.structureType === STRUCTURE_CONTAINER), 3)[0] as ConstructionSite;
 
     if (containerCS) return containerCS;
 

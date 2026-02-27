@@ -28,7 +28,6 @@ const managerPlanner = {
 
         const BLUEPRINTS_ORDER: Blueprint[] = [
             spawnRoadsBlueprint,
-            extensionsBlueprint,
             sourceRoadsBlueprint,
             controllerRoadsBlueprint,
             mineralRoadsBlueprint,
@@ -37,6 +36,7 @@ const managerPlanner = {
             firstTowerBlueprint,
             storageBlueprint,
             secondTowerBlueprint,
+            extensionsBlueprint, // Extensions moved down to prioritize roads and logistics
             rampartsWallsBlueprint,
             linksBlueprint,
         ];
@@ -51,16 +51,18 @@ const managerPlanner = {
         // SEQUENTIAL REVIEW: Check every blueprint from the start.
         for (let i = 0; i < MAX_BLUEPRINT_STAGES; i++) {
             const currentBlueprint = BLUEPRINTS_ORDER[i];
+            const isRoadBlueprint = currentBlueprint.name.toLowerCase().includes('roads');
             
-            // If the blueprint is already 'Complete' (built, planned, or N/A due to RCL), move to next
+            // If the blueprint is already 'Complete', move to next
             if (currentBlueprint.isComplete(room, spawn)) {
                 continue;
             }
 
             // Blueprint is NOT complete. Try to plan it.
-            if (totalConstructionSites >= 20) {
-                // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) is incomplete, but room has too many construction sites (${totalConstructionSites}). Waiting...`);
-                break; // Stop reviewing once we hit a block
+            // ROADS priority: Plan roads even if there are many CS (up to 80), to ensure logistics don't break.
+            const csLimit = isRoadBlueprint ? 80 : 20;
+            if (totalConstructionSites >= csLimit) {
+                break; 
             }
 
             let sitesCreated = currentBlueprint.plan(room, spawn);
