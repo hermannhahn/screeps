@@ -1,74 +1,54 @@
 import { Blueprint } from './blueprintInterface';
+import { cacheUtils } from '../utils.cache';
 
 const rampartsWallsBlueprint: Blueprint = {
     name: "Ramparts and Walls",
 
     plan: function(room: Room, spawn: StructureSpawn): number {
         // Only plan Ramparts and Walls if there is at least one tower built
-        const towers = room.find(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_TOWER }
-        });
+        const towers = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_TOWER);
         if (towers.length === 0) {
             return 0;
         }
 
         let sitesCreated = 0;
 
-        // Limite de Ramparts para RCL 3 é 10. Em RCL 4, 25.
-        // Vamos planejar para o máximo disponível no RCL atual.
-        const maxRamparts = CONTROLLER_STRUCTURES[STRUCTURE_RAMPART][room.controller?.level || 1];
-        let currentRamparts = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_RAMPART } }).length;
-        let currentRampartCS = room.find(FIND_CONSTRUCTION_SITES, { filter: { structureType: STRUCTURE_RAMPART } }).length;
+        // Limite de Ramparts para o RCL atual
+        const rcl = room.controller?.level || 1;
+        const maxRamparts = CONTROLLER_STRUCTURES[STRUCTURE_RAMPART][rcl];
+        let currentRamparts = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_RAMPART).length;
+        let currentRampartCS = cacheUtils.findInRoom(room, FIND_CONSTRUCTION_SITES, (cs) => cs.structureType === STRUCTURE_RAMPART).length;
 
         if (currentRamparts + currentRampartCS >= maxRamparts) {
-            return 0; // Já temos o número máximo de ramparts para o RCL atual
+            return 0; // Já atingimos o limite
         }
 
-        const structuresToProtect = room.find(FIND_MY_STRUCTURES, {
-            filter: (s) => (s.structureType === STRUCTURE_SPAWN ||
-                            s.structureType === STRUCTURE_EXTENSION ||
-                            s.structureType === STRUCTURE_TOWER ||
-                            s.structureType === STRUCTURE_CONTROLLER) // Proteger também o controller
-        });
+        // --- 1. RAMPARTS EM CIMA DE ESTRUTURAS CRÍTICAS ---
+        // Colocamos ramparts DIRETAMENTE sobre estruturas vitais, não ao redor.
+        const vitalStructures = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => 
+            s.structureType === STRUCTURE_SPAWN || 
+            s.structureType === STRUCTURE_TOWER ||
+            s.structureType === STRUCTURE_STORAGE ||
+            s.structureType === STRUCTURE_TERMINAL
+        );
 
-        for (const structure of structuresToProtect) {
-            if (sitesCreated + currentRamparts + currentRampartCS >= maxRamparts) break; // Não exceder o limite de ramparts
+        for (const struct of vitalStructures) {
+            if (currentRamparts + currentRampartCS + sitesCreated >= maxRamparts) break;
 
-            const adjacentPositions = structure.pos.getAdjacentPositions(); // Usar a função de protótipo
+            const existingRampart = struct.pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_RAMPART);
+            const existingCS = struct.pos.lookFor(LOOK_CONSTRUCTION_SITES).some(cs => cs.structureType === STRUCTURE_RAMPART);
 
-            for (const pos of adjacentPositions) {
-                // Verificar se já existe um Rampart, Wall ou CS correspondente na posição
-                const existingStructure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_RAMPART || s.structureType === STRUCTURE_WALL);
-                const existingCS = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(cs => cs.structureType === STRUCTURE_RAMPART || cs.structureType === STRUCTURE_WALL);
-
-                if (existingStructure || existingCS) {
-                    continue; // Já tem uma estrutura defensiva ou CS aqui
-                }
-
-                // Decidir entre Wall ou Rampart: se houver uma estrada, DEVE ser um Rampart
-                const hasRoad = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_ROAD);
-                const structureType = hasRoad ? STRUCTURE_RAMPART : STRUCTURE_WALL;
-
-                // Se for planejar um Rampart, verificar se não excedemos o limite do RCL
-                if (structureType === STRUCTURE_RAMPART) {
-                    if (sitesCreated + currentRamparts + currentRampartCS >= maxRamparts) {
-                        continue; 
-                    }
-                }
-
-                // Criar Construction Site
-                if (room.createConstructionSite(pos, structureType) === OK) {
+            if (!existingRampart && !existingCS) {
+                if (room.createConstructionSite(struct.pos, STRUCTURE_RAMPART) === OK) {
                     sitesCreated++;
-                    if (structureType === STRUCTURE_RAMPART) {
-                        currentRampartCS++;
-                    }
+                    currentRampartCS++;
                 }
             }
         }
 
-        // --- DEFESA DE PERÍMETRO (CHOKE POINTS) ---
-        // Identifica saídas e planeja bloqueios a 2 tiles de distância
-        if (sitesCreated < 10) { // Só planeja perímetro se não tiver muitos CS ativos
+        // --- 2. DEFESA DE PERÍMETRO (BORDAS DA SALA) ---
+        // Planeja bloqueios a 2 tiles das saídas para criar um muro defensivo
+        if (sitesCreated < 5) { 
             const terrain = room.getTerrain();
             const exits = room.find(FIND_EXIT);
             const blockedPositions = new Set<string>();
@@ -87,16 +67,19 @@ const rampartsWallsBlueprint: Blueprint = {
                 const key = `${pos.x},${pos.y}`;
                 if (blockedPositions.has(key)) continue;
 
-                // Verifica se a posição é passável antes de bloquear
+                // Verifica se a posição é passável (não é uma parede natural)
                 if (terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
-                    const existingStructure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_RAMPART || s.structureType === STRUCTURE_WALL);
+                    const existingDef = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_RAMPART || s.structureType === STRUCTURE_WALL);
                     const existingCS = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(cs => cs.structureType === STRUCTURE_RAMPART || cs.structureType === STRUCTURE_WALL);
 
-                    if (!existingStructure && !existingCS) {
+                    if (!existingDef && !existingCS) {
+                        // Se houver uma estrada ou for um caminho importante, usamos RAMPART, senão WALL
                         const hasRoad = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_ROAD);
                         const type = hasRoad ? STRUCTURE_RAMPART : STRUCTURE_WALL;
 
-                        if (type === STRUCTURE_RAMPART && (sitesCreated + currentRamparts + currentRampartCS >= maxRamparts)) {
+                        if (type === STRUCTURE_RAMPART && (currentRamparts + currentRampartCS + sitesCreated >= maxRamparts)) {
+                            // Se não houver cota para Rampart, tentamos Wall se não bloquear estrada, 
+                            // ou apenas pulamos para economizar.
                             continue;
                         }
 
@@ -114,29 +97,15 @@ const rampartsWallsBlueprint: Blueprint = {
     },
 
     isComplete: function(room: Room, spawn: StructureSpawn): boolean {
-        // If there are no towers, we skip this blueprint for now (consider it "complete" so the planner advances)
-        const towers = room.find(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_TOWER }
-        });
-        if (towers.length === 0) {
-            return true;
-        }
+        const towers = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_TOWER);
+        if (towers.length === 0) return true;
 
-        // Obter o número máximo de Ramparts permitidos para o RCL atual
         const maxRamparts = CONTROLLER_STRUCTURES[STRUCTURE_RAMPART][room.controller?.level || 1];
+        const currentTotal = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.structureType === STRUCTURE_RAMPART).length +
+                             cacheUtils.findInRoom(room, FIND_CONSTRUCTION_SITES, (cs) => cs.structureType === STRUCTURE_RAMPART).length;
 
-        // Contar Ramparts construídos
-        const builtRamparts = room.find(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_RAMPART }
-        }).length;
-
-        // Contar Construction Sites de Ramparts
-        const rampartConstructionSites = room.find(FIND_CONSTRUCTION_SITES, {
-            filter: { structureType: STRUCTURE_RAMPART }
-        }).length;
-
-        // A blueprint está completa se o número total de ramparts (construídos + CS) atingir o máximo
-        return (builtRamparts + rampartConstructionSites >= maxRamparts);
+        // Consideramos completo se chegarmos a 80% da cota ou se o planejamento não criou novos sites
+        return (currentTotal >= maxRamparts * 0.8);
     }
 };
 
