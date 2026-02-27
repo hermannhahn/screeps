@@ -46,8 +46,21 @@ const taskCollectEnergy = {
 
             // Priority 1: Immediate Proximity (If something is right next to us, take it)
             const nearby = creep.pos.findInRange(FIND_STRUCTURES, 3, {
-                filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_STORAGE) &&
-                    getAvailable(s) > (myFreeCapacity * 0.5) // At least half of what we need
+                filter: (s) => {
+                    if (s.structureType !== STRUCTURE_CONTAINER && s.structureType !== STRUCTURE_STORAGE) return false;
+                    if (getAvailable(s) <= (myFreeCapacity * 0.5)) return false;
+
+                    // If it's a supplier and it's storage, check if there's a need
+                    if (creep.memory.role === 'supplier' && s.structureType === STRUCTURE_STORAGE) {
+                        const hasNeeds = creep.room.find(FIND_STRUCTURES, {
+                            filter: (sn: any) => (sn.structureType === STRUCTURE_SPAWN || sn.structureType === STRUCTURE_EXTENSION || sn.structureType === STRUCTURE_TOWER) &&
+                                (sn.store.getFreeCapacity(RESOURCE_ENERGY) - (sn.structureType === STRUCTURE_TOWER ? 100 : 0)) > 0
+                        }).length > 0;
+                        if (!hasNeeds) return false;
+                    }
+
+                    return true;
+                }
             });
             if (nearby.length > 0) {
                 target = creep.pos.findClosestByRange(nearby);
@@ -65,7 +78,22 @@ const taskCollectEnergy = {
 
             // Priority 3: Storage
             if (!target && creep.room.storage && getAvailable(creep.room.storage) > 0) {
-                target = creep.room.storage;
+                // If it's a supplier, only withdraw from storage if there's a consumer need
+                let shouldWithdrawFromStorage = true;
+                if (creep.memory.role === 'supplier') {
+                    const hasNeeds = creep.room.find(FIND_STRUCTURES, {
+                        filter: (s: any) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION || s.structureType === STRUCTURE_TOWER) &&
+                            (s.store.getFreeCapacity(RESOURCE_ENERGY) - (s.structureType === STRUCTURE_TOWER ? 100 : 0)) > 0
+                    }).length > 0;
+                    
+                    if (!hasNeeds) {
+                        shouldWithdrawFromStorage = false;
+                    }
+                }
+
+                if (shouldWithdrawFromStorage) {
+                    target = creep.room.storage;
+                }
             }
 
             // Priority 4: Dropped Energy (Fallback with balanced score)
