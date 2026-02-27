@@ -1,3 +1,20 @@
+import _ from 'lodash';
+import roleHarvester from './role.harvester';
+import roleUpgrader from './role.upgrader';
+import roleSupplier from './role.supplier';
+import roleBuilder from './role.builder';
+import roleGuard from './role.guard';
+import roleArcher from './role.archer';
+import roleRepairer from './role.repairer';
+import roleScout from './role.scout';
+import roleRemoteHarvester from './role.remoteHarvester';
+import roleCarrier from './role.carrier';
+import roleReserver from './role.reserver';
+import managerPlanner from './manager.planner';
+import managerSpawner from './manager.spawner';
+import managerRemote from './manager.remote';
+import { managerTower } from './manager.tower';
+import Watcher from './watch-client';
 import { cacheUtils } from './utils.cache';
 
 const OBSTACLE_OBJECT_TYPES: string[] = [
