@@ -28,17 +28,17 @@ const managerPlanner = {
 
         const BLUEPRINTS_ORDER: Blueprint[] = [
             spawnRoadsBlueprint,
-            sourceRoadsBlueprint,
-            controllerRoadsBlueprint,
-            mineralRoadsBlueprint,
+            extensionsBlueprint, // Extensions are high priority for energy capacity
+            firstTowerBlueprint, // Defense is priority
+            storageBlueprint, // Logistics anchor
             sourceContainersBlueprint,
             controllerContainerBlueprint,
-            firstTowerBlueprint,
-            storageBlueprint,
             secondTowerBlueprint,
-            extensionsBlueprint, // Extensions moved down to prioritize roads and logistics
-            rampartsWallsBlueprint,
+            sourceRoadsBlueprint,
+            controllerRoadsBlueprint,
             linksBlueprint,
+            rampartsWallsBlueprint,
+            mineralRoadsBlueprint, // Only really needed at RCL 6+
         ];
         const MAX_BLUEPRINT_STAGES = BLUEPRINTS_ORDER.length;
 
@@ -74,9 +74,9 @@ const managerPlanner = {
             } else {
                 // Stage is incomplete but could not be planned.
                 // This could be due to RCL, unsafe conditions, or no valid spots found.
-                // We STOP here to maintain sequential integrity: don't build stage N+1 if stage N is broken and unfixable.
-                // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) is incomplete and could not be planned. Sequential stop.`);
-                break;
+                // We SKIP this stage for now instead of breaking, to allow higher RCL structures to be planned if this one is stuck.
+                // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) is incomplete and could not be planned. Skipping.`);
+                continue; 
             }
         }
     }

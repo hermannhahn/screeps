@@ -26,23 +26,30 @@ const secondTowerBlueprint: Blueprint = {
         const firstTower = existingTowers[0]; // Assumindo que a primeira torre já existe
 
         // 4. Encontrar um local adequado para a segunda torre.
-        // Tentar posicionar a segunda torre a uma distância razoável do spawn e da primeira torre
-        for (let range = 1; range <= 3; range++) { // Tenta range 1, 2 e 3 do spawn
-            const positionsInRange = spawn.pos.findInRange(FIND_MY_CREEPS, range, { filter: (c) => false }) as any[];
-            
-            for (let i = 0; i < positionsInRange.length; i++) {
-                const pos = positionsInRange[i].pos || positionsInRange[i];
-                
-                // Evitar a posição da primeira torre, se ela existir
-                if (firstTower && pos.isEqualTo(firstTower.pos)) {
-                    continue;
-                }
-                // Evitar a posição do spawn
-                if (pos.isEqualTo(spawn.pos)) {
-                    continue;
-                }
+        // Tentar posicionar a segunda torre a uma distância razoável do spawn
+        // Procurar em um raio de 2 a 5 do spawn
+        for (let range = 2; range <= 5; range++) { 
+            for (let dx = -range; dx <= range; dx++) {
+                for (let dy = -range; dy <= range; dy++) {
+                    if (Math.abs(dx) < range && Math.abs(dy) < range) continue; // Skip inner ranges
 
-                if (pos.isWalkable()) { // Usar a função isWalkable
+                    const x = spawn.pos.x + dx;
+                    const y = spawn.pos.y + dy;
+
+                    if (x < 1 || x > 48 || y < 1 || y > 48) continue;
+                    const pos = new RoomPosition(x, y, room.name);
+
+                    // Evitar a posição da primeira torre, se ela existir
+                    if (firstTower && pos.getRangeTo(firstTower.pos) < 2) {
+                        continue;
+                    }
+                    // Evitar a posição do spawn
+                    if (pos.getRangeTo(spawn.pos) < 2) {
+                        continue;
+                    }
+
+                    if (room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) continue;
+
                     // Verificar se a posição não está ocupada por estruturas existentes
                     const structures = pos.lookFor(LOOK_STRUCTURES);
                     if (structures.length > 0) continue;
@@ -54,6 +61,7 @@ const secondTowerBlueprint: Blueprint = {
                     foundPos = pos;
                     break;
                 }
+                if (foundPos) break;
             }
             if (foundPos) break;
         }
