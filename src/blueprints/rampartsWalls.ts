@@ -48,13 +48,14 @@ const rampartsWallsBlueprint: Blueprint = {
 
         // --- 2. DEFESA DE PERÍMETRO (BORDAS DA SALA) ---
         // Planeja bloqueios a 2 tiles das saídas para criar um muro defensivo
-        if (sitesCreated < 5) { 
+        if (sitesCreated < 10) { 
             const terrain = room.getTerrain();
             const exits = room.find(FIND_EXIT);
-            const blockedPositions = new Set<string>();
+            const plannedPositions = new Set<string>();
+            const wallPositions: RoomPosition[] = [];
 
+            // 1. Identificar posições base (projeção das saídas)
             for (const exitPos of exits) {
-                // Determina a direção do bloqueio (2 tiles para dentro da sala)
                 let bx = exitPos.x;
                 let by = exitPos.y;
 
@@ -65,29 +66,57 @@ const rampartsWallsBlueprint: Blueprint = {
 
                 const pos = new RoomPosition(bx, by, room.name);
                 const key = `${pos.x},${pos.y}`;
-                if (blockedPositions.has(key)) continue;
+                if (!plannedPositions.has(key) && terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
+                    plannedPositions.add(key);
+                    wallPositions.push(pos);
+                }
+            }
 
-                // Verifica se a posição é passável (não é uma parede natural)
-                if (terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
-                    const existingDef = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_RAMPART || s.structureType === STRUCTURE_WALL);
-                    const existingCS = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(cs => cs.structureType === STRUCTURE_RAMPART || cs.structureType === STRUCTURE_WALL);
+            // 2. Preencher brechas diagonais (cantos)
+            // Se tivermos W1 em (x,y) e W2 em (x+1, y+1), precisamos de bloqueios em (x+1, y) ou (x, y+1)
+            const fillerPositions: RoomPosition[] = [];
+            for (const pos of wallPositions) {
+                const neighbors = [
+                    {dx: 1, dy: 1}, {dx: 1, dy: -1}, {dx: -1, dy: 1}, {dx: -1, dy: -1}
+                ];
+                for (const n of neighbors) {
+                    const diagKey = `${pos.x + n.dx},${pos.y + n.dy}`;
+                    if (plannedPositions.has(diagKey)) {
+                        // Temos uma diagonal. Precisamos preencher os dois adjacentes para garantir 100% de bloqueio
+                        const adj1 = new RoomPosition(pos.x + n.dx, pos.y, room.name);
+                        const adj2 = new RoomPosition(pos.x, pos.y + n.dy, room.name);
+                        
+                        [adj1, adj2].forEach(adj => {
+                            const adjKey = `${adj.x},${adj.y}`;
+                            if (!plannedPositions.has(adjKey) && terrain.get(adj.x, adj.y) !== TERRAIN_MASK_WALL) {
+                                fillerPositions.push(adj);
+                                plannedPositions.add(adjKey);
+                            }
+                        });
+                    }
+                }
+            }
+            
+            const allDefPositions = [...wallPositions, ...fillerPositions];
 
-                    if (!existingDef && !existingCS) {
-                        // Se houver uma estrada ou for um caminho importante, usamos RAMPART, senão WALL
-                        const hasRoad = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_ROAD);
-                        const type = hasRoad ? STRUCTURE_RAMPART : STRUCTURE_WALL;
+            for (const pos of allDefPositions) {
+                const existingDef = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_RAMPART || s.structureType === STRUCTURE_WALL);
+                const existingCS = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(cs => cs.structureType === STRUCTURE_RAMPART || cs.structureType === STRUCTURE_WALL);
 
-                        if (type === STRUCTURE_RAMPART && (currentRamparts + currentRampartCS + sitesCreated >= maxRamparts)) {
-                            // Se não houver cota para Rampart, tentamos Wall se não bloquear estrada, 
-                            // ou apenas pulamos para economizar.
-                            continue;
-                        }
+                if (!existingDef && !existingCS) {
+                    const hasRoad = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_ROAD);
+                    // Usar Rampart em "fillers" ou onde tem estrada para não travar
+                    const isFiller = !wallPositions.includes(pos);
+                    const type = (hasRoad || isFiller) ? STRUCTURE_RAMPART : STRUCTURE_WALL;
 
-                        if (room.createConstructionSite(pos, type) === OK) {
-                            sitesCreated++;
-                            if (type === STRUCTURE_RAMPART) currentRampartCS++;
-                            blockedPositions.add(key);
-                        }
+                    if (type === STRUCTURE_RAMPART && (currentRamparts + currentRampartCS + sitesCreated >= maxRamparts)) {
+                        continue;
+                    }
+
+                    if (room.createConstructionSite(pos, type) === OK) {
+                        sitesCreated++;
+                        if (type === STRUCTURE_RAMPART) currentRampartCS++;
+                        if (sitesCreated >= 15) break; // Limite por execução
                     }
                 }
             }
