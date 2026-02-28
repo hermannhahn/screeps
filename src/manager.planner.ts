@@ -2,19 +2,12 @@
 import { addPlannedStructure } from './tools';
 
 export function planStructures(room: Room): void {
-    // Inicialização robusta da memória
     if (!Memory.planning) {
         Memory.planning = { plannedStructures: [], spawnSquareRoadAnchorPositions: [], currentStage: 1 };
     }
-    if (Memory.planning.currentStage === undefined) {
-        Memory.planning.currentStage = 1;
-    }
-    if (!Memory.planning.plannedStructures) {
-        Memory.planning.plannedStructures = [];
-    }
-    if (!Memory.planning.spawnSquareRoadAnchorPositions) {
-        Memory.planning.spawnSquareRoadAnchorPositions = [];
-    }
+    if (Memory.planning.currentStage === undefined) Memory.planning.currentStage = 1;
+    if (!Memory.planning.plannedStructures) Memory.planning.plannedStructures = [];
+    if (!Memory.planning.spawnSquareRoadAnchorPositions) Memory.planning.spawnSquareRoadAnchorPositions = [];
 
     const stage = Memory.planning.currentStage;
     console.log(`Planner Stage: ${stage}`);
@@ -23,7 +16,11 @@ export function planStructures(room: Room): void {
         const spawns = room.find(FIND_MY_SPAWNS);
         if (spawns.length > 0) {
             const spawn = spawns[0];
-            const offsets = [{dx:-2, dy:0}, {dx:2, dy:0}, {dx:0, dy:-2}, {dx:0, dy:2}];
+            // 8 pontos para formar um losango a 2 blocos de distância
+            const offsets = [
+                {dx: -2, dy: 0}, {dx: 2, dy: 0}, {dx: 0, dy: -2}, {dx: 0, dy: 2},
+                {dx: -1, dy: -1}, {dx: 1, dy: -1}, {dx: -1, dy: 1}, {dx: 1, dy: 1}
+            ];
             let added = 0;
             
             for (const off of offsets) {
@@ -33,17 +30,19 @@ export function planStructures(room: Room): void {
                     added++;
                 }
             }
-            if (added > 0) console.log(`Planner: Stage 1 - Planned ${added} roads.`);
+            if (added > 0) console.log(`Planner: Stage 1 - Planned ${added} more roads for the diamond.`);
         }
         
-        // Verifica se ainda há algo para construir no estágio 1
-        const pending = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build').length;
-        const constructionSites = room.find(FIND_MY_CONSTRUCTION_SITES, {
-            filter: (s) => s.structureType === STRUCTURE_ROAD
-        }).length;
+        // Verifica se todas as estradas planejadas no estágio 1 estão construídas
+        const stage1Roads = Memory.planning.plannedStructures.filter((p: PlannedStructure) => 
+            p.structureType === STRUCTURE_ROAD && 
+            Memory.planning.spawnSquareRoadAnchorPositions.some((anchor: any) => anchor.x === p.pos.x && anchor.y === p.pos.y)
+        );
 
-        if (pending === 0 && constructionSites === 0 && Memory.planning.spawnSquareRoadAnchorPositions.length > 0) {
-            console.log("Planner: Stage 1 Complete. Advancing to Stage 2.");
+        const allBuilt = stage1Roads.length > 0 && stage1Roads.every((p: PlannedStructure) => p.status === 'built');
+
+        if (allBuilt) {
+            console.log("Planner: Stage 1 (Diamond) Complete. Advancing to Stage 2.");
             Memory.planning.currentStage = 2;
         }
     }
