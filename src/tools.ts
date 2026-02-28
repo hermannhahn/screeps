@@ -5,8 +5,8 @@ export function isTerrainValidForRoad(pos: RoomPosition, room: Room): boolean {
     if (terrain === 'wall') return false;
     const existingObjects = room.lookAt(pos);
     for (const obj of existingObjects) {
-        if (obj.type === 'structure' && obj.structureType !== STRUCTURE_ROAD) return false;
-        if (obj.type === 'constructionSite' && obj.structureType !== STRUCTURE_ROAD) return false;
+        if (obj.structure && obj.structure.structureType !== STRUCTURE_ROAD) return false;
+        if (obj.constructionSite && obj.constructionSite.structureType !== STRUCTURE_ROAD) return false;
     }
     return true;
 }

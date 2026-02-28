@@ -1,5 +1,5 @@
 // src/main.ts
-console.log("--- GEMINI DEPLOY TEST: Código Atualizado v2 ---");
+console.log("--- GEMINI DEPLOY TEST: Código Atualizado v3 ---");
 
 import { planStructures } from './manager.planner';
 import { runHarvester } from './role.harvester';
@@ -24,7 +24,8 @@ export const loop = function () {
     if (Memory.planning && Memory.planning.plannedStructures) {
         const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
         for (const p of toBuild) {
-            if (room.createConstructionSite(p.pos.x, p.pos.y, p.structureType) === OK) {
+            const result = room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
+            if (result === OK) {
                 p.status = 'building';
                 console.log(`Main: Created CS for ${p.structureType} at ${p.pos.x},${p.pos.y}`);
             }
