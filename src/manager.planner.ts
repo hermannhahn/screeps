@@ -187,9 +187,11 @@ export function planStructures(room: Room): void {
             }
         }
 
-        // 3. Container nas Torres
-        const towers = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
-        for (const tower of towers) {
+        // 3. Container nas Torres (Se já planejadas ou existentes)
+        const plannedTowers = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_TOWER);
+        const existingTowers = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
+        
+        for (const tower of existingTowers) {
             const hasCont = tower.pos.findInRange(FIND_STRUCTURES, 1, { filter: { structureType: STRUCTURE_CONTAINER } }).length > 0 ||
                             planning.plannedStructures.some(p => p.structureType === STRUCTURE_CONTAINER && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).isNearTo(tower.pos));
             if (!hasCont) {
@@ -238,8 +240,42 @@ export function planStructures(room: Room): void {
             !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y)
         );
         if (stage5Roads.length === 0 && activeCS.length === 0) {
-            console.log("Planner: Stage 5 Complete.");
+            console.log("Planner: Stage 5 Complete. Advancing to Stage 6.");
             planning.currentStage = 6;
+        }
+    }
+
+    // --- ESTÁGIO 6: PRIMEIRA TORRE (RCL 3) ---
+    if (stage === 6) {
+        if (!room.controller || room.controller.level < 3) return;
+
+        const spawns = room.find(FIND_MY_SPAWNS);
+        if (spawns.length === 0) return;
+        const spawn = spawns[0];
+
+        const hasTower = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } }).length > 0 ||
+                         planning.plannedStructures.some(p => p.structureType === STRUCTURE_TOWER);
+
+        if (!hasTower) {
+            // Coloca a torre em um spot estratégico perto do spawn
+            const towerSpots = [
+                {dx: 0, dy: -3}, {dx: 0, dy: 3}, {dx: -3, dy: 0}, {dx: 3, dy: 0}
+            ];
+            for (const off of towerSpots) {
+                const pos = new RoomPosition(spawn.pos.x + off.dx, spawn.pos.y + off.dy, room.name);
+                if (room.getTerrain().get(pos.x, pos.y) !== TERRAIN_MASK_WALL && !planning.plannedStructures.some(p => p.pos.x === pos.x && p.pos.y === pos.y)) {
+                    if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_TOWER, 'to_build', room)) {
+                        console.log(`Planner: Planned first Tower at ${pos.x},${pos.y}`);
+                        break;
+                    }
+                }
+            }
+        }
+
+        const plannedTower = planning.plannedStructures.find(p => p.structureType === STRUCTURE_TOWER);
+        if (plannedTower && plannedTower.status === 'built' && activeCS.length === 0) {
+            console.log("Planner: Stage 6 Complete. Advancing to Stage 7.");
+            planning.currentStage = 7;
         }
     }
 }

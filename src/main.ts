@@ -45,7 +45,24 @@ export const loop = function () {
         }
     }
 
-    // --- 4. LOGICA DE SPAWN DINAMICA ---
+    // --- 4. LOGICA DAS TORRES (Defesa e Reparo) ---
+    const towers = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } }) as StructureTower[];
+    for (const tower of towers) {
+        const closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+        if (closestHostile) {
+            tower.attack(closestHostile);
+        } else {
+            // Se não houver inimigos, reparar estruturas críticas (exceto muros por enquanto)
+            const closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
+                filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL && s.structureType !== STRUCTURE_RAMPART
+            });
+            if (closestDamagedStructure) {
+                tower.repair(closestDamagedStructure);
+            }
+        }
+    }
+
+    // --- 5. LOGICA DE SPAWN DINAMICA ---
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (spawn && !spawn.spawning) {
         const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name);
@@ -59,14 +76,11 @@ export const loop = function () {
         const rcl = room.controller ? room.controller.level : 1;
         const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
-        // Metas Ajustadas para Eficiência Inicial
+        // Metas
         const firstHarvester = harvesters[0];
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
-        
-        // Reduzido meta de Suppliers para evitar congestionamento (1 por Harvester + 1 extra se necessário)
-        const targetSuppliers = Math.max(1, harvesters.length); 
-        
+        const targetSuppliers = Math.max(1, harvesters.length + 1);
         const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
@@ -92,7 +106,7 @@ export const loop = function () {
         }
     }
 
-    // --- 5. RODAR CREEPS ---
+    // --- 6. RODAR CREEPS ---
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
         if (creep.spawning) continue;
