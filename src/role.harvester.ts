@@ -1,24 +1,20 @@
 // src/role.harvester.ts
-import { isSourceSafe, handleDefensiveState } from './tools';
+import { isSourceSafe, handleDefensiveState, sayAction } from './tools';
 
 export function runHarvester(creep: Creep): void {
-    // --- SISTEMA DEFENSIVO ---
     if (handleDefensiveState(creep)) return;
 
     const room = creep.room;
 
-    // --- ESCOLHA DO SOURCE ---
     if (!creep.memory.sourceId) {
         const sources = room.find(FIND_SOURCES);
         const safeSources = _.filter(sources, (s) => isSourceSafe(s));
-        
         if (safeSources.length > 0) {
             const harvesters = _.filter(Game.creeps, (c) => c.room.name === room.name && c.memory.role === 'harvester' && c.name !== creep.name);
             for (const source of safeSources) {
                 const assignedCount = _.filter(harvesters, (h) => h.memory.sourceId === source.id).length;
                 if (assignedCount < 2) {
                     creep.memory.sourceId = source.id;
-                    creep.say('⛏️', true);
                     break;
                 }
             }
@@ -31,10 +27,11 @@ export function runHarvester(creep: Creep): void {
         return;
     }
 
-    // --- TRABALHO ---
     if (creep.store.getFreeCapacity() > 0) {
         if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
             creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
+        } else {
+            sayAction(creep, '⛏️');
         }
     } else {
         const suppliers = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name && c.memory.role === 'supplier' && !c.spawning);
@@ -47,10 +44,14 @@ export function runHarvester(creep: Creep): void {
             if (target) {
                 if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+                } else {
+                    sayAction(creep, '📥');
                 }
             } else {
                 if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(room.controller!);
+                } else {
+                    sayAction(creep, '⚡');
                 }
             }
         } else {
@@ -61,6 +62,8 @@ export function runHarvester(creep: Creep): void {
             if (link) {
                 if (creep.transfer(link, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(link);
+                } else {
+                    sayAction(creep, '📥');
                 }
             } else {
                 const container = creep.pos.findInRange(FIND_STRUCTURES, 3, {
@@ -70,8 +73,11 @@ export function runHarvester(creep: Creep): void {
                 if (container) {
                     if (creep.transfer(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                         creep.moveTo(container);
+                    } else {
+                        sayAction(creep, '📥');
                     }
                 } else {
+                    sayAction(creep, '📦');
                     creep.drop(RESOURCE_ENERGY);
                 }
             }

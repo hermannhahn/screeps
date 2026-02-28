@@ -1,8 +1,7 @@
 // src/role.supplier.ts
-import { isTargetAvailable, getEnergyAmount, handleDefensiveState } from './tools';
+import { isTargetAvailable, getEnergyAmount, handleDefensiveState, sayAction } from './tools';
 
 export function runSupplier(creep: Creep): void {
-    // --- SISTEMA DEFENSIVO ---
     if (handleDefensiveState(creep)) return;
 
     const room = creep.room;
@@ -49,11 +48,11 @@ export function runSupplier(creep: Creep): void {
                 if (res === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10 });
                 } else {
-                    creep.say('📦');
+                    sayAction(creep, '📦');
                 }
             }
         } else {
-            creep.say('💤');
+            sayAction(creep, '💤');
         }
 
     } else {
@@ -82,7 +81,7 @@ export function runSupplier(creep: Creep): void {
                 if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 10 });
                 } else {
-                    creep.say('📥');
+                    sayAction(creep, '📥');
                 }
             } else {
                 delete creep.memory.targetId;
@@ -93,21 +92,21 @@ export function runSupplier(creep: Creep): void {
             });
             if (toRepair) {
                 if (creep.repair(toRepair) === ERR_NOT_IN_RANGE) creep.moveTo(toRepair);
-                else creep.say('🔧');
+                else sayAction(creep, '🔧');
                 return;
             }
 
             const site = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES);
             if (site) {
                 if (creep.build(site) === ERR_NOT_IN_RANGE) creep.moveTo(site);
-                else creep.say('🔨');
+                else sayAction(creep, '🔨');
                 return;
             }
 
             if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(room.controller!);
             } else {
-                creep.say('⚡');
+                sayAction(creep, '⚡');
             }
         }
     }

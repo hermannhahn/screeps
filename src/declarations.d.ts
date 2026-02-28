@@ -9,7 +9,8 @@ declare global {
         building?: boolean;
         upgrading?: boolean;
         sourceId?: Id<Source>;
-        targetId?: Id<any>; // Alvo atual para coleta ou entrega
+        targetId?: Id<any>;
+        lastAction?: string; // Armazena a última ação para evitar repetição do creep.say
     }
 
     interface Memory {

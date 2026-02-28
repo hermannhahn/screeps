@@ -1,11 +1,9 @@
 // src/role.builder.ts
-import { isTargetAvailable, getEnergyAmount, handleDefensiveState } from './tools';
+import { isTargetAvailable, getEnergyAmount, handleDefensiveState, sayAction } from './tools';
 
 export function runBuilder(creep: Creep): void {
-    // --- SISTEMA DEFENSIVO ---
     if (handleDefensiveState(creep)) return;
 
-    // 1. VALIDAÇÃO DE ESTADO E ALVO
     if (creep.memory.building && creep.store[RESOURCE_ENERGY] === 0) {
         creep.memory.building = false;
         delete creep.memory.targetId;
@@ -15,7 +13,6 @@ export function runBuilder(creep: Creep): void {
         delete creep.memory.targetId;
     }
 
-    // Validação do alvo persistente
     if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (!target || getEnergyAmount(target) === 0) delete creep.memory.targetId;
@@ -33,7 +30,7 @@ export function runBuilder(creep: Creep): void {
                 if (creep.build(target) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 10 });
                 } else {
-                    creep.say('🔨');
+                    sayAction(creep, '🔨');
                 }
             } else {
                 delete creep.memory.targetId;
@@ -42,7 +39,7 @@ export function runBuilder(creep: Creep): void {
             if (creep.upgradeController(creep.room.controller!) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(creep.room.controller!, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 10 });
             } else {
-                creep.say('⚡');
+                sayAction(creep, '⚡');
             }
         }
     } else {
@@ -72,11 +69,11 @@ export function runBuilder(creep: Creep): void {
                 if (res === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10 });
                 } else {
-                    creep.say('📦');
+                    sayAction(creep, '📦');
                 }
             }
         } else {
-            creep.say('💤');
+            sayAction(creep, '💤');
         }
     }
 }

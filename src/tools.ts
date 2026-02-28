@@ -94,41 +94,32 @@ export function isTargetAvailable(creep: Creep, target: any): boolean {
     return (energyAvailable - reservedAmount) > 0;
 }
 
-// --- SISTEMA DEFENSIVO DE EVASÃO ---
 export function handleDefensiveState(creep: Creep): boolean {
-    // Detectar inimigos em um raio de 5 blocos
     const hostiles = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 5);
-    
     if (hostiles.length > 0) {
-        creep.say('🏃💨', true);
-        
-        // Abandonar alvos atuais para forçar re-escolha após a fuga
+        sayAction(creep, '🏃💨');
         delete creep.memory.targetId;
         if (creep.memory.role === 'harvester') delete creep.memory.sourceId;
-
-        // Gerar caminho de fuga usando PathFinder
         const goals = hostiles.map(h => ({ pos: h.pos, range: 10 }));
-        const path = PathFinder.search(creep.pos, goals, {
-            flee: true,
-            maxRooms: 1,
-            plainCost: 2,
-            swampCost: 10,
-            maxOps: 500
-        }).path;
-
-        if (path.length > 0) {
-            creep.moveByPath(path);
-        } else {
-            // Se não houver caminho de fuga (encurralado), tenta se afastar do mais próximo
+        const path = PathFinder.search(creep.pos, goals, { flee: true, maxRooms: 1, plainCost: 2, swampCost: 10, maxOps: 500 }).path;
+        if (path.length > 0) creep.moveByPath(path);
+        else {
             const closest = creep.pos.findClosestByRange(hostiles);
             if (closest) {
                 const direction = creep.pos.getDirectionTo(closest);
-                // Inverte a direção para fugir
                 const fleeDirection = (direction + 4) % 8 || 8; 
                 creep.move(fleeDirection as DirectionConstant);
             }
         }
-        return true; // Creep sob ameaça
+        return true;
     }
-    return false; // Ambiente seguro
+    return false;
+}
+
+// Exibe um emoji apenas quando a ação do creep muda
+export function sayAction(creep: Creep, message: string): void {
+    if (creep.memory.lastAction !== message) {
+        creep.say(message, true);
+        creep.memory.lastAction = message;
+    }
 }
