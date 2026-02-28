@@ -54,7 +54,8 @@ export function planStructures(room: Room): void {
         const plannedExtensions = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION);
         
         if (builtExtensions + plannedExtensions.length < extensionsToBuild) {
-            for (const roadPos of planning.spawnSquareRoadAnchorPositions) {
+            for (const roadPosRaw of planning.spawnSquareRoadAnchorPositions) {
+                const roadPos = new RoomPosition(roadPosRaw.x, roadPosRaw.y, roadPosRaw.roomName);
                 if (planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION).length >= extensionsToBuild) break;
                 const adjacents = [{dx: -1, dy: 0}, {dx: 1, dy: 0}, {dx: 0, dy: -1}, {dx: 0, dy: 1}];
                 for (const adj of adjacents) {
@@ -83,13 +84,17 @@ export function planStructures(room: Room): void {
     if (stage === 3) {
         const sources = room.find(FIND_SOURCES);
         const safeSources = sources.filter(s => isSourceSafe(s));
-        const anchors = planning.spawnSquareRoadAnchorPositions;
+        const anchorsRaw = planning.spawnSquareRoadAnchorPositions;
+        const anchors = anchorsRaw.map(a => new RoomPosition(a.x, a.y, a.roomName));
 
         if (anchors.length > 0) {
             let addedAny = false;
             for (const source of safeSources) {
-                // Verificar se esta source já tem estradas planejadas até o spawn
-                const alreadyPlanned = planning.plannedStructures.some(p => p.structureType === STRUCTURE_ROAD && p.pos.isNearTo(source.pos));
+                // Instanciar posições da memória para usar métodos como isNearTo
+                const alreadyPlanned = planning.plannedStructures.some(p => {
+                    const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
+                    return p.structureType === STRUCTURE_ROAD && pPos.isNearTo(source.pos);
+                });
                 
                 if (!alreadyPlanned) {
                     const closestAnchor = findClosestAnchor(source.pos, anchors);
@@ -132,7 +137,8 @@ export function planStructures(room: Room): void {
     if (stage === 4) {
         const controller = room.controller;
         if (!controller) return;
-        const anchors = planning.spawnSquareRoadAnchorPositions;
+        const anchorsRaw = planning.spawnSquareRoadAnchorPositions;
+        const anchors = anchorsRaw.map(a => new RoomPosition(a.x, a.y, a.roomName));
         const closestAnchor = findClosestAnchor(controller.pos, anchors);
 
         if (closestAnchor) {
@@ -145,7 +151,10 @@ export function planStructures(room: Room): void {
             }
         }
 
-        const stage4Roads = planning.plannedStructures.filter(p => p.status !== 'built' && !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y));
+        const stage4Roads = planning.plannedStructures.filter(p => 
+            p.status !== 'built' && 
+            !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y)
+        );
         if (stage4Roads.length === 0 && !hasActiveCS) {
             console.log("Planner: Stage 4 Complete.");
             planning.currentStage = 5;
