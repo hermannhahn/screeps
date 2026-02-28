@@ -6,7 +6,7 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe, generateBody } from './tools';
 
-console.log("--- GEMINI DEPLOY: v25 (Dynamic Bodies) ---");
+console.log("--- GEMINI DEPLOY: v26 (Tiered Spawning Priority) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -46,7 +46,7 @@ export const loop = function () {
         }
     }
 
-    // --- LOGICA DE SPAWN DINAMICA ---
+    // --- LOGICA DE SPAWN ESCALONADA (Tiered Priority) ---
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (spawn && !spawn.spawning) {
         const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name);
@@ -58,41 +58,43 @@ export const loop = function () {
         const sources = room.find(FIND_SOURCES);
         const safeSources = _.filter(sources, (s) => isSourceSafe(s));
         const rcl = room.controller ? room.controller.level : 1;
+        const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
-        // Metas
+        // Definição de Metas Finais
         const firstHarvester = harvesters[0];
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
-        const targetSuppliers = harvesters.length * 2;
-        const targetBuilders = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? (rcl <= 2 ? 2 : 1) : 0;
+        const targetSuppliers = Math.max(1, harvesters.length + 1);
+        const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
-        // Energia para o corpo: Se não houver harvesters, usa o que tiver (emergência). Senão, usa a capacidade máxima.
         const energyForBody = (harvesters.length === 0) ? room.energyAvailable : room.energyCapacityAvailable;
 
-        // Execução (Prioridade: Harvester > Supplier > Builder > Upgrader)
-        if (harvesters.length < targetHarvesters) {
-            const body = generateBody('harvester', energyForBody);
-            if (room.energyAvailable >= 200) { // Mínimo para um corpo básico
-                spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester' } });
-            }
-        } 
-        else if (suppliers.length < targetSuppliers) {
-            const body = generateBody('supplier', energyForBody);
-            if (room.energyAvailable >= 200) {
-                spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } });
-            }
-        } 
-        else if (builders.length < targetBuilders) {
-            const body = generateBody('builder', energyForBody);
-            if (room.energyAvailable >= 200) {
-                spawn.spawnCreep(body, 'Builder' + Game.time, { memory: { role: 'builder' } });
-            }
+        // FILA DE PRIORIDADE ESCALONADA
+        let roleToSpawn: string | null = null;
+
+        if (harvesters.length < safeSources.length) {
+            roleToSpawn = 'harvester'; // Tier 1: Mínimo de Harvesters
+        } else if (suppliers.length < 1) {
+            roleToSpawn = 'supplier';  // Tier 1: Primeiro Supplier
+        } else if (upgraders.length < 1) {
+            roleToSpawn = 'upgrader';  // Tier 1: Primeiro Upgrader
+        } else if (harvesters.length < targetHarvesters) {
+            roleToSpawn = 'harvester'; // Tier 2: Economia total
+        } else if (builders.length < targetBuilders) {
+            roleToSpawn = 'builder';   // Tier 2: Infraestrutura
+        } else if (suppliers.length < targetSuppliers) {
+            roleToSpawn = 'supplier';  // Tier 2: Logística total
+        } else if (upgraders.length < targetUpgraders) {
+            roleToSpawn = 'upgrader';  // Tier 2: Crescimento total
         }
-        else if (upgraders.length < targetUpgraders) {
-            const body = generateBody('upgrader', energyForBody);
-            if (room.energyAvailable >= 200) {
-                spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+
+        if (roleToSpawn) {
+            const body = generateBody(roleToSpawn, energyForBody);
+            const cost = body.reduce((sum, part) => sum + BODYPART_COST[part], 0);
+            
+            if (room.energyAvailable >= cost) {
+                spawn.spawnCreep(body, roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time, { memory: { role: roleToSpawn } });
             }
         }
     }
