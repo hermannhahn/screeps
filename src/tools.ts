@@ -33,13 +33,17 @@ export function findClosestAnchor(fromPos: RoomPosition, anchors: RoomPosition[]
     return closest;
 }
 
+// Função para verificar se um source é seguro (sem inimigos ou estruturas hostis em range 10)
 export function isSourceSafe(source: Source): boolean {
-    const hostiles = source.pos.findInRange(FIND_HOSTILE_CREEPS, 5);
+    // Raio de segurança aumentado para 10 blocos
+    const hostiles = source.pos.findInRange(FIND_HOSTILE_CREEPS, 10);
     if (hostiles.length > 0) return false;
-    const hostileStructures = source.pos.findInRange(FIND_HOSTILE_STRUCTURES, 5, {
+
+    const hostileStructures = source.pos.findInRange(FIND_HOSTILE_STRUCTURES, 10, {
         filter: (s) => s.owner && s.owner.username !== 'Invader' && s.owner.username !== 'Source Keeper'
     });
     if (hostileStructures.length > 0) return false;
+
     return true;
 }
 
@@ -76,8 +80,6 @@ export function generateBody(role: string, energy: number): BodyPartConstant[] {
     return body;
 }
 
-// --- LOGICA DE RESERVA DE ENERGIA (Refinada) ---
-
 export function getEnergyAmount(target: any): number {
     if (!target) return 0;
     if (target.store) return target.store.getUsedCapacity(RESOURCE_ENERGY);
@@ -87,23 +89,16 @@ export function getEnergyAmount(target: any): number {
 
 export function isTargetAvailable(creep: Creep, target: any): boolean {
     if (!target) return false;
-    
     let energyAvailable = getEnergyAmount(target);
     if (energyAvailable <= 0) return false;
-
-    // Outros que já MIRARAM esse alvo (excluindo a si mesmo se já tiver marcado)
     const others = _.filter(Game.creeps, (c) => 
         c.room.name === creep.room.name && 
         c.id !== creep.id && 
         c.memory.targetId === target.id
     );
-
     let reservedAmount = 0;
     for (const other of others) {
-        // Reservamos o quanto o outro creep PODE carregar
         reservedAmount += other.store.getFreeCapacity(RESOURCE_ENERGY);
     }
-
-    // Só é disponível se sobrar energia após as reservas dos outros
     return (energyAvailable - reservedAmount) > 0;
 }
