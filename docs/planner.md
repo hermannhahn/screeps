@@ -11,15 +11,15 @@ O `Manager Planner` é o orquestrador central que decide quais estruturas devem 
     - Log: "Room under attack, suspending planning"
     - **Exit**
 - Define `BLUEPRINTS_ORDER`: Sequential list of blueprints:
-    1.  **Spawn Roads:** Estradas circulares ao redor do spawn.
-    2.  **Extensions:** Todas as extensões possíveis para o RCL atual.
-    3.  **First Tower:** Primeira torre de defesa (RCL 3+).
-    4.  **Storage:** Armazenamento central (RCL 4+).
-    5.  **Source Containers:** Containers nas fontes para mineração estática.
-    6.  **Controller Container:** Container adjacente ao Controller para upgrade eficiente.
-    7.  **Second Tower:** Segunda torre de defesa (RCL 5+).
-    8.  **Source Roads:** Estradas ligando fontes ao spawn/logística.
-    9.  **Controller Roads:** Estradas ligando o Controller à logística.
+    1. **Spawn Roads:** Estradas circulares ao redor do spawn.
+    2. **Extensions:** Todas as extensões possíveis para o RCL atual.
+    3. **First Tower:** Primeira torre de defesa (RCL 3+).
+    4. **Storage:** Armazenamento central (RCL 4+).
+    5. **Source Containers:** Containers nas fontes para mineração estática.
+    6. **Controller Container:** Container adjacente ao Controller para upgrade eficiente.
+    7. **Second Tower:** Segunda torre de defesa (RCL 5+).
+    8. **Source Roads:** Estradas ligando fontes ao spawn/logística.
+    9. **Controller Roads:** Estradas ligando o Controller à logística.
     10. **Links:** Rede de transferência instantânea de energia (RCL 5+).
     11. **Ramparts & Walls:** Defesas passivas.
     12. **Mineral Roads:** Estradas para minerais (RCL 6+).
@@ -41,6 +41,7 @@ O `Manager Planner` é o orquestrador central que decide quais estruturas devem 
             - **Continue** (O planner pula este estágio e tenta o próximo, evitando que um estágio bloqueado impeça a expansão do RCL).
 
 ## Principais Mudanças Recentes
+
 - **Pular Estágios (Continue):** Se um estágio for detectado como incompleto mas não puder ser planejado (ex: minerais no RCL 5), o planner agora pula para o próximo estágio. Isso evita o "Sequential Stop" que impedia construções de RCL alto se algo do RCL baixo estivesse bloqueado.
 - **Reordenação de Prioridades:** Extensões, Torres e Storage agora são priorizados antes de estradas e logística secundária.
 - **RCL 5 Readiness:** Adicionado suporte para Storage, Links e a segunda Torre.
