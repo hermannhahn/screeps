@@ -6,7 +6,7 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe } from './tools';
 
-console.log("--- GEMINI DEPLOY: v21 (Robust Extensions & Supplier Helpers) ---");
+console.log("--- GEMINI DEPLOY: v24 (Supplier with WORK Body) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -72,8 +72,9 @@ export const loop = function () {
         if (harvesters.length < targetHarvesters && room.energyAvailable >= 250) {
             spawn.spawnCreep([WORK, WORK, CARRY, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
         } 
-        else if (suppliers.length < targetSuppliers && room.energyAvailable >= 200) {
-            spawn.spawnCreep([CARRY, CARRY, MOVE, MOVE], 'Supplier' + Game.time, { memory: { role: 'supplier' } });
+        else if (suppliers.length < targetSuppliers && room.energyAvailable >= 300) {
+            // Supplier agora com WORK para reparo e construção
+            spawn.spawnCreep([WORK, CARRY, CARRY, MOVE, MOVE], 'Supplier' + Game.time, { memory: { role: 'supplier' } });
         } 
         else if (builders.length < targetBuilders && room.energyAvailable >= 250) {
             spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });

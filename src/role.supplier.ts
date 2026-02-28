@@ -2,16 +2,21 @@
 export function runSupplier(creep: Creep): void {
     const room = creep.room;
 
+    // Auto-suicídio para reciclagem se não tiver WORK part (para a nova lógica de manutenção)
+    if (creep.getActiveBodyparts(WORK) === 0) {
+        console.log(`${creep.name}: Reciclando para obter corpo com WORK.`);
+        creep.suicide();
+        return;
+    }
+
     // Se tiver QUALQUER energia, tenta entregar ou ajudar
     if (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
-        // --- 1. ENTREGA PRIORITÁRIA (Abastecimento) ---
-        // Tenta carregar Spawn/Extensions
+        // --- 1. ENTREGA PRIORITÁRIA ---
         let target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
             filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
                            s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
         }) as AnyStructure;
 
-        // Se Spawn/Ext full, tentar Containers que NÃO são de coleta (ex: Controller Container)
         if (!target) {
             const sources = room.find(FIND_SOURCES);
             target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
@@ -30,10 +35,7 @@ export function runSupplier(creep: Creep): void {
             return;
         }
 
-        // --- 2. TAREFAS DE AJUDA (Fallback) ---
-        // Se chegou aqui, é porque Spawn, Extensions e Containers de entrega estão cheios.
-        
-        // A. Reparo (Estruturas civis danificadas)
+        // --- 2. TAREFAS DE AJUDA ---
         const toRepair = creep.pos.findClosestByPath(FIND_STRUCTURES, {
             filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL && s.structureType !== STRUCTURE_RAMPART
         });
@@ -44,7 +46,6 @@ export function runSupplier(creep: Creep): void {
             return;
         }
 
-        // B. Construção
         const site = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES);
         if (site) {
             if (creep.build(site) === ERR_NOT_IN_RANGE) {
@@ -53,7 +54,6 @@ export function runSupplier(creep: Creep): void {
             return;
         }
 
-        // C. Upgrade (Último recurso para não ficar parado com energia)
         if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
             creep.moveTo(room.controller!);
         }
@@ -85,7 +85,6 @@ export function runSupplier(creep: Creep): void {
             return;
         }
         
-        // Se estiver vazio e não houver nada nas fontes, pegar do Storage se houver sobra
         if (room.storage && room.storage.store[RESOURCE_ENERGY] > 500) {
             if (creep.withdraw(room.storage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(room.storage);
