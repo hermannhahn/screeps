@@ -36,8 +36,9 @@ const managerRemote = {
                 const hostileStructures = cacheUtils.findInRoom(room, FIND_HOSTILE_STRUCTURES, undefined, 100);
 
                 Memory.remoteRooms[room.name] = {
+                    name: room.name, // Adicionado de volta
                     sources: sources,
-                    controller: room.controller ? { id: room.controller.id, pos: room.controller.pos } : undefined, // Save as RoomPosition
+                    controller: room.controller ? { id: room.controller.id, pos: room.controller.pos } : undefined,
                     needsReserving: room.controller && !room.controller.my && (!room.controller.reservation || room.controller.reservation.ticksToEnd < 2000),
                     lastScouted: Game.time,
                     safe: hostiles.length === 0,
