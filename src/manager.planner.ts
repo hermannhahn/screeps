@@ -82,8 +82,30 @@ const managerPlanner = {
             if (result === OK) {
                 sitesCreatedThisTick++;
                 console.log(`[ManagerPlanner] Planned ${planned.structureType} at ${planned.x},${planned.y} for RCL ${currentRCL}.`);
-            } else if (result !== ERR_INVALID_TARGET && result !== ERR_FULL) { // ERR_INVALID_TARGET pode acontecer em tiles proibidos
+            } else { // Handle ALL error codes for debugging
                 console.log(`[ManagerPlanner] Failed to plan ${planned.structureType} at ${planned.x},${planned.y} (RCL ${currentRCL}): ${result}`);
+                console.log(`  -- Debug Info for ${planned.x},${planned.y} --`);
+                console.log(`  Terrain: ${room.getTerrain().get(planned.x, planned.y)}`);
+                const structuresHere = pos.lookFor(LOOK_STRUCTURES);
+                if (structuresHere.length > 0) {
+                    console.log(`  Existing Structures: ${JSON.stringify(structuresHere.map(s => s.structureType))}`);
+                }
+                const csHere = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+                if (csHere.length > 0) {
+                    console.log(`  Existing Construction Sites: ${JSON.stringify(csHere.map(cs => cs.structureType))}`);
+                }
+                // Check if it's too close to controller/source/mineral
+                if (room.controller && pos.isEqualTo(room.controller.pos)) {
+                    console.log(`  Position is Controller.`);
+                }
+                const sources = room.find(FIND_SOURCES);
+                if (sources.some(s => pos.isEqualTo(s.pos))) {
+                    console.log(`  Position is Source.`);
+                }
+                const minerals = room.find(FIND_MINERALS);
+                if (minerals.some(m => pos.isEqualTo(m.pos))) {
+                    console.log(`  Position is Mineral.`);
+                }
             }
         }
     }
