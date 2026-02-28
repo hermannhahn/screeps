@@ -73,28 +73,34 @@ export function planStructures(room: Room): void {
             }
         }
 
-        // 2. Planejar 5 Extensões
+        // 2. Planejar 5 Extensões (Sistema Robusto: Adjacente a estradas do Stage 1)
         const extensionsToBuild = 5;
-        const currentExtCount = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION).length +
-                               room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } }).length;
-
-        if (currentExtCount < extensionsToBuild) {
-            // Tenta encontrar spots ao redor do spawn (em um padrão simples)
-            const extOffsets = [
-                {dx: -1, dy: -2}, {dx: 1, dy: -2}, {dx: -2, dy: -1}, {dx: 2, dy: -1},
-                {dx: -2, dy: 1}, {dx: 2, dy: 1}, {dx: -1, dy: 2}, {dx: 1, dy: 2}
-            ];
-            for (const off of extOffsets) {
+        const builtExtensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } }).length;
+        const plannedExtensions = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION).length;
+        
+        if (builtExtensions + plannedExtensions < extensionsToBuild) {
+            // Buscamos spots vazios em volta do diamante de estradas do spawn
+            for (const roadPos of planning.spawnSquareRoadAnchorPositions) {
                 if (planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION).length >= extensionsToBuild) break;
-                const pos = new RoomPosition(spawn.pos.x + off.dx, spawn.pos.y + off.dy, room.name);
-                
-                // Verificar se o spot está livre de outras construções planejadas e é terreno válido
-                const isOccupied = planning.plannedStructures.some(p => p.pos.x === pos.x && p.pos.y === pos.y);
-                if (!isOccupied) {
-                    // Usamos uma verificação simplificada de terreno (não parede)
-                    const terrain = room.getTerrain().get(pos.x, pos.y);
-                    if (terrain !== TERRAIN_MASK_WALL) {
-                        addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_EXTENSION, 'to_build', room);
+
+                const adjacents = [
+                    {dx: -1, dy: 0}, {dx: 1, dy: 0}, {dx: 0, dy: -1}, {dx: 0, dy: 1}
+                ];
+
+                for (const adj of adjacents) {
+                    const pos = new RoomPosition(roadPos.x + adj.dx, roadPos.y + adj.dy, room.name);
+                    
+                    // Condições para uma boa extensão:
+                    // - Não ser parede
+                    // - Não ser onde o spawn está
+                    // - Não estar ocupada por outra estrutura planejada (incluindo estradas)
+                    if (room.getTerrain().get(pos.x, pos.y) !== TERRAIN_MASK_WALL && 
+                        !pos.isEqualTo(spawn.pos) &&
+                        !planning.plannedStructures.some(p => p.pos.x === pos.x && p.pos.y === pos.y)) {
+                        
+                        if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_EXTENSION, 'to_build', room)) {
+                            if (planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION).length >= extensionsToBuild) break;
+                        }
                     }
                 }
             }

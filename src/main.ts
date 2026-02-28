@@ -6,7 +6,7 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe } from './tools';
 
-console.log("--- GEMINI DEPLOY: v18.1 (Const to Let Fix) ---");
+console.log("--- GEMINI DEPLOY: v21 (Robust Extensions & Supplier Helpers) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -64,7 +64,8 @@ export const loop = function () {
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
         const targetSuppliers = harvesters.length * 2;
-        const targetBuilders = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? (rcl <= 2 ? 2 : 1) : 0;
+        const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
+        const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
         // Execução (Prioridade: Harvester > Supplier > Builder > Upgrader)
