@@ -1,5 +1,5 @@
 // src/manager.planner.ts
-import { addPlannedStructure, findClosestAnchor, isSourceSafe, isTerrainValidForRoad } from './tools';
+import { addPlannedStructure, findClosestAnchor, isSourceSafe } from './tools';
 
 export function planStructures(room: Room): void {
     if (!Memory.planning) {
@@ -70,9 +70,8 @@ export function planStructures(room: Room): void {
             }
         }
 
-        // LOG DE DEBUG PARA O ESTÁGIO 2
-        const allBuilt = plannedExtensions.length > 0 && plannedExtensions.every(p => p.status === 'built');
-        // console.log(`Planner Debug Stage 2: Exts=${plannedExtensions.length}, Built=${plannedExtensions.filter(p => p.status === 'built').length}, ActiveCS=${hasActiveCS}`);
+        const stage2Exts = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION);
+        const allBuilt = stage2Exts.length >= 5 && stage2Exts.every(p => p.status === 'built');
 
         if (allBuilt && !hasActiveCS) {
             console.log("Planner: Stage 2 Complete. Advancing to Stage 3.");
@@ -86,34 +85,52 @@ export function planStructures(room: Room): void {
         const safeSources = sources.filter(s => isSourceSafe(s));
         const anchors = planning.spawnSquareRoadAnchorPositions;
 
-        console.log(`Planner Stage 3: Planning roads for ${safeSources.length} safe sources.`);
+        if (anchors.length > 0) {
+            console.log(`Planner Stage 3: Planning roads for ${safeSources.length} sources.`);
+            for (const source of safeSources) {
+                const closestAnchor = findClosestAnchor(source.pos, anchors);
+                if (closestAnchor) {
+                    const searchResult = PathFinder.search(source.pos, { pos: closestAnchor, range: 1 }, {
+                        plainCost: 2,
+                        swampCost: 10,
+                        roomCallback: (roomName) => {
+                            const costs = new PathFinder.CostMatrix();
+                            // Evitar estruturas que não sejam estradas
+                            room.find(FIND_STRUCTURES).forEach(s => {
+                                if (s.structureType !== STRUCTURE_ROAD) costs.set(s.pos.x, s.pos.y, 0xff);
+                            });
+                            // Favorecer estradas planejadas
+                            planning.plannedStructures.forEach(p => {
+                                if (p.structureType === STRUCTURE_ROAD) costs.set(p.pos.x, p.pos.y, 1);
+                            });
+                            return costs;
+                        }
+                    });
 
-        for (const source of safeSources) {
-            const closestAnchor = findClosestAnchor(source.pos, anchors);
-            if (closestAnchor) {
-                const path = PathFinder.search(source.pos, { pos: closestAnchor, range: 1 }, {
-                    plainCost: 2, swampCost: 10,
-                    roomCallback: (roomName) => {
-                        const costs = new PathFinder.CostMatrix();
-                        planning.plannedStructures.forEach(p => {
-                            if (p.structureType === STRUCTURE_ROAD) costs.set(p.pos.x, p.pos.y, 1);
-                        });
-                        return costs;
+                    if (!searchResult.incomplete) {
+                        for (const pos of searchResult.path) {
+                            addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room);
+                        }
                     }
-                }).path;
-
-                for (const pos of path) {
-                    addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room);
                 }
             }
         }
 
-        const stage3Roads = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_ROAD && !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y));
-        const allBuilt = stage3Roads.length > 0 && stage3Roads.every(p => p.status === 'built');
-
-        if (allBuilt && !hasActiveCS) {
-            console.log("Planner: Stage 3 Complete. Advancing to Stage 4.");
-            planning.currentStage = 4;
+        // Verifica progresso do Estágio 3
+        const stage3Roads = planning.plannedStructures.filter(p => 
+            p.structureType === STRUCTURE_ROAD && 
+            !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y)
+        );
+        
+        if (stage3Roads.length > 0) {
+            const allBuilt = stage3Roads.every(p => p.status === 'built');
+            if (allBuilt && !hasActiveCS) {
+                console.log("Planner: Stage 3 Complete. Advancing to Stage 4.");
+                planning.currentStage = 4;
+            }
+        } else if (safeSources.length > 0) {
+            // Se temos sources mas nenhuma estrada foi adicionada, pode haver bloqueio
+            console.log("Planner Stage 3: No road positions added. Check PathFinder or terrain constraints.");
         }
     }
 
@@ -129,8 +146,8 @@ export function planStructures(room: Room): void {
                 plainCost: 2, swampCost: 10,
                 roomCallback: (roomName) => {
                     const costs = new PathFinder.CostMatrix();
-                    planning.plannedStructures.forEach(p => {
-                        if (p.structureType === STRUCTURE_ROAD) costs.set(p.pos.x, p.pos.y, 1);
+                    room.find(FIND_STRUCTURES).forEach(s => {
+                        if (s.structureType !== STRUCTURE_ROAD) costs.set(s.pos.x, s.pos.y, 0xff);
                     });
                     return costs;
                 }
@@ -141,9 +158,12 @@ export function planStructures(room: Room): void {
             }
         }
 
-        const stage4Roads = planning.plannedStructures.filter(p => p.status === 'to_build' || p.status === 'building');
+        const stage4Roads = planning.plannedStructures.filter(p => 
+            !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y) &&
+            p.status !== 'built'
+        );
         if (stage4Roads.length === 0 && !hasActiveCS) {
-            console.log("Planner: Stage 4 Complete. All initial work finished.");
+            console.log("Planner: Stage 4 Complete.");
             planning.currentStage = 5;
         }
     }

@@ -6,7 +6,7 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe, generateBody } from './tools';
 
-console.log("--- GEMINI DEPLOY: v28.1 (Spawning Cost Fix) ---");
+console.log("--- GEMINI DEPLOY: v29 (Stage 3 Debug) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -22,7 +22,7 @@ export const loop = function () {
     }
     if (!room) return;
 
-    // --- 1. SINCRONIZAÇÃO DE STATUS (Antes do Planner) ---
+    // --- 1. SINCRONIZAÇÃO DE STATUS ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         for (const p of Memory.planning.plannedStructures) {
             if (p.status === 'built') continue;
@@ -39,11 +39,17 @@ export const loop = function () {
     // --- 2. PLANNER ---
     planStructures(room);
 
-    // --- 3. CRIAR CONSTRUCTION SITES ---
+    // --- 3. CRIAR CONSTRUCTION SITES (Com logs de erro) ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
         for (const p of toBuild) {
-            room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
+            const res = room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
+            if (res === OK) {
+                p.status = 'building';
+                console.log(`Main: Successfully created CS for ${p.structureType} at ${p.pos.x},${p.pos.y}`);
+            } else if (res !== ERR_FULL) {
+                console.log(`Main: FAILED to create CS for ${p.structureType} at ${p.pos.x},${p.pos.y}. Error: ${res}`);
+            }
         }
     }
 
@@ -83,7 +89,6 @@ export const loop = function () {
             const body = generateBody(roleToSpawn, energyForBody);
             let cost = 0;
             for (const part of body) cost += BODYPART_COST[part];
-            
             if (room.energyAvailable >= cost) {
                 spawn.spawnCreep(body, roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time, { memory: { role: roleToSpawn } });
             }
