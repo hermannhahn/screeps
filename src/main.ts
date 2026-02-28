@@ -59,7 +59,6 @@ export const loop = function () {
         const rcl = room.controller ? room.controller.level : 1;
         const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
-        // Metas
         const firstHarvester = harvesters[0];
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;

@@ -147,7 +147,7 @@ export function planStructures(room: Room): void {
         }
     }
 
-    // --- ESTÁGIO 4: CONTAINERS ---
+    // --- ESTÁGIO 4: CONTAINERS (Sources, Controller, Torres) ---
     if (stage === 4) {
         let addedAny = false;
 
@@ -158,7 +158,6 @@ export function planStructures(room: Room): void {
                                  planning.plannedStructures.some(p => p.structureType === STRUCTURE_CONTAINER && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).inRangeTo(source, 2));
             
             if (!hasContainer) {
-                // Pega a estrada mais próxima do source para colocar o container
                 const roadNearSource = planning.plannedStructures.find(p => p.structureType === STRUCTURE_ROAD && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).isNearTo(source.pos));
                 if (roadNearSource) {
                     const pos = new RoomPosition(roadNearSource.pos.x, roadNearSource.pos.y, roadNearSource.pos.roomName);
@@ -167,13 +166,24 @@ export function planStructures(room: Room): void {
             }
         }
 
-        // 2. Container no Controller
+        // 2. Container no Controller (Busca de spot livre)
         if (room.controller) {
             const hasCont = room.find(FIND_STRUCTURES, { filter: s => s.structureType === STRUCTURE_CONTAINER && s.pos.inRangeTo(room.controller!, 3) }).length > 0 ||
                             planning.plannedStructures.some(p => p.structureType === STRUCTURE_CONTAINER && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).inRangeTo(room.controller!, 3));
             if (!hasCont) {
-                const pos = new RoomPosition(room.controller.pos.x + 1, room.controller.pos.y + 1, room.name);
-                if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_CONTAINER, 'to_build', room)) addedAny = true;
+                const spots = [
+                    {dx: 1, dy: 1}, {dx: -1, dy: 1}, {dx: 1, dy: -1}, {dx: -1, dy: -1},
+                    {dx: 2, dy: 0}, {dx: -2, dy: 0}, {dx: 0, dy: 2}, {dx: 0, dy: -2}
+                ];
+                for (const off of spots) {
+                    const pos = new RoomPosition(room.controller.pos.x + off.dx, room.controller.pos.y + off.dy, room.name);
+                    if (room.getTerrain().get(pos.x, pos.y) !== TERRAIN_MASK_WALL && !planning.plannedStructures.some(p => p.pos.x === pos.x && p.pos.y === pos.y)) {
+                        if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_CONTAINER, 'to_build', room)) {
+                            addedAny = true;
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -183,8 +193,16 @@ export function planStructures(room: Room): void {
             const hasCont = tower.pos.findInRange(FIND_STRUCTURES, 1, { filter: { structureType: STRUCTURE_CONTAINER } }).length > 0 ||
                             planning.plannedStructures.some(p => p.structureType === STRUCTURE_CONTAINER && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).isNearTo(tower.pos));
             if (!hasCont) {
-                const pos = new RoomPosition(tower.pos.x, tower.pos.y + 1, room.name);
-                if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_CONTAINER, 'to_build', room)) addedAny = true;
+                const spots = [{dx: 0, dy: 1}, {dx: 0, dy: -1}, {dx: 1, dy: 0}, {dx: -1, dy: 0}];
+                for (const off of spots) {
+                    const pos = new RoomPosition(tower.pos.x + off.dx, tower.pos.y + off.dy, room.name);
+                    if (room.getTerrain().get(pos.x, pos.y) !== TERRAIN_MASK_WALL && !planning.plannedStructures.some(p => p.pos.x === pos.x && p.pos.y === pos.y)) {
+                        if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_CONTAINER, 'to_build', room)) {
+                            addedAny = true;
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -215,7 +233,10 @@ export function planStructures(room: Room): void {
             }
         }
 
-        const stage5Roads = planning.plannedStructures.filter(p => p.status !== 'built' && !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y));
+        const stage5Roads = planning.plannedStructures.filter(p => 
+            p.status !== 'built' && 
+            !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y)
+        );
         if (stage5Roads.length === 0 && activeCS.length === 0) {
             console.log("Planner: Stage 5 Complete.");
             planning.currentStage = 6;
