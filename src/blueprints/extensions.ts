@@ -1,5 +1,5 @@
 import { isSafePosition } from './utils'; 
-// PlannedStructure is now global via declarations.d.ts
+// PlannedStructure é global via declarations.d.ts
 
 /**
  * Gera as posições planejadas para Extensões para um dado RCL,
@@ -53,23 +53,15 @@ export function generateExtensionsLayout(room: Room, spawn: StructureSpawn, rcl:
         const look = pos.look();
         const hasBlockingElement = look.some(obj => {
             if (obj.type === LOOK_STRUCTURES) {
-                // Extensões NÃO podem ser construídas sobre:
-                // SPWANS, CONTROLLERS, SOURCES, MINERALS, TOWERS, STORAGE, LINKS, EXTRACTORS, LABS, TERMINALS, NUKERS, FACTORIES, OBSERVERS, POWER_SPAWNS
-                // E, CRITICAMENTE, RAMPARTS são bloqueadores para EXTENSIONS.
-                // APENAS ROADS e CONTAINERS não bloqueiam a construção de EXTENSIONS.
-                return obj.structure && (
-                    obj.structure.structureType !== STRUCTURE_ROAD &&
-                    obj.structure.structureType !== STRUCTURE_CONTAINER
-                    // Qualquer outra estrutura aqui bloqueia, incluindo RAMPARTS.
-                );
+                // Se existe QUALQUER estrutura (incluindo Road e Rampart), ela BLOQUEIA uma EXTENSION.
+                return true; // Se tem alguma estrutura, bloqueia
             }
             if (obj.type === LOOK_CONSTRUCTION_SITES) {
                 // Se já existe um CS de qualquer coisa, ele bloqueia a criação de um NOVO CS de extensão.
                 return true;
             }
             // Check para fontes, minerais (recursos não construíveis, não estruturas)
-            // O controller é uma estrutura e será pego pelo obj.type === LOOK_STRUCTURES
-            if (obj.type === LOOK_SOURCES || obj.type === LOOK_MINERALS) {
+            if (obj.type === LOOK_SOURCES || obj.type === LOOK_MINERALS || obj.type === LOOK_CONTROLLERS) {
                 return true;
             }
             return false;
