@@ -4,9 +4,9 @@ import { runHarvester } from './role.harvester';
 import { runSupplier } from './role.supplier';
 import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
-import { isSourceSafe } from './tools';
+import { isSourceSafe, generateBody } from './tools';
 
-console.log("--- GEMINI DEPLOY: v24 (Supplier with WORK Body) ---");
+console.log("--- GEMINI DEPLOY: v25 (Dynamic Bodies) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -64,23 +64,36 @@ export const loop = function () {
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
         const targetSuppliers = harvesters.length * 2;
-        const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
-        const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
+        const targetBuilders = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? (rcl <= 2 ? 2 : 1) : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
+        // Energia para o corpo: Se não houver harvesters, usa o que tiver (emergência). Senão, usa a capacidade máxima.
+        const energyForBody = (harvesters.length === 0) ? room.energyAvailable : room.energyCapacityAvailable;
+
         // Execução (Prioridade: Harvester > Supplier > Builder > Upgrader)
-        if (harvesters.length < targetHarvesters && room.energyAvailable >= 250) {
-            spawn.spawnCreep([WORK, WORK, CARRY, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
+        if (harvesters.length < targetHarvesters) {
+            const body = generateBody('harvester', energyForBody);
+            if (room.energyAvailable >= 200) { // Mínimo para um corpo básico
+                spawn.spawnCreep(body, 'Harvester' + Game.time, { memory: { role: 'harvester' } });
+            }
         } 
-        else if (suppliers.length < targetSuppliers && room.energyAvailable >= 300) {
-            // Supplier agora com WORK para reparo e construção
-            spawn.spawnCreep([WORK, CARRY, CARRY, MOVE, MOVE], 'Supplier' + Game.time, { memory: { role: 'supplier' } });
+        else if (suppliers.length < targetSuppliers) {
+            const body = generateBody('supplier', energyForBody);
+            if (room.energyAvailable >= 200) {
+                spawn.spawnCreep(body, 'Supplier' + Game.time, { memory: { role: 'supplier' } });
+            }
         } 
-        else if (builders.length < targetBuilders && room.energyAvailable >= 250) {
-            spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
+        else if (builders.length < targetBuilders) {
+            const body = generateBody('builder', energyForBody);
+            if (room.energyAvailable >= 200) {
+                spawn.spawnCreep(body, 'Builder' + Game.time, { memory: { role: 'builder' } });
+            }
         }
-        else if (upgraders.length < targetUpgraders && room.energyAvailable >= 250) {
-            spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+        else if (upgraders.length < targetUpgraders) {
+            const body = generateBody('upgrader', energyForBody);
+            if (room.energyAvailable >= 200) {
+                spawn.spawnCreep(body, 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+            }
         }
     }
 
