@@ -1,33 +1,35 @@
-// Define a structure for planned buildings
-interface PlannedStructure {
-    pos: RoomPosition;
-    structureType: StructureConstant;
-    status: 'planning' | 'to_build' | 'building' | 'built'; // Example statuses
-}
+// src/manager.planner.ts
+import { isTerrainValidForRoad, addPlannedStructure, findClosestAnchor } from './tools';
 
-// Placeholder for memory structure to store plans
-interface MemoryPlanning {
-    plannedStructures: PlannedStructure[];
-    // Potentially more fields for room-specific planning
-}
-
-export function planStructures(): PlannedStructure[] {
-    console.log("Planner: Starting planning process...");
-
-    // Initialize Memory.planning if it doesn't exist
+export function planStructures(room: Room): void {
     if (!Memory.planning) {
-        Memory.planning = { plannedStructures: [] };
+        Memory.planning = { plannedStructures: [], spawnSquareRoadAnchorPositions: [], currentStage: 1 };
     }
 
-    // TODO: Implement actual planning logic based on room state, RCL, sources, etc.
-    // For now, return an empty array as a placeholder.
-    const plannedStructures: PlannedStructure[] = [];
+    const stage = Memory.planning.currentStage;
+    console.log(`Planner Stage: ${stage}`);
 
-    console.log(`Planner: Planning process finished. Found ${plannedStructures.length} structures to plan.`);
-    return plannedStructures;
+    if (stage === 1) {
+        const spawns = room.find(FIND_MY_SPAWNS);
+        if (spawns.length > 0) {
+            const spawn = spawns[0];
+            const offsets = [{dx:-2, dy:0}, {dx:2, dy:0}, {dx:0, dy:-2}, {dx:0, dy:2}];
+            let added = 0;
+            for (const off of offsets) {
+                const pos = new RoomPosition(spawn.pos.x + off.dx, spawn.pos.y + off.dy, room.name);
+                if (addPlannedStructure(Memory.planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) {
+                    Memory.planning.spawnSquareRoadAnchorPositions.push(pos);
+                    added++;
+                }
+            }
+            if (added > 0) console.log(`Planner: Stage 1 - Planned ${added} roads.`);
+        }
+        
+        const pending = Memory.planning.plannedStructures.filter(p => p.status === 'to_build').length;
+        if (pending === 0 && Memory.planning.spawnSquareRoadAnchorPositions.length > 0) {
+            console.log("Planner: Stage 1 Complete. Advancing to Stage 2.");
+            Memory.planning.currentStage = 2;
+        }
+    }
+    // Adicionar lógicas de estágios 2 e 3 aqui posteriormente...
 }
-
-// This module will also be responsible for persisting plans to Memory.planning
-// and potentially loading them on game start.
-// The actual logic for finding sources, controller, towers and placing structures
-// will be implemented in subsequent steps.
