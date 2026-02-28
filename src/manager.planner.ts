@@ -147,25 +147,22 @@ export function planStructures(room: Room): void {
         }
     }
 
-    // --- ESTÁGIO 4: CONTAINERS (Sources, Controller, Torres) ---
+    // --- ESTÁGIO 4: CONTAINERS ---
     if (stage === 4) {
         let addedAny = false;
 
-        // 1. Containers nas Sources Seguras
+        // 1. Containers nas Sources
         const safeSources = sources.filter(s => isSourceSafe(s));
         for (const source of safeSources) {
             const hasContainer = room.find(FIND_STRUCTURES, { filter: s => s.structureType === STRUCTURE_CONTAINER && s.pos.inRangeTo(source, 2) }).length > 0 ||
                                  planning.plannedStructures.some(p => p.structureType === STRUCTURE_CONTAINER && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).inRangeTo(source, 2));
             
             if (!hasContainer) {
-                // Tenta colocar a 1 bloco de distância
-                const spots = source.pos.findInRange(FIND_PATH, 1); // Simples busca de vizinhos
-                // Alternativa: usar a estrada que já chega perto da source
+                // Pega a estrada mais próxima do source para colocar o container
                 const roadNearSource = planning.plannedStructures.find(p => p.structureType === STRUCTURE_ROAD && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).isNearTo(source.pos));
-                const targetPos = roadNearSource ? new RoomPosition(roadNearSource.pos.x, roadNearSource.pos.y, roadNearSource.pos.roomName) : null;
-
-                if (targetPos && addPlannedStructure(planning.plannedStructures, targetPos, STRUCTURE_CONTAINER, 'to_build', room)) {
-                    addedAny = true;
+                if (roadNearSource) {
+                    const pos = new RoomPosition(roadNearSource.pos.x, roadNearSource.pos.y, roadNearSource.pos.roomName);
+                    if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_CONTAINER, 'to_build', room)) addedAny = true;
                 }
             }
         }
@@ -174,9 +171,8 @@ export function planStructures(room: Room): void {
         if (room.controller) {
             const hasCont = room.find(FIND_STRUCTURES, { filter: s => s.structureType === STRUCTURE_CONTAINER && s.pos.inRangeTo(room.controller!, 3) }).length > 0 ||
                             planning.plannedStructures.some(p => p.structureType === STRUCTURE_CONTAINER && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).inRangeTo(room.controller!, 3));
-            
             if (!hasCont) {
-                const pos = new RoomPosition(room.controller.pos.x + 1, room.controller.pos.y + 1, room.name); // Spot simples
+                const pos = new RoomPosition(room.controller.pos.x + 1, room.controller.pos.y + 1, room.name);
                 if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_CONTAINER, 'to_build', room)) addedAny = true;
             }
         }
