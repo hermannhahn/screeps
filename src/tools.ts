@@ -1,5 +1,4 @@
 // src/tools.ts
-import { sayAction } from './tools';
 
 export function isTerrainValidForRoad(pos: RoomPosition, room: Room): boolean {
     if (!pos || !pos.roomName || pos.x < 0 || pos.y < 0 || pos.x >= 50 || pos.y >= 50) return false;
@@ -64,7 +63,6 @@ export function generateBody(role: string, energy: number): BodyPartConstant[] {
         }
     } 
     else if (role === 'reserver') {
-        // Reserver precisa de CLAIM e MOVE (CLAIM custa 600)
         let sets = Math.floor(energy / 650);
         if (sets > 2) sets = 2;
         if (sets < 1) sets = 1;
@@ -141,7 +139,6 @@ export function sayAction(creep: Creep, message: string): void {
     }
 }
 
-// Auxiliar para mover entre salas
 export function travelToRoom(creep: Creep, roomName: string): boolean {
     if (creep.room.name !== roomName) {
         const exitDir = creep.room.findExitTo(roomName);
