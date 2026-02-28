@@ -1,13 +1,14 @@
 // src/main.ts
-console.log("--- GEMINI DEPLOY: v6 (Spawning Priority & Role Refinement) ---");
-
 import { planStructures } from './manager.planner';
 import { runHarvester } from './role.harvester';
 import { runSupplier } from './role.supplier';
 import { runBuilder } from './role.builder';
 
+// Mensagem de deploy única (roda apenas no reset do script)
+console.log("--- GEMINI DEPLOY: v8 (Console Cleaned) ---");
+
 export const loop = function () {
-    // Limpeza de memória
+    // Limpeza de memória de creeps mortos
     for (const name in Memory.creeps) {
         if (!Game.creeps[name]) {
             delete Memory.creeps[name];
@@ -42,7 +43,7 @@ export const loop = function () {
         }
     }
 
-    // --- SPANWER LOGIC (Priority: Harvester > Supplier > Builder) ---
+    // Spawner básico (Harvester > Supplier > Builder)
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (spawn && !spawn.spawning) {
         const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name);
@@ -50,22 +51,12 @@ export const loop = function () {
         const suppliers = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'supplier');
         const builders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'builder');
 
-        let spawned = false;
-
-        // 1. Harvesters (Mínimo 2)
         if (harvesters.length < 2 && room.energyAvailable >= 250) {
             spawn.spawnCreep([WORK, WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
-            spawned = true;
-        } 
-        // 2. Suppliers (Mínimo 1, apenas se houver harvesters e energia no spawn/containers)
-        else if (!spawned && suppliers.length < 1 && harvesters.length > 0 && room.energyAvailable >= 200) {
+        } else if (suppliers.length < 1 && harvesters.length > 0 && room.energyAvailable >= 200) {
             spawn.spawnCreep([CARRY, CARRY, MOVE, MOVE], 'Supplier' + Game.time, { memory: { role: 'supplier' } });
-            spawned = true;
-        }
-        // 3. Builders (Mínimo 2, se houver CS)
-        else if (!spawned && builders.length < 2 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && room.energyAvailable >= 250) {
+        } else if (builders.length < 2 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && room.energyAvailable >= 250) {
             spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
-            spawned = true;
         }
     }
 
