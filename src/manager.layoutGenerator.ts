@@ -1,4 +1,5 @@
 import { isSafePosition } from './blueprints/utils';
+import { generateExtensionsLayout } from './blueprints/extensions'; // NOVO IMPORT
 
 const layoutGenerator = {
     generateLayout: function(room: Room, spawn: StructureSpawn): void {
@@ -7,21 +8,19 @@ const layoutGenerator = {
             generated: true
         };
 
-        const currentRCL = room.controller ? room.controller.level : 0; // Capture o RCL atual da sala
+        const currentRCL = room.controller ? room.controller.level : 0;
 
-        // --- Handle current RCL ---
-        // Primeiro, garantimos que o array para o RCL atual exista
+        // Garante que o array para o RCL atual exista
         if (!roomLayout.rcl[currentRCL]) {
             roomLayout.rcl[currentRCL] = [];
         }
 
-        // 1. Capturar estruturas existentes que queremos manter (ex: estradas, extensões próximas ao spawn)
-        // Para o RCL 1, vamos focar nas estradas ao redor do spawn e extensões básicas.
+        // 1. Capturar estruturas existentes que queremos manter
         const structuresToCapture = room.find(FIND_STRUCTURES, {
             filter: (s: Structure) => {
                 const isBuildable = (
                     s.structureType === STRUCTURE_ROAD ||
-                    s.structureType === STRUCTURE_EXTENSION ||
+                    s.structureType === STRUCTURE_EXTENSION || // Incluir extensões
                     s.structureType === STRUCTURE_RAMPART ||
                     s.structureType === STRUCTURE_WALL ||
                     s.structureType === STRUCTURE_CONTAINER ||
@@ -35,21 +34,27 @@ const layoutGenerator = {
                     s.structureType === STRUCTURE_FACTORY ||
                     s.structureType === STRUCTURE_SPAWN
                 );
-                return isBuildable && s.pos.getRangeTo(spawn.pos) <= 3;
+                return isBuildable && s.pos.getRangeTo(spawn.pos) <= 3; // Raio de 3 para capturar
             }
         });
 
         for (const s of structuresToCapture) {
-            // Adicionar ao layout de RCL atual, se já não existir
             if (!roomLayout.rcl[currentRCL].some((p: PlannedStructure) => p.x === s.pos.x && p.y === s.pos.y && p.structureType === s.structureType)) {
                 roomLayout.rcl[currentRCL].push({ x: s.pos.x, y: s.pos.y, structureType: s.structureType as BuildableStructureConstant });
             }
         }
         
-        // 2. Adicionar as estruturas que são idealmente planejadas (ex: estradas do spawn)
+        // 2. Adicionar as estruturas que são idealmente planejadas
         const newlyPlannedSpawnRoads = this.generateSpawnRoads(room, spawn);
         for (const planned of newlyPlannedSpawnRoads) {
-            // Adicionar ao layout de RCL atual, se já não existir (evita duplicatas com as capturadas)
+            if (!roomLayout.rcl[currentRCL].some((p: PlannedStructure) => p.x === planned.x && p.y === planned.y && p.structureType === planned.structureType)) {
+                roomLayout.rcl[currentRCL].push(planned);
+            }
+        }
+
+        // NOVO: Adicionar extensões planejadas
+        const newlyPlannedExtensions = generateExtensionsLayout(room, spawn, currentRCL);
+        for (const planned of newlyPlannedExtensions) {
             if (!roomLayout.rcl[currentRCL].some((p: PlannedStructure) => p.x === planned.x && p.y === planned.y && p.structureType === planned.structureType)) {
                 roomLayout.rcl[currentRCL].push(planned);
             }

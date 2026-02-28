@@ -1,77 +1,63 @@
-import { Blueprint } from './blueprintInterface';
+import { PlannedStructure } from '../declarations'; // Importar PlannedStructure
 import { isSafePosition } from './utils';
 
-const extensionsBlueprint: Blueprint = {
-    name: "Extensions",
+/**
+ * Gera as posições planejadas para Extensões para um dado RCL,
+ * usando um padrão fixo ao redor do spawn.
+ * @param room A sala atual.
+ * @param spawn O spawn principal da sala.
+ * @param rcl O nível atual do Controller da sala.
+ * @returns Um array de PlannedStructure para as extensões.
+ */
+export function generateExtensionsLayout(room: Room, spawn: StructureSpawn, rcl: number): PlannedStructure[] {
+    const planned: PlannedStructure[] = [];
+    if (rcl < 2) return planned; // Extensões só são permitidas a partir do RCL 2
 
-    plan: function(room: Room, spawn: StructureSpawn): number {
-        if (!room.controller || room.controller.level < 2) return 0;
-        if (!isSafePosition(spawn.pos)) return 0; // If even the spawn isn't safe, don't plan extensions nearby
+    const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][rcl];
+    let currentExtensions = 0;
 
-        let plannedCount = 0;
-        let sitesCreated = 0;
-        const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level];
-        const targetCount = maxExtensionsForRCL;
-        const minDistance = 2; // From original planExtensions
+    // Posições relativas ao spawn para um padrão de extensão (ex: em espiral ou anel)
+    // Este é um exemplo, pode ser ajustado para um layout específico
+    const relativePositions = [
+        { dx: 0, dy: -2 }, { dx: 1, dy: -2 }, { dx: 2, dy: -1 }, { dx: 2, dy: 0 }, { dx: 2, dy: 1 },
+        { dx: 1, dy: 2 }, { dx: 0, dy: 2 }, { dx: -1, dy: 2 }, { dx: -2, dy: -1 }, { dx: -2, dy: 0 },
+        { dx: -2, dy: -1 }, { dx: -1, dy: -2 }, // Primeiro anel (4 extensões para RCL2)
+        { dx: 0, dy: -3 }, { dx: 1, dy: -3 }, { dx: 2, dy: -2 }, { dx: 3, dy: -1 }, { dx: 3, dy: 0 },
+        { dx: 3, dy: 1 }, { dx: 2, dy: 2 }, { dx: 1, dy: 3 }, { dx: 0, dy: 3 }, { dx: -1, dy: 3 },
+        { dx: -2, dy: 2 }, { dx: -3, dy: 1 }, { dx: -3, dy: 0 }, { dx: -3, dy: -1 }, { dx: -2, dy: -2 },
+        { dx: -1, dy: -3 }, // Segundo anel (8 extensões para RCL3)
+        // Adicione mais posições conforme necessário para RCLs mais altos.
+        // RCL4 (10 ext) = 5+5 extras
+        // RCL5 (10 ext) = 5+5+5 extras
+        // etc.
+        { dx: -3, dy: -2 }, { dx: -3, dy: 2 }, { dx: 3, dy: -2 }, { dx: 3, dy: 2 }, { dx: -2, dy: -3 },
+        { dx: 2, dy: -3 }, { dx: -2, dy: 3 }, { dx: 2, dy: 3 }, // Anel externo para RCL4+
+    ];
 
-        const roads = room.find(FIND_STRUCTURES, {
-            filter: (s) => s.structureType === STRUCTURE_ROAD
-        }).concat(room.find(FIND_CONSTRUCTION_SITES, {
-            filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_ROAD
-        } as any) as any);
+    for (const relPos of relativePositions) {
+        if (currentExtensions >= maxExtensionsForRCL) break;
 
-        if (roads.length === 0) return 0;
+        const x = spawn.pos.x + relPos.dx;
+        const y = spawn.pos.y + relPos.dy;
 
-        for (const road of roads) {
-            if (plannedCount >= targetCount) break;
+        // Verificar limites da sala
+        if (x < 1 || x > 48 || y < 1 || y > 48) continue;
 
-            // Look for positions at exactly range 2 from the road
-            for (let dx = -2; dx <= 2; dx++) {
-                for (let dy = -2; dy <= 2; dy++) {
-                    if (plannedCount >= targetCount) break;
-                    if (Math.abs(dx) < 2 && Math.abs(dy) < 2) continue; // Skip range 0 and 1
+        const pos = new RoomPosition(x, y, room.name);
 
-                    const x = road.pos.x + dx;
-                    const y = road.pos.y + dy;
-                    if (x < 1 || x > 48 || y < 1 || y > 48) continue;
+        // Verificar se a posição é segura (não é wall e está longe do spawn)
+        if (room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) continue;
+        // Evita construir muito perto do spawn ou em posições importantes (como o próprio spawn)
+        if (pos.getRangeTo(spawn.pos) <= 1) continue; 
+        
+        // No novo planner, a verificação de "isSafePosition" e "não ter outra estrutura" será feita pelo manager.planner.ts
+        // Aqui, apenas geramos as posições "ideais".
 
-                    const pos = new RoomPosition(x, y, room.name);
-                    if (pos.getRangeTo(spawn.pos) < minDistance) continue;
-
-                    if (room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) continue;
-
-                    // Check range 1 around this position for ANY structure or construction site
-                    const structuresInRange1 = pos.findInRange(FIND_STRUCTURES, 1).length;
-                    const sitesInRange1 = pos.findInRange(FIND_CONSTRUCTION_SITES, 1).length;
-
-                    if (structuresInRange1 === 0 && sitesInRange1 === 0) {
-                        if (room.createConstructionSite(x, y, STRUCTURE_EXTENSION) === OK) {
-                            plannedCount++;
-                            sitesCreated++;
-                        }
-                    }
-                }
-            }
-        }
-        return sitesCreated;
-    },
-
-    isComplete: function(room: Room, spawn: StructureSpawn): boolean {
-        if (!room.controller || room.controller.level < 2) return true; // Not applicable or too early
-
-        const builtExtensions = room.find(FIND_MY_STRUCTURES, {
-            filter: (s: AnyStructure) => s.structureType === STRUCTURE_EXTENSION
-        }).length;
-        const extensionConstructionSites = room.find(FIND_CONSTRUCTION_SITES, {
-            filter: (cs: ConstructionSite) => cs.structureType === STRUCTURE_EXTENSION
-        }).length;
-
-        const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level];
-        const targetExtensions = maxExtensionsForRCL;
-
-        // Stage is considered complete if we have built or are building the target number of extensions
-        return (builtExtensions + extensionConstructionSites) >= targetExtensions;
+        planned.push({ x: x, y: y, structureType: STRUCTURE_EXTENSION });
+        currentExtensions++;
     }
-};
 
-export default extensionsBlueprint;
+    return planned;
+}
+
+export default generateExtensionsLayout;
