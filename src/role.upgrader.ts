@@ -11,7 +11,6 @@ export function runUpgrader(creep: Creep): void {
         delete creep.memory.targetId;
     }
 
-    // Validação do alvo de coleta
     if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (!target || getEnergyAmount(target) === 0) delete creep.memory.targetId;
@@ -20,9 +19,10 @@ export function runUpgrader(creep: Creep): void {
     if (creep.memory.upgrading) {
         if (creep.upgradeController(creep.room.controller!) === ERR_NOT_IN_RANGE) {
             creep.moveTo(creep.room.controller!, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 10 });
+        } else {
+            creep.say('⚡');
         }
     } else {
-        // --- COLETAR ---
         if (!creep.memory.targetId) {
             const controllerContainer = creep.room.controller!.pos.findInRange(FIND_STRUCTURES, 3, {
                 filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] > 0 && isTargetAvailable(creep, s)
@@ -38,9 +38,13 @@ export function runUpgrader(creep: Creep): void {
             const target = Game.getObjectById(creep.memory.targetId as Id<any>);
             if (target) {
                 if (creep.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10 });
+                    creep.moveTo(target, { reusePath: 10 });
+                } else {
+                    creep.say('📦');
                 }
             }
+        } else {
+            creep.say('💤');
         }
     }
 }

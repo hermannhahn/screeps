@@ -8,7 +8,6 @@ export function runHarvester(creep: Creep): void {
     if (!creep.memory.sourceId) {
         const sources = room.find(FIND_SOURCES);
         const safeSources = _.filter(sources, (s) => isSourceSafe(s));
-        
         if (safeSources.length > 0) {
             const harvesters = _.filter(Game.creeps, (c) => c.room.name === room.name && c.memory.role === 'harvester' && c.name !== creep.name);
             for (const source of safeSources) {
@@ -31,13 +30,13 @@ export function runHarvester(creep: Creep): void {
     if (creep.store.getFreeCapacity() > 0) {
         if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
             creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
+        } else {
+            creep.say('⛏️');
         }
     } else {
-        // --- DEPÓSITO ---
         const suppliers = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name && c.memory.role === 'supplier' && !c.spawning);
 
         if (suppliers.length === 0) {
-            // SEM SUPPLIERS: Prioridade total no Spawn/Extensions
             const target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
                 filter: (s: AnyStructure) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
                                s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
@@ -45,16 +44,17 @@ export function runHarvester(creep: Creep): void {
             if (target) {
                 if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+                } else {
+                    creep.say('📥');
                 }
             } else {
-                // Fallback para upgrade
                 if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(room.controller!);
+                } else {
+                    creep.say('⚡');
                 }
             }
         } else {
-            // COM SUPPLIERS: PROIBIDO Spawn/Extensions. Usar Links > Containers > Drop.
-            // 1. Tentar Link em range 3
             const link = creep.pos.findInRange(FIND_MY_STRUCTURES, 3, {
                 filter: (s) => s.structureType === STRUCTURE_LINK && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
             })[0];
@@ -62,9 +62,10 @@ export function runHarvester(creep: Creep): void {
             if (link) {
                 if (creep.transfer(link, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(link);
+                } else {
+                    creep.say('📥');
                 }
             } else {
-                // 2. Tentar Container em range 3
                 const container = creep.pos.findInRange(FIND_STRUCTURES, 3, {
                     filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
                 })[0];
@@ -72,9 +73,11 @@ export function runHarvester(creep: Creep): void {
                 if (container) {
                     if (creep.transfer(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                         creep.moveTo(container);
+                    } else {
+                        creep.say('📥');
                     }
                 } else {
-                    // 3. Drop (Supplier pegará)
+                    creep.say('📦');
                     creep.drop(RESOURCE_ENERGY);
                 }
             }
