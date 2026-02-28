@@ -182,6 +182,11 @@ export const loop = () => {
     // Run Market Manager to handle excess resources
     managerMarket.run();
 
+    // Inicializar Memory.roomsToExplore se for undefined
+    if (!Memory.roomsToExplore) {
+        Memory.roomsToExplore = [];
+    }
+
     // Pixel generation logic
     if (Game.cpu.generatePixel && Game.cpu.bucket >= 10000) {
         const anyRoomUnderAttack = _.some(Game.rooms, (room) => cacheUtils.getHostiles(room).length > 0);
