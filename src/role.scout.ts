@@ -8,19 +8,23 @@ export function runScout(creep: Creep): void {
         sayAction(creep, '🔭');
         travelToRoom(creep, creep.memory.targetRoom);
     } else {
-        // Chegou na sala, mapeia as fontes se ainda não estiver na memória
+        // Chegou na sala, mapeia as fontes
         if (!Memory.remoteMining) Memory.remoteMining = {};
         
         const sources = creep.room.find(FIND_SOURCES);
         const sourceIds = sources.map(s => s.id);
         
+        // Verifica se a sala é hostil
+        const controller = creep.room.controller;
+        const isHostile = !!(controller && controller.owner && !controller.my);
+        
         Memory.remoteMining[creep.room.name] = {
             sources: sourceIds,
-            reserverNeeded: !!creep.room.controller,
+            reserverNeeded: !!controller && !controller.owner,
+            isHostile: isHostile,
             lastScouted: Game.time
         };
         
         sayAction(creep, '✅');
-        // Após escanear, o scout pode ficar parado ou ir para a próxima sala (lógica futura)
     }
 }
