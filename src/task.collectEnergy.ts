@@ -125,11 +125,6 @@ const taskCollectEnergy = {
                     delete creep.memory.targetEnergyId;
                 }
             }
-        } else {
-            // Idle behavior
-            if (creep.room.controller && creep.pos.getRangeTo(creep.room.controller) > 3) {
-                creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.2 } });
-            }
         }
     }
 };

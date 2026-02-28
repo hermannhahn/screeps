@@ -1,6 +1,5 @@
 import taskRepair from './task.repair';
 import taskCollectEnergy from './task.collectEnergy';
-import taskUpgrade from './task.upgrade';
 
 const roleRepairer = {
     run: function(creep: Creep) {
@@ -14,9 +13,7 @@ const roleRepairer = {
         }
 
         if (creep.memory.repairing) {
-            if (!taskRepair.run(creep)) {
-                taskUpgrade.run(creep);
-            }
+            taskRepair.run(creep);
         } else {
             taskCollectEnergy.run(creep);
         }

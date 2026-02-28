@@ -1,6 +1,4 @@
 import _ from 'lodash';
-import taskBuild from './task.build';
-import taskUpgrade from './task.upgrade';
 import taskDeliver from './task.deliver';
 import { cacheUtils } from './utils.cache';
 
@@ -83,7 +81,6 @@ const roleHarvester = {
                     creep.memory.sourceId = bestSource.id;
                     creep.say('⛏️');
                 }
-                else if (!taskBuild.run(creep)) taskUpgrade.run(creep);
             }
         } else {
             const suppliersInRoom = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === creep.room.name);
@@ -127,11 +124,7 @@ const roleHarvester = {
                 }
             } else {
                 // EMERGENCY: No suppliers, harvester must deliver energy
-                if (!taskDeliver.run(creep)) {
-                    if (!taskBuild.run(creep)) {
-                        taskUpgrade.run(creep);
-                    }
-                }
+                taskDeliver.run(creep);
             }
         }
     }

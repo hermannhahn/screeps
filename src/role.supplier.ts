@@ -2,8 +2,6 @@ import _ from 'lodash';
 import taskDeliver from './task.deliver';
 import taskCollectEnergy from './task.collectEnergy';
 import taskRepair from './task.repair';
-import taskBuild from './task.build';
-import taskUpgrade from './task.upgrade';
 import { getIncomingCollection } from './utils.creep';
 
 const roleSupplier = {
@@ -21,11 +19,7 @@ const roleSupplier = {
         if (creep.memory.delivering) {
             if (!taskDeliver.run(creep)) {
                 // Secondary tasks if no one needs delivery
-                if (!taskRepair.run(creep)) {
-                    if (!taskBuild.run(creep)) {
-                        taskUpgrade.run(creep);
-                    }
-                }
+                taskRepair.run(creep);
             }
         } else {
             // PRIORITY 1: Source Containers (Specific for Suppliers to keep mining flowing)

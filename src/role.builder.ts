@@ -1,6 +1,5 @@
 import taskCollectEnergy from './task.collectEnergy';
 import taskBuild from './task.build';
-import taskUpgrade from './task.upgrade';
 
 const roleBuilder = {
     run: function(creep: Creep) {
@@ -14,9 +13,7 @@ const roleBuilder = {
         }
 
         if (creep.memory.building) {
-            if (!taskBuild.run(creep)) {
-                taskUpgrade.run(creep);
-            }
+            taskBuild.run(creep);
         } else {
             taskCollectEnergy.run(creep);
         }
