@@ -67,8 +67,9 @@ export function generateExtensionsLayout(room: Room, spawn: StructureSpawn, rcl:
                 // Se já existe um CS de qualquer coisa, ele bloqueia a criação de um NOVO CS de extensão.
                 return true;
             }
-            // Check para fontes, minerais, controller (recursos não construíveis)
-            if (obj.type === 'source' || obj.type === 'mineral' || obj.type === 'controller') {
+            // Check para fontes, minerais (recursos não construíveis, não estruturas)
+            // O controller é uma estrutura e será pego pelo obj.type === LOOK_STRUCTURES
+            if (obj.type === LOOK_SOURCES || obj.type === LOOK_MINERALS) {
                 return true;
             }
             return false;
