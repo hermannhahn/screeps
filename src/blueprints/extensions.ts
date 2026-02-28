@@ -1,4 +1,3 @@
-import { PlannedStructure } from '../declarations'; // Importar PlannedStructure
 import { isSafePosition } from './utils';
 
 /**
