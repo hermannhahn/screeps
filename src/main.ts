@@ -7,6 +7,8 @@ import { runUpgrader } from './role.upgrader';
 import { isSourceSafe, generateBody } from './tools';
 
 export const loop = function () {
+    // console.log(`--- TICK ${Game.time} ---`);
+
     for (const name in Memory.creeps) {
         if (!Game.creeps[name]) {
             delete Memory.creeps[name];
@@ -20,7 +22,7 @@ export const loop = function () {
     }
     if (!room) return;
 
-    // --- 1. SINCRONIZAÇÃO DE STATUS ---
+    // 1. Sincronizar
     if (Memory.planning && Memory.planning.plannedStructures) {
         for (const p of Memory.planning.plannedStructures) {
             if (p.status === 'built') continue;
@@ -34,21 +36,23 @@ export const loop = function () {
         }
     }
 
-    // --- 2. PLANNER ---
-    planStructures(room);
+    // 2. Planner
+    try {
+        planStructures(room);
+    } catch (e) {
+        console.log("Main Error (Planner): " + e);
+    }
 
-    // --- 3. CRIAR CONSTRUCTION SITES ---
+    // 3. CS
     if (Memory.planning && Memory.planning.plannedStructures) {
         const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
         for (const p of toBuild) {
             const res = room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
-            if (res === OK) {
-                p.status = 'building';
-            }
+            if (res === OK) p.status = 'building';
         }
     }
 
-    // --- 4. LOGICA DE SPAWN ---
+    // 4. Spawn
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (spawn && !spawn.spawning) {
         const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name);
@@ -90,7 +94,7 @@ export const loop = function () {
         }
     }
 
-    // --- 5. RODAR CREEPS ---
+    // 5. Creeps
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
         if (creep.spawning) continue;
