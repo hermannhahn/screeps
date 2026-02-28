@@ -10,12 +10,21 @@ declare global {
         upgrading?: boolean;
         sourceId?: Id<Source>;
         targetId?: Id<any>;
-        lastAction?: string; // Armazena a última ação para evitar repetição do creep.say
+        lastAction?: string;
+        targetRoom?: string; // Sala alvo para roles remotas
+        homeRoom?: string;   // Sala principal para retornar com energia
     }
 
     interface Memory {
         initialized?: boolean;
         planning?: MemoryPlanning;
+        remoteMining?: { [roomName: string]: RemoteMiningData };
+    }
+
+    interface RemoteMiningData {
+        sources: Id<Source>[];
+        reserverNeeded: boolean;
+        lastScouted: number;
     }
 
     interface MemoryPlanning {

@@ -1,4 +1,6 @@
 // src/tools.ts
+import { sayAction } from './tools';
+
 export function isTerrainValidForRoad(pos: RoomPosition, room: Room): boolean {
     if (!pos || !pos.roomName || pos.x < 0 || pos.y < 0 || pos.x >= 50 || pos.y >= 50) return false;
     const terrain = room.getTerrain().get(pos.x, pos.y);
@@ -40,7 +42,8 @@ export function isSourceSafe(source: Source): boolean {
 
 export function generateBody(role: string, energy: number): BodyPartConstant[] {
     let body: BodyPartConstant[] = [];
-    if (role === 'harvester') {
+    
+    if (role === 'harvester' || role === 'remoteHarvester') {
         body.push(CARRY);
         body.push(MOVE);
         let remaining = energy - 100;
@@ -48,7 +51,8 @@ export function generateBody(role: string, energy: number): BodyPartConstant[] {
         if (workParts > 6) workParts = 6;
         if (workParts < 1) workParts = 1;
         for (let i = 0; i < workParts; i++) body.push(WORK);
-    } else if (role === 'supplier') {
+    } 
+    else if (role === 'supplier' || role === 'remoteCarrier') {
         body.push(WORK);
         let remaining = energy - 100;
         let pairs = Math.floor(remaining / 100);
@@ -58,7 +62,21 @@ export function generateBody(role: string, energy: number): BodyPartConstant[] {
             body.push(CARRY);
             body.push(MOVE);
         }
-    } else {
+    } 
+    else if (role === 'reserver') {
+        // Reserver precisa de CLAIM e MOVE (CLAIM custa 600)
+        let sets = Math.floor(energy / 650);
+        if (sets > 2) sets = 2;
+        if (sets < 1) sets = 1;
+        for (let i = 0; i < sets; i++) {
+            body.push(CLAIM);
+            body.push(MOVE);
+        }
+    }
+    else if (role === 'scout') {
+        body = [MOVE];
+    }
+    else {
         let sets = Math.floor(energy / 200);
         if (sets > 15) sets = 15;
         if (sets < 1) sets = 1;
@@ -116,10 +134,24 @@ export function handleDefensiveState(creep: Creep): boolean {
     return false;
 }
 
-// Exibe um emoji apenas quando a ação do creep muda
 export function sayAction(creep: Creep, message: string): void {
     if (creep.memory.lastAction !== message) {
         creep.say(message, false);
         creep.memory.lastAction = message;
     }
+}
+
+// Auxiliar para mover entre salas
+export function travelToRoom(creep: Creep, roomName: string): boolean {
+    if (creep.room.name !== roomName) {
+        const exitDir = creep.room.findExitTo(roomName);
+        if (exitDir !== ERR_NO_PATH && exitDir !== ERR_INVALID_ARGS) {
+            const exit = creep.pos.findClosestByRange(exitDir as ExitConstant);
+            if (exit) {
+                creep.moveTo(exit, { visualizePathStyle: { stroke: '#ffffff' } });
+                return true;
+            }
+        }
+    }
+    return false;
 }
