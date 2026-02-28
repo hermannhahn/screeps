@@ -24,7 +24,7 @@ interface CreepMemory {
 interface RoomMemory {
     // Other room memory properties
     layout?: RoomLayoutMemory; // Adicionado para o novo planner
-    primaryHostileTargetId?: Id<Creep>; // Adicionado para manager.tower
+    primaryHostileTargetId: Id<Creep> | null; // Adicionado para manager.tower
 }
 
 interface SourceMemory {

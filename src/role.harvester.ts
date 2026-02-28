@@ -32,14 +32,13 @@ const roleHarvester = {
                         flee: true,
                         plainCost: 1,
                         swampCost: 5,
-                        roomCallback: (roomName) => {
+                        roomCallback: (roomName: string) => { // Type 'string'
                             let room = Game.rooms[roomName];
                             if (!room) return new PathFinder.CostMatrix();
                             
-                            // Use cache for CostMatrix or objects within the tick
                             const cm = new PathFinder.CostMatrix();
-                            cacheUtils.getHostiles(room).forEach(c => cm.set(c.pos.x, c.pos.y, 255));
-                            cacheUtils.findInRoom(room, FIND_STRUCTURES, undefined, 10).forEach(struct => {
+                            cacheUtils.getHostiles(room).forEach((c: Creep) => cm.set(c.pos.x, c.pos.y, 255)); // Type 'Creep'
+                            cacheUtils.findInRoom(room, FIND_STRUCTURES, undefined, 10).forEach((struct: Structure) => { // Type 'Structure'
                                 if (struct.structureType !== STRUCTURE_ROAD && struct.structureType !== STRUCTURE_CONTAINER && struct.structureType !== STRUCTURE_RAMPART) {
                                     cm.set(struct.pos.x, struct.pos.y, 255);
                                 }
@@ -63,14 +62,14 @@ const roleHarvester = {
                 }
             } else {
                 const hostileStructures = cacheUtils.findInRoom(creep.room, FIND_HOSTILE_STRUCTURES, undefined, 10);
-                const safeSources = cacheUtils.getSources(creep.room).filter(s => isSourceSafe(s, hostileStructures, hostileCreepsInRoom));
+                const safeSources = cacheUtils.getSources(creep.room).filter((s: Source) => isSourceSafe(s, hostileStructures, hostileCreepsInRoom)); // Type 'Source'
                 const targetHarvestersPerSource = creep.room.controller && creep.room.controller.level < 4 ? 2 : 1;
 
                 let bestSource: Source | null = null;
                 let minHarvesters = Infinity;
 
                 for (const s of safeSources) {
-                    const assigned = _.filter(Game.creeps, (c) => c.memory.role === 'harvester' && c.memory.sourceId === s.id).length;
+                    const assigned = _.filter(Game.creeps, (c: Creep) => c.memory.role === 'harvester' && c.memory.sourceId === s.id).length; // Type 'Creep'
                     if (assigned < targetHarvestersPerSource && assigned < minHarvesters) {
                         minHarvesters = assigned;
                         bestSource = s;
@@ -83,12 +82,12 @@ const roleHarvester = {
                 }
             }
         } else {
-            const suppliersInRoom = _.filter(Game.creeps, (c) => c.memory.role === 'supplier' && c.room.name === creep.room.name);
+            const suppliersInRoom = _.filter(Game.creeps, (c: Creep) => c.memory.role === 'supplier' && c.room.name === creep.room.name); // Type 'Creep'
 
             if (suppliersInRoom.length > 0) {
                 // Prioridade 1: Links em range 3
                 const linksInRange = creep.pos.findInRange(FIND_MY_STRUCTURES, 3, {
-                    filter: (s) => s.structureType === STRUCTURE_LINK && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                    filter: (s: StructureLink) => s.structureType === STRUCTURE_LINK && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 // Type 'StructureLink'
                 }) as StructureLink[];
 
                 if (linksInRange.length > 0) {
@@ -107,7 +106,7 @@ const roleHarvester = {
 
                 if (assignedSource) {
                     const containersInRange = assignedSource.pos.findInRange(FIND_STRUCTURES, 3, { 
-                        filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                        filter: (s: StructureContainer) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 // Type 'StructureContainer'
                     }) as StructureContainer[];
 
                     if (containersInRange.length > 0) {

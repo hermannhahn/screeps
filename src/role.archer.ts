@@ -13,11 +13,11 @@ const roleArcher = {
                     const fleePath = PathFinder.search(
                         creep.pos,
                         { pos: target.pos, range: 3 },
-                        { flee: true, roomCallback: (roomName) => {
+                        { flee: true, roomCallback: (roomName: string) => { // Adicionado o tipo string
                             const room = Game.rooms[roomName];
                             if (!room) return false;
                             const costs = new PathFinder.CostMatrix();
-                            room.find(FIND_STRUCTURES).forEach(function(s) {
+                            room.find(FIND_STRUCTURES).forEach(function(s: Structure) { // Adicionado o tipo Structure
                                 if (s.structureType === STRUCTURE_ROAD) {
                                     // Personaliza para estradas
                                     costs.set(s.pos.x, s.pos.y, 1);
@@ -28,8 +28,7 @@ const roleArcher = {
                             });
                             return costs;
                         }}
-                    );
-                    if (fleePath.path.length > 0) {
+                    );                    if (fleePath.path.length > 0) {
                         creep.moveByPath(fleePath.path);
                     } else {
                         // Se não conseguir fugir, pelo menos se move para o range 3
