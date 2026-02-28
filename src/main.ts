@@ -182,9 +182,10 @@ export const loop = () => {
     // Run Market Manager to handle excess resources
     managerMarket.run();
 
-    // Inicializar Memory.roomsToExplore se for undefined
-    if (!Memory.roomsToExplore) {
+    // Inicializar Memory.roomsToExplore se for undefined OU se não for um array
+    if (!Memory.roomsToExplore || !Array.isArray(Memory.roomsToExplore)) {
         Memory.roomsToExplore = [];
+        console.log("[Main] Resetting Memory.roomsToExplore as it was undefined or not an array.");
     }
 
     // Pixel generation logic
