@@ -4,19 +4,18 @@ import { runHarvester } from './role.harvester';
 import { runSupplier } from './role.supplier';
 import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
+import { isSourceSafe } from './tools';
 
-console.log("--- GEMINI DEPLOY: v17 (Body Parts Fix) ---");
+console.log("--- GEMINI DEPLOY: v18 (Full Spawning Priority Restored) ---");
 
 export const loop = function () {
-    if (Game.time % 1000 === 0) console.log(`--- TICK: ${Game.time} ---`);
-
     for (const name in Memory.creeps) {
         if (!Game.creeps[name]) {
             delete Memory.creeps[name];
         }
     }
 
-    let room = Object.values(Game.rooms)[0];
+    const room = Object.values(Game.rooms)[0];
     if (!room) {
         const spawns = Object.values(Game.spawns);
         if (spawns.length > 0) room = spawns[0].room;
@@ -47,21 +46,39 @@ export const loop = function () {
         }
     }
 
-    // --- LOGICA DE SPAWN (Corpos corrigidos) ---
+    // --- LOGICA DE SPAWN DINAMICA ---
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (spawn && !spawn.spawning) {
         const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name);
         const harvesters = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'harvester');
-        
-        // Harvester agora com CARRY
-        if (harvesters.length < 2 && room.energyAvailable >= 200) {
-            const res = spawn.spawnCreep([WORK, CARRY, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
-            if (res === OK) console.log("Main: Spawning Harvester (Fixed Body)");
-        } else {
-            const builders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'builder');
-            if (builders.length < 2 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && room.energyAvailable >= 200) {
-                spawn.spawnCreep([WORK, CARRY, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
-            }
+        const suppliers = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'supplier');
+        const builders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'builder');
+        const upgraders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'upgrader');
+
+        const sources = room.find(FIND_SOURCES);
+        const safeSources = _.filter(sources, (s) => isSourceSafe(s));
+        const rcl = room.controller ? room.controller.level : 1;
+
+        // Metas
+        const firstHarvester = harvesters[0];
+        const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
+        const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
+        const targetSuppliers = harvesters.length * 2;
+        const targetBuilders = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? (rcl <= 2 ? 2 : 1) : 0;
+        const targetUpgraders = (rcl <= 3) ? 2 : 1;
+
+        // Execução (Prioridade: Harvester > Supplier > Builder > Upgrader)
+        if (harvesters.length < targetHarvesters && room.energyAvailable >= 250) {
+            spawn.spawnCreep([WORK, WORK, CARRY, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
+        } 
+        else if (suppliers.length < targetSuppliers && room.energyAvailable >= 200) {
+            spawn.spawnCreep([CARRY, CARRY, MOVE, MOVE], 'Supplier' + Game.time, { memory: { role: 'supplier' } });
+        } 
+        else if (builders.length < targetBuilders && room.energyAvailable >= 250) {
+            spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
+        }
+        else if (upgraders.length < targetUpgraders && room.energyAvailable >= 250) {
+            spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
         }
     }
 
@@ -69,14 +86,9 @@ export const loop = function () {
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
         if (creep.spawning) continue;
-        
-        try {
-            if (creep.memory.role === 'harvester') runHarvester(creep);
-            else if (creep.memory.role === 'builder') runBuilder(creep);
-            else if (creep.memory.role === 'supplier') runSupplier(creep);
-            else if (creep.memory.role === 'upgrader') runUpgrader(creep);
-        } catch (e) {
-            console.log(`Error running creep ${creep.name}: ${e}`);
-        }
+        if (creep.memory.role === 'harvester') runHarvester(creep);
+        else if (creep.memory.role === 'builder') runBuilder(creep);
+        else if (creep.memory.role === 'supplier') runSupplier(creep);
+        else if (creep.memory.role === 'upgrader') runUpgrader(creep);
     }
 }
