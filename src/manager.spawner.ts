@@ -156,26 +156,40 @@ function getSupplierBody(energyLimit: number): BodyPartConstant[] {
     const parts: BodyPartConstant[] = [];
     let currentCost = 0;
 
-    // Phase 0: Ensure minimum energy for a basic functional creep (WORK, CARRY, MOVE)
-    const basicCreepCost = BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    // Phase 0: Ensure minimum energy for a basic functional creep (CARRY, MOVE)
+    const basicCreepCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
     if (energyLimit < basicCreepCost) {
         return []; // Not enough energy for a basic creep
     }
 
-    // Phase 1: Add one WORK, one CARRY, and one MOVE as a base
-    parts.push(WORK, CARRY, MOVE);
+    // Phase 1: Add one CARRY and one MOVE as a base
+    parts.push(CARRY, MOVE);
     currentCost += basicCreepCost;
 
-    // Phase 2: Add more CARRY and MOVE parts in a 1:1 ratio, up to a reasonable limit (e.g., 10 CARRY, 10 MOVE total)
-    const maxCarryMovePairs = 10; // To prevent too much CARRY and maintain speed
-    const pairCost = BODYPART_COST[CARRY] + BODYPART_COST[MOVE];
+    // Phase 2: Add more CARRY and MOVE parts. Aim for 2 CARRY : 1 MOVE for road efficiency.
+    // If not on roads, 1 CARRY : 1 MOVE is faster, but 2:1 maximizes transport capacity/cost.
+    // Let's go with a balanced approach for now, prioritizing CARRY to maximize load.
+    const carryPartCost = BODYPART_COST[CARRY];
+    const movePartCost = BODYPART_COST[MOVE];
 
-    while (currentCost + pairCost <= energyLimit && 
-           parts.filter(p => p === CARRY).length < maxCarryMovePairs && 
-           parts.filter(p => p === MOVE).length < maxCarryMovePairs && 
-           parts.length < 48) {
-        parts.push(CARRY, MOVE);
-        currentCost += pairCost;
+    while (currentCost + carryPartCost + movePartCost <= energyLimit && parts.length < 48) {
+        // Adiciona 2 CARRYs para cada MOVE, otimizando para estradas
+        if (currentCost + (carryPartCost * 2) + movePartCost <= energyLimit && parts.length + 3 <= 48) {
+             parts.push(CARRY, CARRY, MOVE);
+             currentCost += (carryPartCost * 2) + movePartCost;
+        } else if (currentCost + carryPartCost + movePartCost <= energyLimit && parts.length + 2 <= 48) {
+            // Se não puder adicionar 2 CARRYs e 1 MOVE, tenta 1 CARRY e 1 MOVE
+            parts.push(CARRY, MOVE);
+            currentCost += carryPartCost + movePartCost;
+        } else {
+            break; // Não pode adicionar mais partes
+        }
+    }
+    
+    // Fallback: se ainda houver energia e espaço, adicione CARRYs extras
+    while (currentCost + carryPartCost <= energyLimit && parts.length < 48) {
+        parts.push(CARRY);
+        currentCost += carryPartCost;
     }
 
     return parts;
@@ -340,10 +354,23 @@ function getArcherBody(energyLimit: number): BodyPartConstant[] {
 
 
 function getScoutBody(energyLimit: number): BodyPartConstant[] {
-    if (energyLimit < 50) {
+    const parts: BodyPartConstant[] = [];
+    let currentCost = 0;
+
+    // Base: Mínimo 1 MOVE
+    if (energyLimit < BODYPART_COST[MOVE]) {
         return [];
     }
-    return [MOVE];
+    parts.push(MOVE);
+    currentCost += BODYPART_COST[MOVE];
+
+    // Adiciona mais MOVE parts para velocidade máxima (até 48, ou 24 MOVEs para 1 tick/tile)
+    const maxMoveParts = 24; // 24 MOVE parts garantem velocidade máxima (1 tick/tile)
+    while (currentCost + BODYPART_COST[MOVE] <= energyLimit && parts.length < maxMoveParts && parts.length < 48) {
+        parts.push(MOVE);
+        currentCost += BODYPART_COST[MOVE];
+    }
+    return parts;
 }
 
 
