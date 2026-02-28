@@ -29,14 +29,14 @@ const managerPlanner = {
 
         const BLUEPRINTS_ORDER: Blueprint[] = [
             spawnRoadsBlueprint,
+            sourceRoadsBlueprint,
+            controllerRoadsBlueprint,
             extensionsBlueprint, // Extensions are high priority for energy capacity
             firstTowerBlueprint, // Defense is priority
             storageBlueprint, // Logistics anchor
             sourceContainersBlueprint,
             controllerContainerBlueprint,
             secondTowerBlueprint,
-            sourceRoadsBlueprint,
-            controllerRoadsBlueprint,
             linksBlueprint,
             rampartsWallsBlueprint,
             mineralRoadsBlueprint, // Only really needed at RCL 6+
@@ -64,7 +64,7 @@ const managerPlanner = {
             // ROADS priority: Plan roads even if there are many CS (up to 80), to ensure logistics don't break.
             const csLimit = isRoadBlueprint ? 80 : 20;
             if (totalConstructionSites >= csLimit) {
-                break; 
+                continue; 
             }
 
             let sitesCreated = currentBlueprint.plan(room, spawn);
