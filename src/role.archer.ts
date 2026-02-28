@@ -21,8 +21,8 @@ const roleArcher = {
                                 if (s.structureType === STRUCTURE_ROAD) {
                                     // Personaliza para estradas
                                     costs.set(s.pos.x, s.pos.y, 1);
-                                } else if (s.structureType !== STRUCTURE_CONTAINER && (s.structureType !== STRUCTURE_RAMPART || !s.my)) {
-                                    // Evita estruturas que não sejam containers ou ramparts do próprio jogador
+                                } else if (s.structureType !== STRUCTURE_CONTAINER && (s.structureType !== STRUCTURE_RAMPART || (s as OwnedStructure).my === false || (s as OwnedStructure).my === undefined)) {
+                                    // Evita estruturas que não sejam containers ou ramparts do próprio jogador (verifica se é do inimigo ou neutra)
                                     costs.set(s.pos.x, s.pos.y, 0xff);
                                 }
                             });

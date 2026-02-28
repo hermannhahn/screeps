@@ -21,8 +21,8 @@ const roleScout = {
             const exitRoomName = exits[direction as ExitKey];
             // Certifica-se de que a sala não é controlada por outro jogador antes de adicionar para exploração
             // E que não é um setor de corredor ("highway") que não é de interesse inicial
-            if (exitRoomName && !Memory.roomsToExplore[exitRoomName] && !(exitRoomName.includes('W') && exitRoomName.includes('E') && exitRoomName.includes('N') && exitRoomName.includes('S'))) {
-                Memory.roomsToExplore[exitRoomName] = true;
+            if (exitRoomName && Memory.roomsToExplore && !Memory.roomsToExplore.includes(exitRoomName) && !(exitRoomName.includes('W') && exitRoomName.includes('E') && exitRoomName.includes('N') && exitRoomName.includes('S'))) {
+                Memory.roomsToExplore.push(exitRoomName); // Usa push para adicionar ao array
                 console.log(`Scout ${creep.name} added room ${exitRoomName} to roomsToExplore.`);
             }
         }

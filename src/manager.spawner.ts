@@ -416,7 +416,7 @@ const managerSpawner = {
         const rcl = room.controller?.level || 1;
 
         if (!Memory.roomsToExplore) {
-            Memory.roomsToExplore = {};
+            Memory.roomsToExplore = []; // Inicializa como array
         }
 
         // --- ABSOLUTE PRIORITY: Harvesters and Suppliers (Interleaved 1:2) ---
@@ -599,8 +599,10 @@ const managerSpawner = {
             const allScouts = _.filter(Game.creeps, (c) => c.memory.role === 'scout');
             if (allScouts.length < 1) {
                 let targetRoomForScout: string | null = null;
-                for (const roomName in Memory.roomsToExplore) {
-                    if (Memory.roomsToExplore[roomName]) {
+                // Itera sobre o array diretamente
+                for (const roomName of Memory.roomsToExplore) {
+                    // Garante que o item é uma string e não um booleano (como no código antigo)
+                    if (typeof roomName === 'string') { 
                         targetRoomForScout = roomName;
                         break;
                     }
@@ -608,7 +610,8 @@ const managerSpawner = {
                 if (targetRoomForScout) {
                     const body = getScoutBody(energyAvailable);
                     if (body.length > 0 && spawn.spawnCreep(body, 'Scout' + Game.time, { memory: { role: 'scout', targetRoom: targetRoomForScout } }) === OK) {
-                        Memory.roomsToExplore[targetRoomForScout] = false;
+                        // Remove a sala explorada do array
+                        _.remove(Memory.roomsToExplore, (r) => r === targetRoomForScout);
                         console.log(`Spawning new scout for target room ${targetRoomForScout}`);
                         return;
                     }
