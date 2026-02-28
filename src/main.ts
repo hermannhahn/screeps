@@ -6,9 +6,12 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe } from './tools';
 
-console.log("--- GEMINI DEPLOY: v12 (Debug Roles Execution) ---");
-
 export const loop = function () {
+    // Mensagem de deploy a cada 10.000 ticks
+    if (Game.time % 10000 === 0) {
+        console.log("--- GEMINI DEPLOY: v14 (Interval Message) ---");
+    }
+
     for (const name in Memory.creeps) {
         if (!Game.creeps[name]) {
             delete Memory.creeps[name];
@@ -76,18 +79,14 @@ export const loop = function () {
         }
     }
 
-    // --- EXECUÇÃO DE ROLES COM LOG ---
+    // --- EXECUÇÃO DE ROLES ---
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
         if (creep.spawning) continue;
 
-        try {
-            if (creep.memory.role === 'harvester') runHarvester(creep);
-            else if (creep.memory.role === 'builder') runBuilder(creep);
-            else if (creep.memory.role === 'supplier') runSupplier(creep);
-            else if (creep.memory.role === 'upgrader') runUpgrader(creep);
-        } catch (e) {
-            console.log(`Erro na role do creep ${creep.name}: ${e}`);
-        }
+        if (creep.memory.role === 'harvester') runHarvester(creep);
+        else if (creep.memory.role === 'builder') runBuilder(creep);
+        else if (creep.memory.role === 'supplier') runSupplier(creep);
+        else if (creep.memory.role === 'upgrader') runUpgrader(creep);
     }
 }
