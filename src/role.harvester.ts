@@ -4,20 +4,25 @@ import { isSourceSafe } from './tools';
 export function runHarvester(creep: Creep): void {
     const room = creep.room;
 
-    // --- ESCOLHA PERSISTENTE DO SOURCE ---
+    // Escolha de source persistente
     if (!creep.memory.sourceId) {
         const sources = room.find(FIND_SOURCES);
         const safeSources = _.filter(sources, (s) => isSourceSafe(s));
         
+        console.log(`${creep.name}: Escolhendo source. Seguros: ${safeSources.length}/${sources.length}`);
+
         if (safeSources.length > 0) {
             const harvesters = _.filter(Game.creeps, (c) => c.room.name === room.name && c.memory.role === 'harvester' && c.name !== creep.name);
             for (const source of safeSources) {
                 const assignedCount = _.filter(harvesters, (h) => h.memory.sourceId === source.id).length;
                 if (assignedCount < 2) {
                     creep.memory.sourceId = source.id;
+                    console.log(`${creep.name}: Atribuído ao source ${source.id}`);
                     break;
                 }
             }
+        } else {
+            console.log(`${creep.name}: AVISO - Nenhum source seguro encontrado!`);
         }
     }
 
@@ -29,9 +34,10 @@ export function runHarvester(creep: Creep): void {
         return;
     }
 
-    // --- TRABALHO ---
+    // --- Trabalho ---
     if (creep.store.getFreeCapacity() > 0) {
-        if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+        const harvestResult = creep.harvest(source);
+        if (harvestResult === ERR_NOT_IN_RANGE) {
             creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
         }
     } else {
