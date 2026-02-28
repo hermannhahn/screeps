@@ -8,6 +8,7 @@ declare global {
         role: string;
         building?: boolean;
         upgrading?: boolean;
+        sourceId?: Id<Source>;
     }
 
     interface Memory {

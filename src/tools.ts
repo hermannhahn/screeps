@@ -32,3 +32,14 @@ export function findClosestAnchor(fromPos: RoomPosition, anchors: RoomPosition[]
     }
     return closest;
 }
+
+// Função para verificar se um source é seguro (sem inimigos ou estruturas hostis em range 5)
+export function isSourceSafe(source: Source): boolean {
+    const hostiles = source.pos.findInRange(FIND_HOSTILE_CREEPS, 5);
+    if (hostiles.length > 0) return false;
+
+    const hostileStructures = source.pos.findInRange(FIND_HOSTILE_STRUCTURES, 5);
+    if (hostileStructures.length > 0) return false;
+
+    return true;
+}

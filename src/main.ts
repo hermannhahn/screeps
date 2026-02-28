@@ -4,8 +4,9 @@ import { runHarvester } from './role.harvester';
 import { runSupplier } from './role.supplier';
 import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
+import { isSourceSafe } from './tools';
 
-console.log("--- GEMINI DEPLOY: v10 (Upgrader Implementation) ---");
+console.log("--- GEMINI DEPLOY: v11 (Source Security & Persistence) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -51,14 +52,21 @@ export const loop = function () {
         const upgraders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'upgrader');
 
         const sources = room.find(FIND_SOURCES);
+        const safeSources = _.filter(sources, (s) => isSourceSafe(s));
         const rcl = room.controller ? room.controller.level : 1;
 
-        // Metas
+        // 1. Metas Harvesters (Apenas Sources SEGUROS)
         const firstHarvester = harvesters[0];
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
-        const targetHarvesters = (workCount < 5) ? sources.length * 2 : sources.length;
+        const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
+
+        // 2. Metas Suppliers
         const targetSuppliers = harvesters.length * 2;
+
+        // 3. Metas Builders
         const targetBuilders = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? (rcl <= 2 ? 2 : 1) : 0;
+
+        // 4. Metas Upgraders
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
         // Execução (Prioridade: Harvester > Supplier > Builder > Upgrader)
