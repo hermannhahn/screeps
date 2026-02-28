@@ -4,58 +4,51 @@ import { isSourceSafe } from './tools';
 export function runHarvester(creep: Creep): void {
     const room = creep.room;
 
-    // --- ESCOLHA PERSISTENTE DO SOURCE ---
+    // Se o creep já tem um source atribuído, validar se ele ainda existe
+    if (creep.memory.sourceId) {
+        const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
+        if (!source) {
+            console.log(`${creep.name}: Source ${creep.memory.sourceId} desapareceu. Resetando...`);
+            delete creep.memory.sourceId;
+        }
+    }
+
+    // Escolha de source se não tiver um
     if (!creep.memory.sourceId) {
         const sources = room.find(FIND_SOURCES);
         const safeSources = _.filter(sources, (s) => isSourceSafe(s));
         
         if (safeSources.length > 0) {
-            const harvesters = _.filter(Game.creeps, (c) => c.room.name === room.name && c.memory.role === 'harvester');
+            const harvesters = _.filter(Game.creeps, (c) => c.room.name === room.name && c.memory.role === 'harvester' && c.name !== creep.name);
             
             for (const source of safeSources) {
-                // Contar quantos harvesters já estão atribuídos a este source (incluindo os que estão spawnando)
                 const assignedCount = _.filter(harvesters, (h) => h.memory.sourceId === source.id).length;
                 if (assignedCount < 2) {
                     creep.memory.sourceId = source.id;
-                    console.log(`${creep.name}: Atribuído ao source ${source.id} em ${source.pos}`);
+                    console.log(`${creep.name}: ATRIBUÍDO ao source ${source.id}`);
                     break;
                 }
             }
         } else {
-            console.log(`${creep.name}: Nenhum source SEGURO encontrado na sala!`);
+            console.log(`${creep.name}: ERRO - Nenhum source SEGURO em range 5 encontrado!`);
         }
     }
 
-    // Se após a tentativa ainda não tiver sourceId, o creep para e avisa
-    if (!creep.memory.sourceId) {
-        // console.log(`${creep.name}: Aguardando atribuição de source livre/seguro...`);
-        return;
-    }
+    // Se ainda não tem source, não pode fazer nada
+    if (!creep.memory.sourceId) return;
 
     const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
-    if (!source) {
-        console.log(`${creep.name}: Source atribuído (${creep.memory.sourceId}) não foi encontrado! Resetando...`);
-        delete creep.memory.sourceId;
-        return;
-    }
+    if (!source) return;
 
-    // --- LÓGICA DE TRABALHO ---
+    // --- TRABALHO ---
     if (creep.store.getFreeCapacity() > 0) {
-        // Coletar
-        const harvestResult = creep.harvest(source);
-        if (harvestResult === ERR_NOT_IN_RANGE) {
+        if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
             creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
-        } else if (harvestResult !== OK) {
-            // Se houver outro erro (ex: source vazio), apenas logar se for crítico
-            // console.log(`${creep.name}: Erro ao harvestar: ${harvestResult}`);
         }
     } else {
-        // Depositar
-        const room = creep.room;
         const suppliers = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name && c.memory.role === 'supplier');
 
         if (suppliers.length === 0) {
-            // Sem suppliers: Spawn/Extensions
             const target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
                 filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
                                s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
@@ -65,7 +58,6 @@ export function runHarvester(creep: Creep): void {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
                 }
             } else {
-                // Controller upgrade como fallback
                 if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(room.controller!);
                 }
@@ -90,7 +82,6 @@ export function runHarvester(creep: Creep): void {
                         creep.moveTo(container);
                     }
                 } else {
-                    // Drop perto da source (o supplier pegará)
                     creep.drop(RESOURCE_ENERGY);
                 }
             }

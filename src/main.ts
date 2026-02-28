@@ -6,7 +6,7 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe } from './tools';
 
-console.log("--- GEMINI DEPLOY: v11 (Source Security & Persistence) ---");
+console.log("--- GEMINI DEPLOY: v12 (Debug Roles Execution) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -42,7 +42,7 @@ export const loop = function () {
         }
     }
 
-    // --- LOGICA DE SPAWN DINAMICA ---
+    // --- LOGICA DE SPAWN ---
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (spawn && !spawn.spawning) {
         const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name);
@@ -55,21 +55,13 @@ export const loop = function () {
         const safeSources = _.filter(sources, (s) => isSourceSafe(s));
         const rcl = room.controller ? room.controller.level : 1;
 
-        // 1. Metas Harvesters (Apenas Sources SEGUROS)
         const firstHarvester = harvesters[0];
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
-
-        // 2. Metas Suppliers
         const targetSuppliers = harvesters.length * 2;
-
-        // 3. Metas Builders
         const targetBuilders = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? (rcl <= 2 ? 2 : 1) : 0;
-
-        // 4. Metas Upgraders
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
-        // Execução (Prioridade: Harvester > Supplier > Builder > Upgrader)
         if (harvesters.length < targetHarvesters && room.energyAvailable >= 250) {
             spawn.spawnCreep([WORK, WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
         } 
@@ -84,12 +76,18 @@ export const loop = function () {
         }
     }
 
-    // Rodar creeps
+    // --- EXECUÇÃO DE ROLES COM LOG ---
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
-        if (creep.memory.role === 'harvester') runHarvester(creep);
-        if (creep.memory.role === 'builder') runBuilder(creep);
-        if (creep.memory.role === 'supplier') runSupplier(creep);
-        if (creep.memory.role === 'upgrader') runUpgrader(creep);
+        if (creep.spawning) continue;
+
+        try {
+            if (creep.memory.role === 'harvester') runHarvester(creep);
+            else if (creep.memory.role === 'builder') runBuilder(creep);
+            else if (creep.memory.role === 'supplier') runSupplier(creep);
+            else if (creep.memory.role === 'upgrader') runUpgrader(creep);
+        } catch (e) {
+            console.log(`Erro na role do creep ${creep.name}: ${e}`);
+        }
     }
 }
