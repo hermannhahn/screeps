@@ -25,17 +25,22 @@ export const loop = function () {
     }
     if (!room) return;
 
-    // --- 1. SINCRONIZAÇÃO DE STATUS ---
+    // --- 1. SINCRONIZAÇÃO DE STATUS (Com Verificação de Visibilidade) ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         for (const p of Memory.planning.plannedStructures) {
             if (p.status === 'built') continue;
-            const pos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
-            const isBuilt = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === p.structureType);
-            if (isBuilt) {
-                p.status = 'built';
-                continue;
+
+            // Só sincroniza se tivermos visibilidade da sala
+            const targetRoom = Game.rooms[p.pos.roomName];
+            if (targetRoom) {
+                const pos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
+                const isBuilt = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === p.structureType);
+                if (isBuilt) {
+                    p.status = 'built';
+                    continue;
+                }
+                p.status = pos.lookFor(LOOK_CONSTRUCTION_SITES).length > 0 ? 'building' : 'to_build';
             }
-            p.status = pos.lookFor(LOOK_CONSTRUCTION_SITES).length > 0 ? 'building' : 'to_build';
         }
     }
 
@@ -43,11 +48,14 @@ export const loop = function () {
     planStructures(room);
     manageRemoteMining(room);
 
-    // --- 3. CRIAR CONSTRUCTION SITES ---
+    // --- 3. CRIAR CONSTRUCTION SITES (Apenas sala principal ou com visibilidade) ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
         for (const p of toBuild) {
-            room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
+            const targetRoom = Game.rooms[p.pos.roomName];
+            if (targetRoom) {
+                room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
+            }
         }
     }
 
@@ -76,33 +84,28 @@ export const loop = function () {
         const rcl = room.controller ? room.controller.level : 1;
         const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
-        // Metas Locais
-        const firstHarvester = harvesters[0];
-        const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
-        const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
+        const targetHarvesters = safeSources.length * 2;
         const targetSuppliers = Math.max(1, harvesters.length + 1);
         const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
-        // Demanda Remota
         const remoteRequest = getRemoteSpawnRequest(room);
 
-        // FILA DE PRIORIDADE ESCALONADA (Incluindo Remoto)
         let roleToSpawn: string | null = null;
-        let targetRoom: string | undefined = undefined;
+        let tRoom: string | undefined = undefined;
 
         if (harvesters.length < safeSources.length) roleToSpawn = 'harvester';
         else if (suppliers.length < 1) roleToSpawn = 'supplier';
         else if (upgraders.length < 1) roleToSpawn = 'upgrader';
         else if (remoteRequest && remoteRequest.role === 'scout') {
             roleToSpawn = 'scout';
-            targetRoom = remoteRequest.targetRoom;
+            tRoom = remoteRequest.targetRoom;
         }
         else if (harvesters.length < targetHarvesters) roleToSpawn = 'harvester';
         else if (builders.length < targetBuilders) roleToSpawn = 'builder';
         else if (remoteRequest) {
             roleToSpawn = remoteRequest.role;
-            targetRoom = remoteRequest.targetRoom;
+            tRoom = remoteRequest.targetRoom;
         }
         else if (suppliers.length < targetSuppliers) roleToSpawn = 'supplier';
         else if (upgraders.length < targetUpgraders) roleToSpawn = 'upgrader';
@@ -116,11 +119,7 @@ export const loop = function () {
             if (room.energyAvailable >= cost) {
                 const name = roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time;
                 spawn.spawnCreep(body, name, { 
-                    memory: { 
-                        role: roleToSpawn, 
-                        targetRoom: targetRoom, 
-                        homeRoom: room.name 
-                    } 
+                    memory: { role: roleToSpawn, targetRoom: tRoom, homeRoom: room.name } 
                 });
             }
         }
@@ -130,7 +129,6 @@ export const loop = function () {
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
         if (creep.spawning) continue;
-        
         switch (creep.memory.role) {
             case 'harvester': runHarvester(creep); break;
             case 'builder': runBuilder(creep); break;
