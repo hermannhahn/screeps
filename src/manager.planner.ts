@@ -14,6 +14,21 @@ export function planStructures(room: Room): void {
     const stage = planning.currentStage;
     const hasActiveCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
+    // --- LIMPEZA DE SEGURANÇA ---
+    // Remover planos de estradas que levam a sources que não são mais seguras
+    const sources = room.find(FIND_SOURCES);
+    const unsafeSources = sources.filter(s => !isSourceSafe(s));
+    if (unsafeSources.length > 0) {
+        planning.plannedStructures = planning.plannedStructures.filter(p => {
+            if (p.structureType === STRUCTURE_ROAD) {
+                const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
+                // Se a estrada está muito perto de uma source insegura (range 5), removemos o plano
+                return !unsafeSources.some(us => pPos.inRangeTo(us, 5));
+            }
+            return true;
+        });
+    }
+
     // --- ESTÁGIO 1: DIAMANTE DO SPAWN ---
     if (stage === 1) {
         const spawns = room.find(FIND_MY_SPAWNS);
@@ -80,9 +95,8 @@ export function planStructures(room: Room): void {
         }
     }
 
-    // --- ESTÁGIO 3: ESTRADAS DAS SOURCES ---
+    // --- ESTÁGIO 3: ESTRADAS DAS SOURCES (Segurança Reforçada) ---
     if (stage === 3) {
-        const sources = room.find(FIND_SOURCES);
         const safeSources = sources.filter(s => isSourceSafe(s));
         const anchorsRaw = planning.spawnSquareRoadAnchorPositions;
         const anchors = anchorsRaw.map(a => new RoomPosition(a.x, a.y, a.roomName));
@@ -90,7 +104,6 @@ export function planStructures(room: Room): void {
         if (anchors.length > 0) {
             let addedAny = false;
             for (const source of safeSources) {
-                // Instanciar posições da memória para usar métodos como isNearTo
                 const alreadyPlanned = planning.plannedStructures.some(p => {
                     const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
                     return p.structureType === STRUCTURE_ROAD && pPos.isNearTo(source.pos);
@@ -118,7 +131,7 @@ export function planStructures(room: Room): void {
                     }
                 }
             }
-            if (addedAny) console.log("Planner Stage 3: New road positions added.");
+            if (addedAny) console.log("Planner Stage 3: New road positions added for SAFE sources.");
         }
 
         const stage3Roads = planning.plannedStructures.filter(p => 

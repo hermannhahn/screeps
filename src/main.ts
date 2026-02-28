@@ -6,9 +6,9 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe, generateBody } from './tools';
 
-export const loop = function () {
-    // console.log(`--- TICK ${Game.time} ---`);
+console.log("--- GEMINI DEPLOY: v32.1 (Safety Cleanup & Supplier Fix) ---");
 
+export const loop = function () {
     for (const name in Memory.creeps) {
         if (!Game.creeps[name]) {
             delete Memory.creeps[name];
@@ -22,7 +22,7 @@ export const loop = function () {
     }
     if (!room) return;
 
-    // 1. Sincronizar
+    // --- 1. SINCRONIZAÇÃO DE STATUS ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         for (const p of Memory.planning.plannedStructures) {
             if (p.status === 'built') continue;
@@ -36,23 +36,18 @@ export const loop = function () {
         }
     }
 
-    // 2. Planner
-    try {
-        planStructures(room);
-    } catch (e) {
-        console.log("Main Error (Planner): " + e);
-    }
+    // --- 2. PLANNER ---
+    planStructures(room);
 
-    // 3. CS
+    // --- 3. CRIAR CONSTRUCTION SITES ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
         for (const p of toBuild) {
-            const res = room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
-            if (res === OK) p.status = 'building';
+            room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
         }
     }
 
-    // 4. Spawn
+    // --- 4. LOGICA DE SPAWN DINAMICA ---
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (spawn && !spawn.spawning) {
         const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name);
@@ -66,6 +61,7 @@ export const loop = function () {
         const rcl = room.controller ? room.controller.level : 1;
         const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
+        // Metas
         const firstHarvester = harvesters[0];
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
@@ -73,8 +69,7 @@ export const loop = function () {
         const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
-        const energyForBody = (harvesters.length === 0) ? room.energyAvailable : room.energyCapacityAvailable;
-
+        // FILA DE PRIORIDADE ESCALONADA
         let roleToSpawn: string | null = null;
         if (harvesters.length < safeSources.length) roleToSpawn = 'harvester';
         else if (suppliers.length < 1) roleToSpawn = 'supplier';
@@ -85,16 +80,19 @@ export const loop = function () {
         else if (upgraders.length < targetUpgraders) roleToSpawn = 'upgrader';
 
         if (roleToSpawn) {
-            const body = generateBody(roleToSpawn, energyForBody);
+            // Se for spawn crítico (zero harvesters ou zero suppliers), usa energia atual. Senão usa capacidade total.
+            const energyLimit = (harvesters.length === 0 || (suppliers.length === 0 && harvesters.length > 0)) ? room.energyAvailable : room.energyCapacityAvailable;
+            const body = generateBody(roleToSpawn, energyLimit);
             let cost = 0;
             for (const part of body) cost += BODYPART_COST[part];
+            
             if (room.energyAvailable >= cost) {
                 spawn.spawnCreep(body, roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time, { memory: { role: roleToSpawn } });
             }
         }
     }
 
-    // 5. Creeps
+    // --- 5. RODAR CREEPS ---
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
         if (creep.spawning) continue;
