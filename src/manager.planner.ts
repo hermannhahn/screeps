@@ -13,6 +13,7 @@ import secondTowerBlueprint from './blueprints/secondTower';
 import rampartsWallsBlueprint from './blueprints/rampartsWalls';
 import linksBlueprint from './blueprints/links';
 import { cacheUtils } from './utils.cache';
+import layoutGenerator from './manager.layoutGenerator';
 
 const managerPlanner = {
     run: function(room: Room) {
@@ -32,6 +33,18 @@ const managerPlanner = {
             return;
         }
 
+        // NOVO PLANNER: Verificar e gerar layout se necessário
+        if (!room.memory.layout || !room.memory.layout.generated) {
+            const spawns = cacheUtils.findInRoom(room, FIND_MY_SPAWNS);
+            if (spawns.length > 0) {
+                layoutGenerator.generateLayout(room, spawns[0] as StructureSpawn);
+            }
+            return; // Retornar após gerar o layout para processá-lo no próximo tick
+        }
+
+        // TODO: Lógica do NOVO PLANNER (iterar sobre room.memory.layout e criar CS)
+        // A lógica antiga foi comentada para evitar conflitos durante a transição.
+        /*
         const BLUEPRINTS_ORDER: Blueprint[] = [
             spawnRoadsBlueprint,
             sourceRoadsBlueprint,
@@ -84,6 +97,7 @@ const managerPlanner = {
                 continue; 
             }
         }
+        */
     }
 };
 

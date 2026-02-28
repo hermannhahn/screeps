@@ -200,6 +200,12 @@ export const loop = () => {
 
     for (const roomName in Game.rooms) {
         const room = Game.rooms[roomName];
+
+        // Inicializar Memory.rooms[roomName].layout se não existir
+        if (!room.memory.layout) {
+            room.memory.layout = { rcl: {}, generated: false };
+        }
+
         // console.log(`[Main] Executing loop for room: ${room.name}`);
         managerPlanner.run(room);
         const spawn = (cacheUtils.findInRoom(room, FIND_MY_SPAWNS) as StructureSpawn[])[0];

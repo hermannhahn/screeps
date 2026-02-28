@@ -1,54 +1,110 @@
-interface RoomMemory {
-    travelTimes?: { [key: string]: number };
-    blueprintStage?: number; // Made optional to match previous usage
-    maxBlueprintStageCompleted: number;
-    currentBlueprintStage: number;
-    primaryHostileTargetId?: Id<Creep> | null; // Adicionado para o foco de fogo das torres
-}
-
 interface CreepMemory {
     role: string;
     room?: string;
     working?: boolean;
-    sourceId?: Id<Source>;
-    targetEnergyId?: Id<any>;
-    targetRepairId?: Id<AnyStructure>;
-    targetBuildId?: Id<ConstructionSite>;
-    deliveryTargetId?: Id<any>;
-    assignedSupplier?: Id<Creep>;
-    delivering?: boolean;
     building?: boolean;
     repairing?: boolean;
     upgrading?: boolean;
-    state?: string;
+    sourceId?: Id<Source>;
+    targetId?: Id<AnyStructure | Creep | ConstructionSite | Resource>;
+    targetEnergyId?: Id<AnyStructure | Creep | ConstructionSite | Resource>;
+    targetBuildId?: Id<ConstructionSite>;
+    targetRepairId?: Id<AnyStructure>;
+    targetDeliverId?: Id<AnyStructure>;
+    assignedSupplier?: Id<Creep>;
     targetRoom?: string;
-    scoutTarget?: string;
     homeRoom?: string;
-    remoteSourceId?: Id<Source>;
     remoteContainerId?: Id<StructureContainer>;
+    travelPath?: RoomPosition[];
+    fleePath?: RoomPosition[];
 }
 
+interface RoomMemory {
+    // Other room memory properties
+}
+
+interface SourceMemory {
+    id: Id<Source>;
+    roomName: string;
+    pos: RoomPosition;
+    harvesterCount: number;
+}
+
+interface FlagMemory {
+    // Other flag memory properties
+}
+
+interface MineralMemory {
+    // Mineral memory properties
+}
+
+interface RemoteRoomMemory {
+    name: string;
+    safe: boolean;
+    lastScouted: number;
+    sources: { id: Id<Source>, pos: RoomPosition }[];
+    controller?: { id: Id<StructureController>, pos: RoomPosition };
+    lastHarvestTick?: number;
+}
+
+interface PlannedStructure {
+    x: number;
+    y: number;
+    structureType: BuildableStructureConstant;
+}
+
+interface RoomLayoutMemory {
+    rcl: {
+        [rclLevel: number]: PlannedStructure[];
+    };
+    generated: boolean;
+}
+
+
+interface Memory {
+    rooms: {
+        [roomName: string]: {
+            layout?: RoomLayoutMemory;
+            // ... outras propriedades da sala
+        };
+    };
+    creeps: {
+        [name: string]: CreepMemory;
+    };
+    flags: {
+        [name: string]: FlagMemory;
+    };
+    minerals: {
+        [id: string]: MineralMemory;
+    };
+    remoteRooms: {
+        [roomName: string]: RemoteRoomMemory;
+    };
+    uuid: number;
+    log: any;
+}
+
+
+// `global` extension for Screeps global objects
+declare namespace NodeJS {
+    interface Global {
+        log: any;
+    }
+}
+
+// Screeps global objects
+declare const _: _.LoDashStatic;
+declare const Game: Game;
+declare const Memory: Memory;
+declare const RawMemory: RawMemory;
+declare const PathFinder: PathFinder;
+declare const InterShardMemory: InterShardMemory;
+declare const PowerCreep: PowerCreepConstructor;
+
+// Extend RoomPosition prototype
 interface RoomPosition {
     isWalkable(creepLooking?: Creep): boolean;
     getAdjacentPositions(): RoomPosition[];
     hasCreep(): boolean;
     findAdjacentWalkableSpot(): RoomPosition | null;
-}
-
-// Global Memory
-interface Memory {
-    uuid: number;
-    log: any;
-    primaryHostileTargetId?: Id<Creep> | null; // Adicionado para o foco de fogo das torres
-    roomsToExplore: { [roomName: string]: boolean };
-    remoteRooms: { [roomName: string]: RemoteRoomData };
-}
-
-interface RemoteRoomData {
-    sources: { id: Id<Source>; pos: { x: number; y: number } }[];
-    controllerPos?: { x: number; y: number };
-    needsReserving?: boolean;
-    lastScouted: number;
-    safe: boolean;
-    hasEnemyStructures: boolean;
 }
