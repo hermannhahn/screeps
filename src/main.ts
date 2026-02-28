@@ -6,7 +6,7 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe, generateBody } from './tools';
 
-console.log("--- GEMINI DEPLOY: v26 (Tiered Spawning Priority) ---");
+console.log("--- GEMINI DEPLOY: v28 (Pre-Planner Sync) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -22,9 +22,7 @@ export const loop = function () {
     }
     if (!room) return;
 
-    planStructures(room);
-
-    // Sincronizar status das construções
+    // --- 1. SINCRONIZAÇÃO DE STATUS (Antes do Planner) ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         for (const p of Memory.planning.plannedStructures) {
             if (p.status === 'built') continue;
@@ -38,7 +36,10 @@ export const loop = function () {
         }
     }
 
-    // Criar Construction Sites pendentes
+    // --- 2. PLANNER ---
+    planStructures(room);
+
+    // --- 3. CRIAR CONSTRUCTION SITES ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
         for (const p of toBuild) {
@@ -46,7 +47,7 @@ export const loop = function () {
         }
     }
 
-    // --- LOGICA DE SPAWN ESCALONADA (Tiered Priority) ---
+    // --- 4. LOGICA DE SPAWN ---
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (spawn && !spawn.spawning) {
         const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name);
@@ -60,7 +61,6 @@ export const loop = function () {
         const rcl = room.controller ? room.controller.level : 1;
         const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
-        // Definição de Metas Finais
         const firstHarvester = harvesters[0];
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
@@ -70,36 +70,25 @@ export const loop = function () {
 
         const energyForBody = (harvesters.length === 0) ? room.energyAvailable : room.energyCapacityAvailable;
 
-        // FILA DE PRIORIDADE ESCALONADA
         let roleToSpawn: string | null = null;
-
-        if (harvesters.length < safeSources.length) {
-            roleToSpawn = 'harvester'; // Tier 1: Mínimo de Harvesters
-        } else if (suppliers.length < 1) {
-            roleToSpawn = 'supplier';  // Tier 1: Primeiro Supplier
-        } else if (upgraders.length < 1) {
-            roleToSpawn = 'upgrader';  // Tier 1: Primeiro Upgrader
-        } else if (harvesters.length < targetHarvesters) {
-            roleToSpawn = 'harvester'; // Tier 2: Economia total
-        } else if (builders.length < targetBuilders) {
-            roleToSpawn = 'builder';   // Tier 2: Infraestrutura
-        } else if (suppliers.length < targetSuppliers) {
-            roleToSpawn = 'supplier';  // Tier 2: Logística total
-        } else if (upgraders.length < targetUpgraders) {
-            roleToSpawn = 'upgrader';  // Tier 2: Crescimento total
-        }
+        if (harvesters.length < safeSources.length) roleToSpawn = 'harvester';
+        else if (suppliers.length < 1) roleToSpawn = 'supplier';
+        else if (upgraders.length < 1) roleToSpawn = 'upgrader';
+        else if (harvesters.length < targetHarvesters) roleToSpawn = 'harvester';
+        else if (builders.length < targetBuilders) roleToSpawn = 'builder';
+        else if (suppliers.length < targetSuppliers) roleToSpawn = 'supplier';
+        else if (upgraders.length < targetUpgraders) roleToSpawn = 'upgrader';
 
         if (roleToSpawn) {
             const body = generateBody(roleToSpawn, energyForBody);
-            const cost = body.reduce((sum, part) => sum + BODYPART_COST[part], 0);
-            
+            const cost = _.sum(body, p => BODYPART_COST[p]);
             if (room.energyAvailable >= cost) {
                 spawn.spawnCreep(body, roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time, { memory: { role: roleToSpawn } });
             }
         }
     }
 
-    // Rodar creeps
+    // --- 5. RODAR CREEPS ---
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
         if (creep.spawning) continue;

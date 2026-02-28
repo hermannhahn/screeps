@@ -51,9 +51,9 @@ export function planStructures(room: Room): void {
 
         const extensionsToBuild = 5;
         const builtExtensions = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } }).length;
-        const plannedExtensions = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION).length;
+        const plannedExtensions = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION);
         
-        if (builtExtensions + plannedExtensions < extensionsToBuild) {
+        if (builtExtensions + plannedExtensions.length < extensionsToBuild) {
             for (const roadPos of planning.spawnSquareRoadAnchorPositions) {
                 if (planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION).length >= extensionsToBuild) break;
                 const adjacents = [{dx: -1, dy: 0}, {dx: 1, dy: 0}, {dx: 0, dy: -1}, {dx: 0, dy: 1}];
@@ -70,8 +70,9 @@ export function planStructures(room: Room): void {
             }
         }
 
-        const stage2Exts = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION);
-        const allBuilt = stage2Exts.length >= 5 && stage2Exts.every(p => p.status === 'built');
+        // LOG DE DEBUG PARA O ESTÁGIO 2
+        const allBuilt = plannedExtensions.length > 0 && plannedExtensions.every(p => p.status === 'built');
+        // console.log(`Planner Debug Stage 2: Exts=${plannedExtensions.length}, Built=${plannedExtensions.filter(p => p.status === 'built').length}, ActiveCS=${hasActiveCS}`);
 
         if (allBuilt && !hasActiveCS) {
             console.log("Planner: Stage 2 Complete. Advancing to Stage 3.");
@@ -85,7 +86,8 @@ export function planStructures(room: Room): void {
         const safeSources = sources.filter(s => isSourceSafe(s));
         const anchors = planning.spawnSquareRoadAnchorPositions;
 
-        let addedAny = false;
+        console.log(`Planner Stage 3: Planning roads for ${safeSources.length} safe sources.`);
+
         for (const source of safeSources) {
             const closestAnchor = findClosestAnchor(source.pos, anchors);
             if (closestAnchor) {
@@ -101,9 +103,7 @@ export function planStructures(room: Room): void {
                 }).path;
 
                 for (const pos of path) {
-                    if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) {
-                        addedAny = true;
-                    }
+                    addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room);
                 }
             }
         }
