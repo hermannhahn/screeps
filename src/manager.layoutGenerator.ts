@@ -1,4 +1,3 @@
-import { PlannedStructure, RoomLayoutMemory } from './declarations';
 import { isSafePosition } from './blueprints/utils';
 
 const layoutGenerator = {
@@ -25,7 +24,7 @@ const layoutGenerator = {
 
         for (const s of structuresToCapture) {
             // Adicionar ao layout de RCL atual, se já não existir
-            if (!roomLayout.rcl[currentRCL].some(p => p.x === s.pos.x && p.y === s.pos.y && p.structureType === s.structureType)) {
+            if (!roomLayout.rcl[currentRCL].some((p: PlannedStructure) => p.x === s.pos.x && p.y === s.pos.y && p.structureType === s.structureType)) {
                 roomLayout.rcl[currentRCL].push({ x: s.pos.x, y: s.pos.y, structureType: s.structureType });
             }
         }
@@ -34,7 +33,7 @@ const layoutGenerator = {
         const newlyPlannedSpawnRoads = this.generateSpawnRoads(room, spawn);
         for (const planned of newlyPlannedSpawnRoads) {
             // Adicionar ao layout de RCL atual, se já não existir (evita duplicatas com as capturadas)
-            if (!roomLayout.rcl[currentRCL].some(p => p.x === planned.x && p.y === planned.y && p.structureType === planned.structureType)) {
+            if (!roomLayout.rcl[currentRCL].some((p: PlannedStructure) => p.x === planned.x && p.y === planned.y && p.structureType === planned.structureType)) {
                 roomLayout.rcl[currentRCL].push(planned);
             }
         }
