@@ -42,31 +42,10 @@ const managerPlanner = {
             return; // Retornar após gerar o layout para processá-lo no próximo tick
         }
 
-        // TODO: Lógica do NOVO PLANNER (iterar sobre room.memory.layout e criar CS)
-        // A lógica antiga foi comentada para evitar conflitos durante a transição.
-        /*
-        const BLUEPRINTS_ORDER: Blueprint[] = [
-            spawnRoadsBlueprint,
-            sourceRoadsBlueprint,
-            controllerRoadsBlueprint,
-            extensionsBlueprint,
-            firstTowerBlueprint,
-            storageBlueprint,
-            sourceContainersBlueprint,
-            controllerContainerBlueprint,
-            secondTowerBlueprint,
-            linksBlueprint,
-            rampartsWallsBlueprint,
-            mineralRoadsBlueprint,
-            exitRoadsBlueprint,
-        ];
-        const MAX_BLUEPRINT_STAGES = BLUEPRINTS_ORDER.length;
-
-        const spawns = cacheUtils.findInRoom(room, FIND_MY_SPAWNS);
-        if (spawns.length === 0) return;
-        const spawn = spawns[0] as StructureSpawn;
-
-        const totalConstructionSites = cacheUtils.findInRoom(room, FIND_CONSTRUCTION_SITES).length;
+        // Lógica do NOVO PLANNER: Iterar sobre room.memory.layout e criar CS
+        const currentRCL = room.controller ? room.controller.level : 0;
+        const plannedStructuresForRCL = room.memory.layout.rcl[currentRCL] || [];
+        const totalConstructionSitesInRoom = cacheUtils.findInRoom(room, FIND_CONSTRUCTION_SITES).length;
         const globalCSCount = Object.keys(Game.constructionSites).length;
 
         if (globalCSCount >= 100) {
@@ -74,30 +53,39 @@ const managerPlanner = {
             return;
         }
 
-        // Sequential check
-        for (let i = 0; i < MAX_BLUEPRINT_STAGES; i++) {
-            const currentBlueprint = BLUEPRINTS_ORDER[i];
-            const isRoadBlueprint = currentBlueprint.name.toLowerCase().includes('roads');
+        let sitesCreatedThisTick = 0;
+        const maxSitesPerTick = 3; // Limita a criação de CS por tick para não estourar CPU
+
+        for (const planned of plannedStructuresForRCL) {
+            if (sitesCreatedThisTick >= maxSitesPerTick) break;
+
+            const pos = new RoomPosition(planned.x, planned.y, room.name);
             
-            if (currentBlueprint.isComplete(room, spawn)) {
-                continue;
+            // Verifica se a estrutura já existe
+            const existingStructures = pos.lookFor(LOOK_STRUCTURES);
+            const hasExistingStructure = existingStructures.some(s => s.structureType === planned.structureType);
+
+            if (hasExistingStructure) {
+                continue; // Já existe, nada a fazer
             }
 
-            const csLimit = isRoadBlueprint ? 80 : 20;
-            if (totalConstructionSites >= csLimit) {
-                continue; 
+            // Verifica se já existe um canteiro de obra
+            const existingConstructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+            const hasExistingCS = existingConstructionSites.some(cs => cs.structureType === planned.structureType);
+
+            if (hasExistingCS) {
+                continue; // Já existe um CS, nada a fazer
             }
 
-            let sitesCreated = currentBlueprint.plan(room, spawn);
-            
-            if (sitesCreated > 0) {
-                console.log(`[ManagerPlanner] Planned ${sitesCreated} sites for stage ${i}: ${currentBlueprint.name}`);
-                break; 
-            } else {
-                continue; 
+            // Se não existe estrutura nem CS, cria um ConstructionSite
+            const result = room.createConstructionSite(planned.x, planned.y, planned.structureType);
+            if (result === OK) {
+                sitesCreatedThisTick++;
+                console.log(`[ManagerPlanner] Planned ${planned.structureType} at ${planned.x},${planned.y} for RCL ${currentRCL}.`);
+            } else if (result !== ERR_INVALID_TARGET && result !== ERR_FULL) { // ERR_INVALID_TARGET pode acontecer em tiles proibidos
+                console.log(`[ManagerPlanner] Failed to plan ${planned.structureType} at ${planned.x},${planned.y} (RCL ${currentRCL}): ${result}`);
             }
         }
-        */
     }
 };
 
