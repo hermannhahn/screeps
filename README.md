@@ -16,13 +16,7 @@ Certifique-se de ter o Node.js instalado e execute:
 npm install
 ```
 
-### 3. Onde editar o código
-- **Lógica de Roles:** `src/role.*.ts`
-- **Lógica de Tasks:** `src/task.*.ts`
-- **Planejamento de Sala:** `src/manager.planner.ts` e `src/blueprints/`
-- **Configuração de População:** `src/main.ts`
-
-### 4. Configuração do Servidor
+### 3. Configuração do Servidor
 Crie um arquivo `screeps.json` na raiz do projeto baseado no `screeps.json.example`:
 ```json
 {

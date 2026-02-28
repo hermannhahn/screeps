@@ -17,25 +17,19 @@ Script de automação para o jogo de estratégia MMO **Screeps**. O código é f
 ## 📁 Estrutura de Arquivos
 
 - `src/main.ts`: Loop principal e orquestração global.
-- `src/manager.planner.ts`: Inteligência de planejamento que verifica todos os estágios (blueprint stages) e ignora áreas inseguras.
-- `src/role.*.ts`: Comportamentos específicos de creeps com persistência de alvo na memória para evitar oscilações.
+- `src/manager.planner.ts`: Inteligência de planejamento de estruturas, com verificação e reconstrução, ignorando áreas inseguras.
+- `src/manager.rooms.ts: Inteligência de planejamento de rooms.
+- `src/manager.spawns: Inteligência de geração de creeps.
+- `src/tools.ts: Ferramentas em geral.
+-  `src/role.*.ts`: Comportamentos específicos de creeps com persistência de alvo na memória para evitar oscilações.
 - `src/task.*.ts`: Módulos de tarefas reutilizáveis (Build, Upgrade, CollectEnergy, Repair).
 - `dist/main.js`: Arquivo final gerado pelo Webpack para deploy.
 
 ## 🛠️ Comandos e Operações
 
-- **Workflow de Alteração:** Sempre que fizer uma alteração no código, você deve primeiro realizar um `git commit` (com mensagem descritiva) e um `git push`. Somente após isso, execute o comando `npm run deploy` para o deploy.
+- **Workflow de Alteração:** Sempre que fizer uma alteração, você deve primeiro realizar um `git commit` (com mensagem descritiva) e um `git push`. Somente após isso, execute o comando `npm run deploy` para o deploy.
 - **Deploy Automático:** Execute `npm run deploy`. Isso limpa a `dist/`, compila o código, incrementa o contador de deploy, envia para o GitHub e realiza o upload via `screeps-api` para o servidor privado.
 - **Configuração do Deploy:** Credenciais do servidor privado ficam no arquivo `screeps.json` (baseado no `screeps.json.example`).
-- **Configuração de População:** As metas de população (`targetCount`) estão no `src/main.ts`.
-
-### Ferramentas e Métodos de Depuração
-
-Para auxiliar no debug e teste de funcionalidades, o projeto utiliza o `screeps-multimeter`. Esta ferramenta permite acesso direto ao console do servidor e oferece um plugin "Watch" para monitorar expressões e variáveis no jogo em tempo real.
-
-- **`screeps-multimeter` (executável: `multimeter`):** Console interativo para interagir com o servidor Screeps.
-- **Plugin "Watch":** Funcionalidade para monitorar o estado de variáveis e expressões JavaScript dentro do jogo Screeps, com saída no terminal do `multimeter`.
-  As instruções detalhadas para configuração e uso do `screeps-multimeter` e seu plugin "Watch" estão disponíveis no arquivo `README.md` na seção "🛠️ Ferramentas de Depuração e Monitoramento".
 
 ## 📝 Convenções de Desenvolvimento (Surgical Changes)
 
@@ -46,7 +40,7 @@ Para auxiliar no debug e teste de funcionalidades, o projeto utiliza o `screeps-
 - **Memory Safety:** Sempre verificar se objetos existem em `Game.getObjectById` antes de usá-los.
 - **Screeps Compatibility:** O target do TS deve ser `ES2018` para compatibilidade com o ambiente do jogo.
 
-## 🎯 Próximos Passos (Backlog)
+## 🎯 Instruções Gerais
 
 - Ler o arquivo `TODO.md` para entender as tarefas pendentes e prioridades.
 - Manter o arquivo `TODO.md` atualizado com novas tarefas e status de progresso.
