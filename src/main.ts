@@ -6,8 +6,6 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe, generateBody } from './tools';
 
-console.log("--- GEMINI DEPLOY: v29 (Stage 3 Debug) ---");
-
 export const loop = function () {
     for (const name in Memory.creeps) {
         if (!Game.creeps[name]) {
@@ -39,16 +37,13 @@ export const loop = function () {
     // --- 2. PLANNER ---
     planStructures(room);
 
-    // --- 3. CRIAR CONSTRUCTION SITES (Com logs de erro) ---
+    // --- 3. CRIAR CONSTRUCTION SITES ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
         for (const p of toBuild) {
             const res = room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
             if (res === OK) {
                 p.status = 'building';
-                console.log(`Main: Successfully created CS for ${p.structureType} at ${p.pos.x},${p.pos.y}`);
-            } else if (res !== ERR_FULL) {
-                console.log(`Main: FAILED to create CS for ${p.structureType} at ${p.pos.x},${p.pos.y}. Error: ${res}`);
             }
         }
     }

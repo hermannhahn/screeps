@@ -86,7 +86,7 @@ export function planStructures(room: Room): void {
         const anchors = planning.spawnSquareRoadAnchorPositions;
 
         if (anchors.length > 0) {
-            console.log(`Planner Stage 3: Planning roads for ${safeSources.length} sources.`);
+            let newlyAddedCount = 0;
             for (const source of safeSources) {
                 const closestAnchor = findClosestAnchor(source.pos, anchors);
                 if (closestAnchor) {
@@ -95,11 +95,13 @@ export function planStructures(room: Room): void {
                         swampCost: 10,
                         roomCallback: (roomName) => {
                             const costs = new PathFinder.CostMatrix();
-                            // Evitar estruturas que não sejam estradas
+                            // Obstáculos REAIS bloqueiam o caminho
                             room.find(FIND_STRUCTURES).forEach(s => {
-                                if (s.structureType !== STRUCTURE_ROAD) costs.set(s.pos.x, s.pos.y, 0xff);
+                                if (s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_CONTAINER) {
+                                    costs.set(s.pos.x, s.pos.y, 0xff);
+                                }
                             });
-                            // Favorecer estradas planejadas
+                            // Favorecer estradas já planejadas
                             planning.plannedStructures.forEach(p => {
                                 if (p.structureType === STRUCTURE_ROAD) costs.set(p.pos.x, p.pos.y, 1);
                             });
@@ -109,14 +111,16 @@ export function planStructures(room: Room): void {
 
                     if (!searchResult.incomplete) {
                         for (const pos of searchResult.path) {
-                            addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room);
+                            if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) {
+                                newlyAddedCount++;
+                            }
                         }
                     }
                 }
             }
+            if (newlyAddedCount > 0) console.log(`Planner Stage 3: Planned ${newlyAddedCount} road positions.`);
         }
 
-        // Verifica progresso do Estágio 3
         const stage3Roads = planning.plannedStructures.filter(p => 
             p.structureType === STRUCTURE_ROAD && 
             !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y)
@@ -128,9 +132,6 @@ export function planStructures(room: Room): void {
                 console.log("Planner: Stage 3 Complete. Advancing to Stage 4.");
                 planning.currentStage = 4;
             }
-        } else if (safeSources.length > 0) {
-            // Se temos sources mas nenhuma estrada foi adicionada, pode haver bloqueio
-            console.log("Planner Stage 3: No road positions added. Check PathFinder or terrain constraints.");
         }
     }
 
@@ -147,7 +148,9 @@ export function planStructures(room: Room): void {
                 roomCallback: (roomName) => {
                     const costs = new PathFinder.CostMatrix();
                     room.find(FIND_STRUCTURES).forEach(s => {
-                        if (s.structureType !== STRUCTURE_ROAD) costs.set(s.pos.x, s.pos.y, 0xff);
+                        if (s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_CONTAINER) {
+                            costs.set(s.pos.x, s.pos.y, 0xff);
+                        }
                     });
                     return costs;
                 }
