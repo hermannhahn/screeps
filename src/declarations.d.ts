@@ -9,6 +9,7 @@ declare global {
         building?: boolean;
         upgrading?: boolean;
         sourceId?: Id<Source>;
+        targetId?: Id<any>; // Alvo atual para coleta ou entrega
     }
 
     interface Memory {
