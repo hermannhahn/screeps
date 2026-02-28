@@ -1,5 +1,5 @@
 // src/main.ts
-console.log("--- GEMINI DEPLOY: v5 (Stage 1 Diamond & Built Check) ---");
+console.log("--- GEMINI DEPLOY: v6 (Spawning Priority & Role Refinement) ---");
 
 import { planStructures } from './manager.planner';
 import { runHarvester } from './role.harvester';
@@ -20,30 +20,17 @@ export const loop = function () {
     // Planner
     planStructures(room);
 
-    // Sincronizar status das construções planejadas com o mapa
+    // Sincronizar status das construções
     if (Memory.planning && Memory.planning.plannedStructures) {
         for (const p of Memory.planning.plannedStructures) {
             if (p.status === 'built') continue;
-
             const pos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
-            const structures = pos.lookFor(LOOK_STRUCTURES);
-            const isBuilt = structures.some(s => s.structureType === p.structureType);
-
+            const isBuilt = pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === p.structureType);
             if (isBuilt) {
                 p.status = 'built';
-                console.log(`Main: Structure ${p.structureType} built at ${p.pos.x},${p.pos.y}`);
                 continue;
             }
-
-            const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-            const hasSite = sites.some(s => s.structureType === p.structureType);
-
-            if (hasSite) {
-                p.status = 'building';
-            } else if (p.status === 'building') {
-                // Se estava building e não tem site nem estrutura, algo deu errado (ou foi destruído)
-                p.status = 'to_build';
-            }
+            p.status = pos.lookFor(LOOK_CONSTRUCTION_SITES).length > 0 ? 'building' : 'to_build';
         }
     }
 
@@ -51,27 +38,34 @@ export const loop = function () {
     if (Memory.planning && Memory.planning.plannedStructures) {
         const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
         for (const p of toBuild) {
-            const result = room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
-            if (result === OK) {
-                p.status = 'building';
-                console.log(`Main: Created CS for ${p.structureType} at ${p.pos.x},${p.pos.y}`);
-            }
+            room.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
         }
     }
 
-    // Spawner básico
+    // --- SPANWER LOGIC (Priority: Harvester > Supplier > Builder) ---
     const spawn = room.find(FIND_MY_SPAWNS)[0];
-    if (spawn && !spawn.spawning && room.energyAvailable >= 200) {
+    if (spawn && !spawn.spawning) {
         const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name);
         const harvesters = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'harvester');
-        
-        if (harvesters.length < 2) {
-            spawn.spawnCreep([WORK, CARRY, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
-        } else {
-            const builders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'builder');
-            if (builders.length < 2 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) {
-                spawn.spawnCreep([WORK, CARRY, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
-            }
+        const suppliers = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'supplier');
+        const builders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'builder');
+
+        let spawned = false;
+
+        // 1. Harvesters (Mínimo 2)
+        if (harvesters.length < 2 && room.energyAvailable >= 250) {
+            spawn.spawnCreep([WORK, WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
+            spawned = true;
+        } 
+        // 2. Suppliers (Mínimo 1, apenas se houver harvesters e energia no spawn/containers)
+        else if (!spawned && suppliers.length < 1 && harvesters.length > 0 && room.energyAvailable >= 200) {
+            spawn.spawnCreep([CARRY, CARRY, MOVE, MOVE], 'Supplier' + Game.time, { memory: { role: 'supplier' } });
+            spawned = true;
+        }
+        // 3. Builders (Mínimo 2, se houver CS)
+        else if (!spawned && builders.length < 2 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && room.energyAvailable >= 250) {
+            spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
+            spawned = true;
         }
     }
 
