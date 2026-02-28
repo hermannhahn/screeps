@@ -3,43 +3,52 @@ import { isSourceSafe } from './tools';
 
 export function runHarvester(creep: Creep): void {
     const room = creep.room;
+    // console.log(`${creep.name}: Início do processamento.`);
 
+    // --- ESCOLHA DO SOURCE ---
     if (!creep.memory.sourceId) {
+        console.log(`${creep.name}: Sem sourceId na memória. Procurando...`);
         const sources = room.find(FIND_SOURCES);
         const safeSources = _.filter(sources, (s) => isSourceSafe(s));
         
-        console.log(`${creep.name}: Escolhendo source. Disponíveis: ${safeSources.length}`);
-
         if (safeSources.length > 0) {
             const harvesters = _.filter(Game.creeps, (c) => c.room.name === room.name && c.memory.role === 'harvester' && c.name !== creep.name);
             for (const source of safeSources) {
                 const assignedCount = _.filter(harvesters, (h) => h.memory.sourceId === source.id).length;
                 if (assignedCount < 2) {
                     creep.memory.sourceId = source.id;
-                    console.log(`${creep.name}: Atribuído ao source ${source.id}`);
+                    console.log(`${creep.name}: Atribuído ao source ${source.id} em ${source.pos}`);
                     break;
                 }
             }
+        } else {
+            console.log(`${creep.name}: ERRO - Nenhum source seguro encontrado!`);
         }
     }
 
-    if (!creep.memory.sourceId) return;
+    // Validação final do alvo
+    if (!creep.memory.sourceId) {
+        console.log(`${creep.name}: Saindo - sourceId continua indefinido.`);
+        return;
+    }
 
     const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
     if (!source) {
+        console.log(`${creep.name}: Saindo - Alvo ${creep.memory.sourceId} é inválido ou está fora de vista. Resetando memória.`);
         delete creep.memory.sourceId;
         return;
     }
 
+    // --- TRABALHO ---
     if (creep.store.getFreeCapacity() > 0) {
         const res = creep.harvest(source);
         if (res === ERR_NOT_IN_RANGE) {
-            console.log(`${creep.name}: Indo para source ${source.pos}`);
+            console.log(`${creep.name}: Movendo para source em ${source.pos}`);
             creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
         } else if (res === OK) {
-            console.log(`${creep.name}: Harvestando...`);
+            // console.log(`${creep.name}: Harvestando...`);
         } else {
-            console.log(`${creep.name}: Erro ao harvestar: ${res}`);
+            console.log(`${creep.name}: Erro ao colher: ${res}`);
         }
     } else {
         const target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
@@ -49,11 +58,14 @@ export function runHarvester(creep: Creep): void {
 
         if (target) {
             if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                console.log(`${creep.name}: Indo depositar no ${target.structureType}`);
+                console.log(`${creep.name}: Movendo para entrega em ${target.structureType}`);
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
             }
         } else {
-            console.log(`${creep.name}: Nada para depositar, aguardando.`);
+            console.log(`${creep.name}: Sem destino para entrega. Fazendo upgrade.`);
+            if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(room.controller!);
+            }
         }
     }
 }
