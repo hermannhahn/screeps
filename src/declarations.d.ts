@@ -11,8 +11,8 @@ declare global {
         sourceId?: Id<Source>;
         targetId?: Id<any>;
         lastAction?: string;
-        targetRoom?: string; // Sala alvo para roles remotas
-        homeRoom?: string;   // Sala principal para retornar com energia
+        targetRoom?: string;
+        homeRoom?: string;
     }
 
     interface Memory {
@@ -24,6 +24,7 @@ declare global {
     interface RemoteMiningData {
         sources: Id<Source>[];
         reserverNeeded: boolean;
+        isHostile: boolean;
         lastScouted: number;
     }
 

@@ -1,9 +1,14 @@
 // src/main.ts
 import { planStructures } from './manager.planner';
+import { manageRemoteMining, getRemoteSpawnRequest } from './manager.remote';
 import { runHarvester } from './role.harvester';
 import { runSupplier } from './role.supplier';
 import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
+import { runScout } from './role.scout';
+import { runReserver } from './role.reserver';
+import { runRemoteHarvester } from './role.remoteHarvester';
+import { runRemoteCarrier } from './role.remoteCarrier';
 import { isSourceSafe, generateBody } from './tools';
 
 export const loop = function () {
@@ -34,8 +39,9 @@ export const loop = function () {
         }
     }
 
-    // --- 2. PLANNER ---
+    // --- 2. MANAGERS ---
     planStructures(room);
+    manageRemoteMining(room);
 
     // --- 3. CRIAR CONSTRUCTION SITES ---
     if (Memory.planning && Memory.planning.plannedStructures) {
@@ -45,20 +51,14 @@ export const loop = function () {
         }
     }
 
-    // --- 4. LOGICA DAS TORRES (Defesa e Reparo) ---
+    // --- 4. LOGICA DAS TORRES ---
     const towers = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } }) as StructureTower[];
     for (const tower of towers) {
         const closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-        if (closestHostile) {
-            tower.attack(closestHostile);
-        } else {
-            // Se não houver inimigos, reparar estruturas críticas (exceto muros por enquanto)
-            const closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-                filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL && s.structureType !== STRUCTURE_RAMPART
-            });
-            if (closestDamagedStructure) {
-                tower.repair(closestDamagedStructure);
-            }
+        if (closestHostile) tower.attack(closestHostile);
+        else {
+            const damaged = tower.pos.findClosestByRange(FIND_STRUCTURES, { filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL && s.structureType !== STRUCTURE_RAMPART });
+            if (damaged) tower.repair(damaged);
         }
     }
 
@@ -76,7 +76,7 @@ export const loop = function () {
         const rcl = room.controller ? room.controller.level : 1;
         const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
-        // Metas
+        // Metas Locais
         const firstHarvester = harvesters[0];
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
@@ -84,24 +84,44 @@ export const loop = function () {
         const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
-        const energyForBody = (harvesters.length === 0) ? room.energyAvailable : room.energyCapacityAvailable;
+        // Demanda Remota
+        const remoteRequest = getRemoteSpawnRequest(room);
 
+        // FILA DE PRIORIDADE ESCALONADA (Incluindo Remoto)
         let roleToSpawn: string | null = null;
+        let targetRoom: string | undefined = undefined;
+
         if (harvesters.length < safeSources.length) roleToSpawn = 'harvester';
         else if (suppliers.length < 1) roleToSpawn = 'supplier';
         else if (upgraders.length < 1) roleToSpawn = 'upgrader';
+        else if (remoteRequest && remoteRequest.role === 'scout') {
+            roleToSpawn = 'scout';
+            targetRoom = remoteRequest.targetRoom;
+        }
         else if (harvesters.length < targetHarvesters) roleToSpawn = 'harvester';
         else if (builders.length < targetBuilders) roleToSpawn = 'builder';
+        else if (remoteRequest) {
+            roleToSpawn = remoteRequest.role;
+            targetRoom = remoteRequest.targetRoom;
+        }
         else if (suppliers.length < targetSuppliers) roleToSpawn = 'supplier';
         else if (upgraders.length < targetUpgraders) roleToSpawn = 'upgrader';
 
         if (roleToSpawn) {
-            const energyLimit = (harvesters.length === 0 || (suppliers.length === 0 && harvesters.length > 0)) ? room.energyAvailable : room.energyCapacityAvailable;
+            const energyLimit = (harvesters.length === 0) ? room.energyAvailable : room.energyCapacityAvailable;
             const body = generateBody(roleToSpawn, energyLimit);
             let cost = 0;
             for (const part of body) cost += BODYPART_COST[part];
+            
             if (room.energyAvailable >= cost) {
-                spawn.spawnCreep(body, roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time, { memory: { role: roleToSpawn } });
+                const name = roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time;
+                spawn.spawnCreep(body, name, { 
+                    memory: { 
+                        role: roleToSpawn, 
+                        targetRoom: targetRoom, 
+                        homeRoom: room.name 
+                    } 
+                });
             }
         }
     }
@@ -110,9 +130,16 @@ export const loop = function () {
     for (const name in Game.creeps) {
         const creep = Game.creeps[name];
         if (creep.spawning) continue;
-        if (creep.memory.role === 'harvester') runHarvester(creep);
-        else if (creep.memory.role === 'builder') runBuilder(creep);
-        else if (creep.memory.role === 'supplier') runSupplier(creep);
-        else if (creep.memory.role === 'upgrader') runUpgrader(creep);
+        
+        switch (creep.memory.role) {
+            case 'harvester': runHarvester(creep); break;
+            case 'builder': runBuilder(creep); break;
+            case 'supplier': runSupplier(creep); break;
+            case 'upgrader': runUpgrader(creep); break;
+            case 'scout': runScout(creep); break;
+            case 'reserver': runReserver(creep); break;
+            case 'remoteHarvester': runRemoteHarvester(creep); break;
+            case 'remoteCarrier': runRemoteCarrier(creep); break;
+        }
     }
 }
