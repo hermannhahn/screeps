@@ -38,12 +38,9 @@ export function isSourceSafe(source: Source): boolean {
     return true;
 }
 
-// Gerador de corpos dinâmicos (Corrigido)
 export function generateBody(role: string, energy: number): BodyPartConstant[] {
     let body: BodyPartConstant[] = [];
-    
     if (role === 'harvester') {
-        // Harvester: Base [WORK, CARRY, MOVE] = 200. Cada WORK extra = 100.
         body.push(CARRY);
         body.push(MOVE);
         let remaining = energy - 100;
@@ -51,10 +48,7 @@ export function generateBody(role: string, energy: number): BodyPartConstant[] {
         if (workParts > 6) workParts = 6;
         if (workParts < 1) workParts = 1;
         for (let i = 0; i < workParts; i++) body.push(WORK);
-    } 
-    else if (role === 'supplier') {
-        // Supplier: 1 WORK fixo (100). Resto pares [CARRY, MOVE] (100) ou trios [CARRY, CARRY, MOVE] (150).
-        // Vamos usar pares [CARRY, MOVE] para garantir que o custo seja respeitado.
+    } else if (role === 'supplier') {
         body.push(WORK);
         let remaining = energy - 100;
         let pairs = Math.floor(remaining / 100);
@@ -64,9 +58,7 @@ export function generateBody(role: string, energy: number): BodyPartConstant[] {
             body.push(CARRY);
             body.push(MOVE);
         }
-    }
-    else {
-        // Builder e Upgrader: [WORK, CARRY, MOVE] = 200
+    } else {
         let sets = Math.floor(energy / 200);
         if (sets > 15) sets = 15;
         if (sets < 1) sets = 1;
@@ -76,7 +68,6 @@ export function generateBody(role: string, energy: number): BodyPartConstant[] {
             body.push(MOVE);
         }
     }
-
     return body;
 }
 
@@ -101,4 +92,43 @@ export function isTargetAvailable(creep: Creep, target: any): boolean {
         reservedAmount += other.store.getFreeCapacity(RESOURCE_ENERGY);
     }
     return (energyAvailable - reservedAmount) > 0;
+}
+
+// --- SISTEMA DEFENSIVO DE EVASÃO ---
+export function handleDefensiveState(creep: Creep): boolean {
+    // Detectar inimigos em um raio de 5 blocos
+    const hostiles = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 5);
+    
+    if (hostiles.length > 0) {
+        creep.say('🏃💨', true);
+        
+        // Abandonar alvos atuais para forçar re-escolha após a fuga
+        delete creep.memory.targetId;
+        if (creep.memory.role === 'harvester') delete creep.memory.sourceId;
+
+        // Gerar caminho de fuga usando PathFinder
+        const goals = hostiles.map(h => ({ pos: h.pos, range: 10 }));
+        const path = PathFinder.search(creep.pos, goals, {
+            flee: true,
+            maxRooms: 1,
+            plainCost: 2,
+            swampCost: 10,
+            maxOps: 500
+        }).path;
+
+        if (path.length > 0) {
+            creep.moveByPath(path);
+        } else {
+            // Se não houver caminho de fuga (encurralado), tenta se afastar do mais próximo
+            const closest = creep.pos.findClosestByRange(hostiles);
+            if (closest) {
+                const direction = creep.pos.getDirectionTo(closest);
+                // Inverte a direção para fugir
+                const fleeDirection = (direction + 4) % 8 || 8; 
+                creep.move(fleeDirection as DirectionConstant);
+            }
+        }
+        return true; // Creep sob ameaça
+    }
+    return false; // Ambiente seguro
 }

@@ -1,7 +1,10 @@
 // src/role.supplier.ts
-import { isTargetAvailable, getEnergyAmount } from './tools';
+import { isTargetAvailable, getEnergyAmount, handleDefensiveState } from './tools';
 
 export function runSupplier(creep: Creep): void {
+    // --- SISTEMA DEFENSIVO ---
+    if (handleDefensiveState(creep)) return;
+
     const room = creep.room;
 
     if (creep.getActiveBodyparts(WORK) === 0) {

@@ -1,7 +1,10 @@
 // src/role.harvester.ts
-import { isSourceSafe } from './tools';
+import { isSourceSafe, handleDefensiveState } from './tools';
 
 export function runHarvester(creep: Creep): void {
+    // --- SISTEMA DEFENSIVO ---
+    if (handleDefensiveState(creep)) return;
+
     const room = creep.room;
 
     // --- ESCOLHA DO SOURCE ---
@@ -15,7 +18,7 @@ export function runHarvester(creep: Creep): void {
                 const assignedCount = _.filter(harvesters, (h) => h.memory.sourceId === source.id).length;
                 if (assignedCount < 2) {
                     creep.memory.sourceId = source.id;
-                    creep.say('⛏️', true); // Diz apenas uma vez ao definir o alvo
+                    creep.say('⛏️', true);
                     break;
                 }
             }

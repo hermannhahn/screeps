@@ -1,7 +1,10 @@
 // src/role.upgrader.ts
-import { isTargetAvailable, getEnergyAmount } from './tools';
+import { isTargetAvailable, getEnergyAmount, handleDefensiveState } from './tools';
 
 export function runUpgrader(creep: Creep): void {
+    // --- SISTEMA DEFENSIVO ---
+    if (handleDefensiveState(creep)) return;
+
     if (creep.memory.upgrading && creep.store[RESOURCE_ENERGY] === 0) {
         creep.memory.upgrading = false;
         delete creep.memory.targetId;
@@ -18,25 +21,21 @@ export function runUpgrader(creep: Creep): void {
 
     if (creep.memory.upgrading) {
         if (creep.upgradeController(creep.room.controller!) === ERR_NOT_IN_RANGE) {
-            creep.moveTo(creep.room.controller!, { visualizePathStyle: { stroke: '#ffffff' } });
+            creep.moveTo(creep.room.controller!, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 10 });
         } else {
             creep.say('⚡');
         }
     } else {
-        // --- COLETA DE ENERGIA ---
         if (!creep.memory.targetId) {
-            // 1. Container próximo ao Controller
             const controllerContainer = creep.room.controller!.pos.findInRange(FIND_STRUCTURES, 3, {
                 filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] > 0 && isTargetAvailable(creep, s)
             })[0];
             if (controllerContainer) creep.memory.targetId = controllerContainer.id;
 
-            // 2. Storage
             if (!creep.memory.targetId && creep.room.storage && isTargetAvailable(creep, creep.room.storage) && creep.room.storage.store[RESOURCE_ENERGY] > 0) {
                 creep.memory.targetId = creep.room.storage.id;
             }
 
-            // 3. Outros Containers
             if (!creep.memory.targetId) {
                 const container = creep.pos.findClosestByPath(FIND_STRUCTURES, {
                     filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] > 50 && isTargetAvailable(creep, s)
@@ -44,7 +43,6 @@ export function runUpgrader(creep: Creep): void {
                 if (container) creep.memory.targetId = container.id;
             }
 
-            // 4. Drops
             if (!creep.memory.targetId) {
                 const drop = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
                     filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 50 && isTargetAvailable(creep, r)
@@ -53,19 +51,16 @@ export function runUpgrader(creep: Creep): void {
             }
         }
 
-        // Executar Coleta ou Fallback
         if (creep.memory.targetId) {
             const target = Game.getObjectById(creep.memory.targetId as Id<any>);
             if (target) {
-                const res = (target instanceof Resource) ? creep.pickup(target) : creep.withdraw(target, RESOURCE_ENERGY);
-                if (res === ERR_NOT_IN_RANGE) {
+                if (creep.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10 });
                 } else {
                     creep.say('📦');
                 }
             }
         } else {
-            // --- FALLBACK: Harvest direto se for RCL baixo e não houver infraestrutura ---
             if (creep.room.controller!.level <= 2) {
                 const source = creep.pos.findClosestByPath(FIND_SOURCES, {
                     filter: (s) => s.energy > 0

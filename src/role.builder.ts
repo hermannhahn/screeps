@@ -1,7 +1,11 @@
 // src/role.builder.ts
-import { isTargetAvailable, getEnergyAmount } from './tools';
+import { isTargetAvailable, getEnergyAmount, handleDefensiveState } from './tools';
 
 export function runBuilder(creep: Creep): void {
+    // --- SISTEMA DEFENSIVO ---
+    if (handleDefensiveState(creep)) return;
+
+    // 1. VALIDAÇÃO DE ESTADO E ALVO
     if (creep.memory.building && creep.store[RESOURCE_ENERGY] === 0) {
         creep.memory.building = false;
         delete creep.memory.targetId;
@@ -11,6 +15,7 @@ export function runBuilder(creep: Creep): void {
         delete creep.memory.targetId;
     }
 
+    // Validação do alvo persistente
     if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (!target || getEnergyAmount(target) === 0) delete creep.memory.targetId;
@@ -35,7 +40,7 @@ export function runBuilder(creep: Creep): void {
             }
         } else {
             if (creep.upgradeController(creep.room.controller!) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(creep.room.controller!, { reusePath: 10 });
+                creep.moveTo(creep.room.controller!, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 10 });
             } else {
                 creep.say('⚡');
             }
