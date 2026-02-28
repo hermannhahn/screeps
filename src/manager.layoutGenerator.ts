@@ -1,4 +1,3 @@
-import { PlannedStructure, RoomLayoutMemory } from './declarations';
 import { isSafePosition } from './blueprints/utils'; // Reutilizar isSafePosition
 
 const layoutGenerator = {
