@@ -4,13 +4,6 @@ import { isSourceSafe } from './tools';
 export function runHarvester(creep: Creep): void {
     const room = creep.room;
 
-    // Verificação de erro de design: Harvester sem CARRY não funciona sem containers
-    if (creep.getActiveBodyparts(CARRY) === 0) {
-        console.log(`${creep.name}: ERRO FATAL - Creep sem CARRY part! Suicidando para renascer correto.`);
-        creep.suicide();
-        return;
-    }
-
     // --- ESCOLHA DO SOURCE ---
     if (!creep.memory.sourceId) {
         const sources = room.find(FIND_SOURCES);
@@ -22,7 +15,6 @@ export function runHarvester(creep: Creep): void {
                 const assignedCount = _.filter(harvesters, (h) => h.memory.sourceId === source.id).length;
                 if (assignedCount < 2) {
                     creep.memory.sourceId = source.id;
-                    console.log(`${creep.name}: Atribuído ao source ${source.id}`);
                     break;
                 }
             }
@@ -41,18 +33,50 @@ export function runHarvester(creep: Creep): void {
             creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
         }
     } else {
-        const target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
-            filter: (s: AnyStructure) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
-                           s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-        }) as AnyStructure;
+        // --- DEPÓSITO ---
+        const suppliers = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name && c.memory.role === 'supplier' && !c.spawning);
 
-        if (target) {
-            if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+        if (suppliers.length === 0) {
+            // SEM SUPPLIERS: Prioridade total no Spawn/Extensions
+            const target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+                filter: (s: AnyStructure) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
+                               s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+            }) as AnyStructure;
+            if (target) {
+                if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+                }
+            } else {
+                // Fallback para upgrade
+                if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(room.controller!);
+                }
             }
         } else {
-            if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(room.controller!);
+            // COM SUPPLIERS: PROIBIDO Spawn/Extensions. Usar Links > Containers > Drop.
+            // 1. Tentar Link em range 3
+            const link = creep.pos.findInRange(FIND_MY_STRUCTURES, 3, {
+                filter: (s) => s.structureType === STRUCTURE_LINK && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+            })[0];
+
+            if (link) {
+                if (creep.transfer(link, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(link);
+                }
+            } else {
+                // 2. Tentar Container em range 3
+                const container = creep.pos.findInRange(FIND_STRUCTURES, 3, {
+                    filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                })[0];
+
+                if (container) {
+                    if (creep.transfer(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                        creep.moveTo(container);
+                    }
+                } else {
+                    // 3. Drop (Supplier pegará)
+                    creep.drop(RESOURCE_ENERGY);
+                }
             }
         }
     }
