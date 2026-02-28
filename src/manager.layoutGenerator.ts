@@ -1,5 +1,5 @@
 import { isSafePosition } from './blueprints/utils';
-import { generateExtensionsLayout } from './blueprints/extensions'; // NOVO IMPORT
+import { generateExtensionsLayout } from './blueprints/extensions';
 
 const layoutGenerator = {
     generateLayout: function(room: Room, spawn: StructureSpawn): void {
@@ -8,92 +8,65 @@ const layoutGenerator = {
             generated: true
         };
 
-        const currentRCL = room.controller ? room.controller.level : 0;
+        // Planejamos para todos os RCLs do 1 até o nível atual
+        const currentRCL = room.controller ? room.controller.level : 1;
 
-        // Garante que o array para o RCL atual exista
-        if (!roomLayout.rcl[currentRCL]) {
-            roomLayout.rcl[currentRCL] = [];
-        }
+        for (let rcl = 1; rcl <= currentRCL; rcl++) {
+            if (!roomLayout.rcl[rcl]) {
+                roomLayout.rcl[rcl] = [];
+            }
 
-        // 1. Capturar estruturas existentes que queremos manter
-        const structuresToCapture = room.find(FIND_STRUCTURES, {
-            filter: (s: Structure) => {
-                const isBuildable = (
-                    s.structureType === STRUCTURE_ROAD ||
-                    s.structureType === STRUCTURE_EXTENSION || // Incluir extensões
-                    s.structureType === STRUCTURE_RAMPART ||
-                    s.structureType === STRUCTURE_WALL ||
-                    s.structureType === STRUCTURE_CONTAINER ||
-                    s.structureType === STRUCTURE_TOWER ||
-                    s.structureType === STRUCTURE_STORAGE ||
-                    s.structureType === STRUCTURE_LINK ||
-                    s.structureType === STRUCTURE_EXTRACTOR ||
-                    s.structureType === STRUCTURE_LAB ||
-                    s.structureType === STRUCTURE_TERMINAL ||
-                    s.structureType === STRUCTURE_NUKER ||
-                    s.structureType === STRUCTURE_FACTORY ||
-                    s.structureType === STRUCTURE_SPAWN
-                );
-                return isBuildable && s.pos.getRangeTo(spawn.pos) <= 3; // Raio de 3 para capturar
+            // 1. Planejar Estradas do Spawn (RCL 1+)
+            if (rcl === 1) {
+                const spawnRoads = this.generateSpawnRoads(room, spawn);
+                roomLayout.rcl[rcl].push(...spawnRoads);
             }
-        });
 
-        for (const s of structuresToCapture) {
-            if (!roomLayout.rcl[currentRCL].some((p: PlannedStructure) => p.x === s.pos.x && p.y === s.pos.y && p.structureType === s.structureType)) {
-                roomLayout.rcl[currentRCL].push({ x: s.pos.x, y: s.pos.y, structureType: s.structureType as BuildableStructureConstant });
+            // 2. Planejar Extensões (RCL 2+)
+            if (rcl >= 2) {
+                const extensions = generateExtensionsLayout(room, spawn, rcl);
+                // Adiciona apenas as que ainda não foram planejadas em RCLs anteriores
+                for (const ext of extensions) {
+                    if (!this.isAlreadyPlanned(roomLayout, ext)) {
+                        roomLayout.rcl[rcl].push(ext);
+                    }
+                }
             }
+            
+            // TODO: Adicionar outros geradores (Torres, Containers, etc.) conforme implementarmos
         }
-        
-        // 2. Adicionar as estruturas que são idealmente planejadas
-        const newlyPlannedSpawnRoads = this.generateSpawnRoads(room, spawn);
-        for (const planned of newlyPlannedSpawnRoads) {
-            if (!roomLayout.rcl[currentRCL].some((p: PlannedStructure) => p.x === planned.x && p.y === planned.y && p.structureType === planned.structureType)) {
-                roomLayout.rcl[currentRCL].push(planned);
-            }
-        }
-
-        // NOVO: Adicionar extensões planejadas
-        const newlyPlannedExtensions = generateExtensionsLayout(room, spawn, currentRCL);
-        for (const planned of newlyPlannedExtensions) {
-            if (!roomLayout.rcl[currentRCL].some((p: PlannedStructure) => p.x === planned.x && p.y === planned.y && p.structureType === planned.structureType)) {
-                roomLayout.rcl[currentRCL].push(planned);
-            }
-        }
-        
-        // TODO: Adicionar lógica para outros RCLs (2 a 8) e outros tipos de estruturas
 
         room.memory.layout = roomLayout;
-        console.log(`[LayoutGenerator] Generated initial layout for room ${room.name}. Total planned structures for RCL ${currentRCL}: ${roomLayout.rcl[currentRCL].length}.`);
+        const total = Object.values(roomLayout.rcl).reduce((sum, list) => sum + list.length, 0);
+        console.log(`[LayoutGenerator] Clean layout generated for room ${room.name}. Total planned structures: ${total}.`);
+    },
+
+    isAlreadyPlanned: function(layout: RoomLayoutMemory, structure: PlannedStructure): boolean {
+        for (const rcl in layout.rcl) {
+            if (layout.rcl[rcl].some(p => p.x === structure.x && p.y === structure.y && p.structureType === structure.structureType)) {
+                return true;
+            }
+        }
+        return false;
     },
 
     generateSpawnRoads: function(room: Room, spawn: StructureSpawn): PlannedStructure[] {
         const planned: PlannedStructure[] = [];
-        if (!isSafePosition(spawn.pos)) {
-            console.log(`[LayoutGenerator] Spawn at ${spawn.pos} is not safe. Skipping spawn roads generation.`);
-            return planned;
-        }
-        
-        const distance = 1; // Anel de distância 1 ao redor do spawn
+        const distance = 1; 
         const centerPos = spawn.pos;
 
         for (let x = centerPos.x - distance; x <= centerPos.x + distance; x++) {
             for (let y = centerPos.y - distance; y <= centerPos.y + distance; y++) {
-                // Apenas as bordas do quadrado 3x3
                 if (x === centerPos.x - distance || x === centerPos.x + distance ||
                     y === centerPos.y - distance || y === centerPos.y + distance) {
                     if (x < 0 || x > 49 || y < 0 || y > 49) continue;
-                    
-                    const terrain = room.getTerrain().get(x, y);
-                    if (terrain === TERRAIN_MASK_WALL) continue; // Não planeja estradas em paredes
-                    
+                    if (room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) continue;
                     planned.push({ x: x, y: y, structureType: STRUCTURE_ROAD });
                 }
             }
         }
         return planned;
-    },
-
-    // TODO: Adicionar métodos generateExtensions, generateSourceRoads, etc.
+    }
 };
 
 export default layoutGenerator;
