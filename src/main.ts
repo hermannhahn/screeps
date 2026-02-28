@@ -3,8 +3,9 @@ import { planStructures } from './manager.planner';
 import { runHarvester } from './role.harvester';
 import { runSupplier } from './role.supplier';
 import { runBuilder } from './role.builder';
+import { runUpgrader } from './role.upgrader';
 
-console.log("--- GEMINI DEPLOY: v9 (Dynamic Spawning Logic) ---");
+console.log("--- GEMINI DEPLOY: v10 (Upgrader Implementation) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -47,27 +48,20 @@ export const loop = function () {
         const harvesters = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'harvester');
         const suppliers = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'supplier');
         const builders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'builder');
+        const upgraders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'upgrader');
 
         const sources = room.find(FIND_SOURCES);
         const rcl = room.controller ? room.controller.level : 1;
 
-        // 1. Determinar meta de Harvesters
-        // 2 por source se work < 5, senão 1 por source.
-        // Verificamos o corpo do primeiro harvester vivo como referência
+        // Metas
         const firstHarvester = harvesters[0];
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? sources.length * 2 : sources.length;
-
-        // 2. Determinar meta de Suppliers
-        // 2 suppliers por harvester vivo
         const targetSuppliers = harvesters.length * 2;
+        const targetBuilders = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? (rcl <= 2 ? 2 : 1) : 0;
+        const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
-        // 3. Determinar meta de Builders
-        // 2 se RCL <= 2, senão 1. Apenas se houver CS.
-        const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
-        const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
-
-        // Execução do Spawn (Prioridade: Harvester > Supplier > Builder)
+        // Execução (Prioridade: Harvester > Supplier > Builder > Upgrader)
         if (harvesters.length < targetHarvesters && room.energyAvailable >= 250) {
             spawn.spawnCreep([WORK, WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
         } 
@@ -77,6 +71,9 @@ export const loop = function () {
         else if (builders.length < targetBuilders && room.energyAvailable >= 250) {
             spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
         }
+        else if (upgraders.length < targetUpgraders && room.energyAvailable >= 250) {
+            spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+        }
     }
 
     // Rodar creeps
@@ -85,5 +82,6 @@ export const loop = function () {
         if (creep.memory.role === 'harvester') runHarvester(creep);
         if (creep.memory.role === 'builder') runBuilder(creep);
         if (creep.memory.role === 'supplier') runSupplier(creep);
+        if (creep.memory.role === 'upgrader') runUpgrader(creep);
     }
 }
