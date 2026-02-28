@@ -61,7 +61,7 @@ export function generateExtensionsLayout(room: Room, spawn: StructureSpawn, rcl:
                 return true;
             }
             // Check para fontes, minerais (recursos não construíveis, não estruturas)
-            if (obj.type === LOOK_SOURCES || obj.type === LOOK_MINERALS || obj.type === 'controller') {
+            if (obj.type === LOOK_SOURCES || obj.type === LOOK_MINERALS) {
                 return true;
             }
             return false;
