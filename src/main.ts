@@ -6,7 +6,7 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe } from './tools';
 
-console.log("--- GEMINI DEPLOY: v18 (Full Spawning Priority Restored) ---");
+console.log("--- GEMINI DEPLOY: v18.1 (Const to Let Fix) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -15,7 +15,7 @@ export const loop = function () {
         }
     }
 
-    const room = Object.values(Game.rooms)[0];
+    let room = Object.values(Game.rooms)[0];
     if (!room) {
         const spawns = Object.values(Game.spawns);
         if (spawns.length > 0) room = spawns[0].room;
