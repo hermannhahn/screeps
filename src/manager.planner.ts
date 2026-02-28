@@ -2,14 +2,18 @@
 import { addPlannedStructure } from './tools';
 
 export function planStructures(room: Room): void {
+    // Inicialização robusta da memória
     if (!Memory.planning) {
         Memory.planning = { plannedStructures: [], spawnSquareRoadAnchorPositions: [], currentStage: 1 };
     }
-    if (Memory.planning.currentStage === undefined) Memory.planning.currentStage = 1;
-    if (!Memory.planning.plannedStructures) Memory.planning.plannedStructures = [];
-    if (!Memory.planning.spawnSquareRoadAnchorPositions) Memory.planning.spawnSquareRoadAnchorPositions = [];
+    
+    const planning = Memory.planning; // Variável local para evitar erro de 'possibly undefined'
 
-    const stage = Memory.planning.currentStage;
+    if (planning.currentStage === undefined) planning.currentStage = 1;
+    if (!planning.plannedStructures) planning.plannedStructures = [];
+    if (!planning.spawnSquareRoadAnchorPositions) planning.spawnSquareRoadAnchorPositions = [];
+
+    const stage = planning.currentStage;
     console.log(`Planner Stage: ${stage}`);
 
     if (stage === 1) {
@@ -25,8 +29,8 @@ export function planStructures(room: Room): void {
             
             for (const off of offsets) {
                 const pos = new RoomPosition(spawn.pos.x + off.dx, spawn.pos.y + off.dy, room.name);
-                if (addPlannedStructure(Memory.planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) {
-                    Memory.planning.spawnSquareRoadAnchorPositions.push(pos);
+                if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) {
+                    planning.spawnSquareRoadAnchorPositions.push(pos);
                     added++;
                 }
             }
@@ -34,16 +38,16 @@ export function planStructures(room: Room): void {
         }
         
         // Verifica se todas as estradas planejadas no estágio 1 estão construídas
-        const stage1Roads = Memory.planning.plannedStructures.filter((p: PlannedStructure) => 
+        const stage1Roads = planning.plannedStructures.filter((p: PlannedStructure) => 
             p.structureType === STRUCTURE_ROAD && 
-            Memory.planning.spawnSquareRoadAnchorPositions.some((anchor: any) => anchor.x === p.pos.x && anchor.y === p.pos.y)
+            planning.spawnSquareRoadAnchorPositions.some((anchor: any) => anchor.x === p.pos.x && anchor.y === p.pos.y)
         );
 
         const allBuilt = stage1Roads.length > 0 && stage1Roads.every((p: PlannedStructure) => p.status === 'built');
 
         if (allBuilt) {
             console.log("Planner: Stage 1 (Diamond) Complete. Advancing to Stage 2.");
-            Memory.planning.currentStage = 2;
+            planning.currentStage = 2;
         }
     }
 }
