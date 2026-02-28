@@ -7,14 +7,9 @@ export function isTerrainValidForRoad(pos: RoomPosition, room: Room): boolean {
 }
 
 export function addPlannedStructure(plans: PlannedStructure[], pos: RoomPosition, structureType: StructureConstant, status: PlannedStructure['status'] = 'to_build', room: Room): boolean {
-    // Verificar se já existe um plano EXATAMENTE igual (mesma pos e tipo)
     const exists = plans.some(p => p.pos.x === pos.x && p.pos.y === pos.y && p.structureType === structureType);
     if (exists) return false;
-
-    // Se for estrada, permitir planejar sobre outras coisas planejadas para o PathFinder funcionar, 
-    // mas na hora de criar o CS o main.ts filtrará se está ocupado por estrutura real.
     if (!isTerrainValidForRoad(pos, room)) return false;
-
     plans.push({ pos, structureType, status });
     return true;
 }
@@ -43,36 +38,45 @@ export function isSourceSafe(source: Source): boolean {
     return true;
 }
 
+// Gerador de corpos dinâmicos (Corrigido)
 export function generateBody(role: string, energy: number): BodyPartConstant[] {
     let body: BodyPartConstant[] = [];
+    
     if (role === 'harvester') {
-        let workParts = Math.floor((energy - 100) / 100);
+        // Harvester: Base [WORK, CARRY, MOVE] = 200. Cada WORK extra = 100.
+        body.push(CARRY);
+        body.push(MOVE);
+        let remaining = energy - 100;
+        let workParts = Math.floor(remaining / 100);
         if (workParts > 6) workParts = 6;
         if (workParts < 1) workParts = 1;
         for (let i = 0; i < workParts; i++) body.push(WORK);
-        body.push(CARRY);
-        body.push(MOVE);
-    } else if (role === 'supplier') {
+    } 
+    else if (role === 'supplier') {
+        // Supplier: 1 WORK fixo (100). Resto pares [CARRY, MOVE] (100) ou trios [CARRY, CARRY, MOVE] (150).
+        // Vamos usar pares [CARRY, MOVE] para garantir que o custo seja respeitado.
         body.push(WORK);
-        let remainingEnergy = energy - 100;
-        let pairs = Math.floor(remainingEnergy / 100);
+        let remaining = energy - 100;
+        let pairs = Math.floor(remaining / 100);
         if (pairs > 15) pairs = 15;
         if (pairs < 1) pairs = 1;
         for (let i = 0; i < pairs; i++) {
             body.push(CARRY);
-            body.push(CARRY);
             body.push(MOVE);
         }
-    } else {
-        let parts = Math.floor(energy / 200);
-        if (parts > 15) parts = 15;
-        if (parts < 1) parts = 1;
-        for (let i = 0; i < parts; i++) {
+    }
+    else {
+        // Builder e Upgrader: [WORK, CARRY, MOVE] = 200
+        let sets = Math.floor(energy / 200);
+        if (sets > 15) sets = 15;
+        if (sets < 1) sets = 1;
+        for (let i = 0; i < sets; i++) {
             body.push(WORK);
             body.push(CARRY);
             body.push(MOVE);
         }
     }
+
     return body;
 }
 

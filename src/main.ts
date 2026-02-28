@@ -6,8 +6,6 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe, generateBody } from './tools';
 
-console.log("--- GEMINI DEPLOY: v32.1 (Safety Cleanup & Supplier Fix) ---");
-
 export const loop = function () {
     for (const name in Memory.creeps) {
         if (!Game.creeps[name]) {
@@ -69,7 +67,8 @@ export const loop = function () {
         const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
-        // FILA DE PRIORIDADE ESCALONADA
+        const energyForBody = (harvesters.length === 0) ? room.energyAvailable : room.energyCapacityAvailable;
+
         let roleToSpawn: string | null = null;
         if (harvesters.length < safeSources.length) roleToSpawn = 'harvester';
         else if (suppliers.length < 1) roleToSpawn = 'supplier';
@@ -80,12 +79,10 @@ export const loop = function () {
         else if (upgraders.length < targetUpgraders) roleToSpawn = 'upgrader';
 
         if (roleToSpawn) {
-            // Se for spawn crítico (zero harvesters ou zero suppliers), usa energia atual. Senão usa capacidade total.
             const energyLimit = (harvesters.length === 0 || (suppliers.length === 0 && harvesters.length > 0)) ? room.energyAvailable : room.energyCapacityAvailable;
             const body = generateBody(roleToSpawn, energyLimit);
             let cost = 0;
             for (const part of body) cost += BODYPART_COST[part];
-            
             if (room.energyAvailable >= cost) {
                 spawn.spawnCreep(body, roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time, { memory: { role: roleToSpawn } });
             }

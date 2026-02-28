@@ -12,21 +12,26 @@ export function planStructures(room: Room): void {
     if (!planning.spawnSquareRoadAnchorPositions) planning.spawnSquareRoadAnchorPositions = [];
 
     const stage = planning.currentStage;
-    const hasActiveCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
+    const activeCS = room.find(FIND_MY_CONSTRUCTION_SITES);
 
     // --- LIMPEZA DE SEGURANÇA ---
-    // Remover planos de estradas que levam a sources que não são mais seguras
     const sources = room.find(FIND_SOURCES);
     const unsafeSources = sources.filter(s => !isSourceSafe(s));
+    
     if (unsafeSources.length > 0) {
+        // 1. Remover da memória
         planning.plannedStructures = planning.plannedStructures.filter(p => {
-            if (p.structureType === STRUCTURE_ROAD) {
-                const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
-                // Se a estrada está muito perto de uma source insegura (range 5), removemos o plano
-                return !unsafeSources.some(us => pPos.inRangeTo(us, 5));
-            }
-            return true;
+            const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
+            return !unsafeSources.some(us => pPos.inRangeTo(us, 10)); // Usar range 10 para ser consistente
         });
+
+        // 2. Cancelar Construction Sites reais em áreas inseguras
+        for (const cs of activeCS) {
+            if (unsafeSources.some(us => cs.pos.inRangeTo(us, 10))) {
+                cs.remove();
+                console.log(`Planner: Removed unsafe CS at ${cs.pos.x},${cs.pos.y}`);
+            }
+        }
     }
 
     // --- ESTÁGIO 1: DIAMANTE DO SPAWN ---
@@ -52,7 +57,7 @@ export function planStructures(room: Room): void {
         );
 
         const allBuilt = stage1Roads.length > 0 && stage1Roads.every((p: PlannedStructure) => p.status === 'built');
-        if (allBuilt && !hasActiveCS) {
+        if (allBuilt && activeCS.length === 0) {
             console.log("Planner: Stage 1 Complete. Advancing to Stage 2.");
             planning.currentStage = 2;
         }
@@ -89,13 +94,13 @@ export function planStructures(room: Room): void {
         const stage2Exts = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_EXTENSION);
         const allBuilt = stage2Exts.length >= 5 && stage2Exts.every(p => p.status === 'built');
 
-        if (allBuilt && !hasActiveCS) {
+        if (allBuilt && activeCS.length === 0) {
             console.log("Planner: Stage 2 Complete. Advancing to Stage 3.");
             planning.currentStage = 3;
         }
     }
 
-    // --- ESTÁGIO 3: ESTRADAS DAS SOURCES (Segurança Reforçada) ---
+    // --- ESTÁGIO 3: ESTRADAS DAS SOURCES ---
     if (stage === 3) {
         const safeSources = sources.filter(s => isSourceSafe(s));
         const anchorsRaw = planning.spawnSquareRoadAnchorPositions;
@@ -140,7 +145,7 @@ export function planStructures(room: Room): void {
         );
         
         const allBuilt = stage3Roads.length > 0 && stage3Roads.every(p => p.status === 'built');
-        if (allBuilt && !hasActiveCS) {
+        if (allBuilt && activeCS.length === 0) {
             console.log("Planner: Stage 3 Complete. Advancing to Stage 4.");
             planning.currentStage = 4;
         }
@@ -168,7 +173,7 @@ export function planStructures(room: Room): void {
             p.status !== 'built' && 
             !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y)
         );
-        if (stage4Roads.length === 0 && !hasActiveCS) {
+        if (stage4Roads.length === 0 && activeCS.length === 0) {
             console.log("Planner: Stage 4 Complete.");
             planning.currentStage = 5;
         }
