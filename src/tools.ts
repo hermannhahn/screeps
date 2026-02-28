@@ -76,35 +76,34 @@ export function generateBody(role: string, energy: number): BodyPartConstant[] {
     return body;
 }
 
-// --- LOGICA DE RESERVA DE ENERGIA ---
+// --- LOGICA DE RESERVA DE ENERGIA (Refinada) ---
 
-// Retorna a quantidade de energia disponível no alvo (Structure ou Resource)
 export function getEnergyAmount(target: any): number {
+    if (!target) return 0;
     if (target.store) return target.store.getUsedCapacity(RESOURCE_ENERGY);
-    if (target.amount) return target.amount; // Para Resources
+    if (target.amount) return target.amount; 
     return 0;
 }
 
-// Verifica se há energia suficiente sobrando para o creep após descontar os outros que já miraram o alvo
 export function isTargetAvailable(creep: Creep, target: any): boolean {
     if (!target) return false;
     
     let energyAvailable = getEnergyAmount(target);
     if (energyAvailable <= 0) return false;
 
-    // Buscar outros creeps que já têm esse alvo
+    // Outros que já MIRARAM esse alvo (excluindo a si mesmo se já tiver marcado)
     const others = _.filter(Game.creeps, (c) => 
         c.room.name === creep.room.name && 
         c.id !== creep.id && 
         c.memory.targetId === target.id
     );
 
-    // Subtrair o espaço livre de carga de cada creep indo pro mesmo alvo
     let reservedAmount = 0;
     for (const other of others) {
+        // Reservamos o quanto o outro creep PODE carregar
         reservedAmount += other.store.getFreeCapacity(RESOURCE_ENERGY);
     }
 
-    // O alvo está disponível se sobrar energia após as reservas
+    // Só é disponível se sobrar energia após as reservas dos outros
     return (energyAvailable - reservedAmount) > 0;
 }

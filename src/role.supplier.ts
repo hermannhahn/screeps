@@ -1,5 +1,5 @@
 // src/role.supplier.ts
-import { isTargetAvailable } from './tools';
+import { isTargetAvailable, getEnergyAmount } from './tools';
 
 export function runSupplier(creep: Creep): void {
     const room = creep.room;
@@ -9,97 +9,117 @@ export function runSupplier(creep: Creep): void {
         return;
     }
 
+    // --- 1. VALIDAÇÃO DO ALVO ATUAL ---
+    if (creep.memory.targetId) {
+        const target = Game.getObjectById(creep.memory.targetId as Id<any>);
+        
+        // Se o alvo sumiu ou ficou vazio, reseta
+        if (!target || getEnergyAmount(target) === 0) {
+            delete creep.memory.targetId;
+        } 
+        // Se estivermos coletando e ficarmos cheios, reseta
+        else if (creep.store.getFreeCapacity() === 0 && (target instanceof Resource || target instanceof StructureContainer || target instanceof StructureLink || target instanceof StructureStorage)) {
+            delete creep.memory.targetId;
+        }
+        // Se estivermos entregando e ficarmos vazios, reseta
+        else if (creep.store.getUsedCapacity() === 0) {
+            delete creep.memory.targetId;
+        }
+    }
+
+    // --- 2. LÓGICA DE COLETA ---
     if (creep.store.getUsedCapacity() === 0) {
-        // --- COLETA ---
-        const sources = room.find(FIND_SOURCES);
-        
-        // 1. Containers/Links de Coleta (perto de Source)
-        const sourceContainers = room.find(FIND_STRUCTURES, {
-            filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_LINK) && 
-                           sources.some(source => s.pos.inRangeTo(source, 3)) &&
-                           isTargetAvailable(creep, s)
-        });
+        if (!creep.memory.targetId) {
+            const sources = room.find(FIND_SOURCES);
+            
+            // Prioridade 1: Containers/Links de Coleta
+            const sourceContainers = room.find(FIND_STRUCTURES, {
+                filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_LINK) && 
+                               sources.some(source => s.pos.inRangeTo(source, 3)) &&
+                               isTargetAvailable(creep, s)
+            });
+            if (sourceContainers.length > 0) {
+                const target = creep.pos.findClosestByPath(sourceContainers);
+                if (target) creep.memory.targetId = target.id;
+            }
 
-        if (sourceContainers.length > 0) {
-            const target = creep.pos.findClosestByPath(sourceContainers);
+            // Prioridade 2: Drops
+            if (!creep.memory.targetId) {
+                const drop = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+                    filter: (r) => r.resourceType === RESOURCE_ENERGY && isTargetAvailable(creep, r)
+                });
+                if (drop) creep.memory.targetId = drop.id;
+            }
+            
+            // Prioridade 3: Storage
+            if (!creep.memory.targetId && room.storage && isTargetAvailable(creep, room.storage) && room.storage.store[RESOURCE_ENERGY] > 500) {
+                creep.memory.targetId = room.storage.id;
+            }
+        }
+
+        // Executar Coleta
+        if (creep.memory.targetId) {
+            const target = Game.getObjectById(creep.memory.targetId as Id<any>);
             if (target) {
-                creep.memory.targetId = target.id;
-                if (creep.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
+                const res = (target instanceof Resource) ? creep.pickup(target) : creep.withdraw(target, RESOURCE_ENERGY);
+                if (res === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10 });
                 }
-                return;
             }
         }
-
-        // 2. Drops
-        const drop = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
-            filter: (r) => r.resourceType === RESOURCE_ENERGY && isTargetAvailable(creep, r)
-        });
-        if (drop) {
-            creep.memory.targetId = drop.id;
-            if (creep.pickup(drop) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(drop, { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
-            return;
-        }
-        
-        // 3. Storage (se houver sobra e não tiver nada nas fontes)
-        if (room.storage && isTargetAvailable(creep, room.storage) && room.storage.store[RESOURCE_ENERGY] > 500) {
-            creep.memory.targetId = room.storage.id;
-            if (creep.withdraw(room.storage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(room.storage);
-            }
-            return;
-        }
-
-        // Se nada disponível, limpa o targetId
-        delete creep.memory.targetId;
 
     } else {
-        // --- ENTREGA ---
-        delete creep.memory.targetId; // Limpa o alvo de coleta ao começar a entregar
-
-        let target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
-            filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
-                           s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-        }) as AnyStructure;
-
-        if (!target) {
-            const sources = room.find(FIND_SOURCES);
-            target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
-                filter: (s) => {
-                    const isContainer = s.structureType === STRUCTURE_CONTAINER;
-                    const notNearSource = !sources.some(source => s.pos.inRangeTo(source, 3));
-                    return isContainer && notNearSource && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-                }
+        // --- 3. LÓGICA DE ENTREGA ---
+        if (!creep.memory.targetId) {
+            // Prioridade 1: Spawn/Extensions
+            let target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+                filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
+                               s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
             }) as AnyStructure;
+
+            // Prioridade 2: Outros Containers
+            if (!target) {
+                const sources = room.find(FIND_SOURCES);
+                target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+                    filter: (s) => {
+                        const isContainer = s.structureType === STRUCTURE_CONTAINER;
+                        const notNearSource = !sources.some(source => s.pos.inRangeTo(source, 3));
+                        return isContainer && notNearSource && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                    }
+                }) as AnyStructure;
+            }
+
+            if (target) creep.memory.targetId = target.id;
         }
 
-        if (target) {
-            if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+        // Executar Entrega ou Manutenção
+        if (creep.memory.targetId) {
+            const target = Game.getObjectById(creep.memory.targetId as Id<any>);
+            if (target && target.store && target.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 10 });
+                }
+            } else {
+                delete creep.memory.targetId;
             }
         } else {
+            // FALLBACK: Reparo/Construção (Para quando não houver alvos de entrega de energia)
             const toRepair = creep.pos.findClosestByPath(FIND_STRUCTURES, {
                 filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL && s.structureType !== STRUCTURE_RAMPART
             });
             if (toRepair) {
-                if (creep.repair(toRepair) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(toRepair);
-                }
+                if (creep.repair(toRepair) === ERR_NOT_IN_RANGE) creep.moveTo(toRepair, { reusePath: 10 });
                 return;
             }
 
             const site = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES);
             if (site) {
-                if (creep.build(site) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(site);
-                }
+                if (creep.build(site) === ERR_NOT_IN_RANGE) creep.moveTo(site, { reusePath: 10 });
                 return;
             }
 
             if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(room.controller!);
+                creep.moveTo(room.controller!, { reusePath: 10 });
             }
         }
     }
