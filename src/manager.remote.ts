@@ -2,8 +2,8 @@ import _ from 'lodash';
 import { cacheUtils } from './utils.cache';
 
 export interface RemoteRoomData {
-    sources: { id: Id<Source>; pos: { x: number; y: number } }[];
-    controllerPos?: { x: number; y: number };
+    sources: { id: Id<Source>; pos: RoomPosition }[]; // Changed to RoomPosition
+    controller?: { id: Id<StructureController>; pos: RoomPosition }; // Changed to RoomPosition
     needsReserving?: boolean;
     lastScouted: number;
     safe: boolean;
@@ -29,7 +29,7 @@ const managerRemote = {
                 
                 const sources = cacheUtils.getSources(room).map(s => ({
                     id: s.id,
-                    pos: { x: s.pos.x, y: s.pos.y }
+                    pos: s.pos // Save as RoomPosition
                 }));
 
                 const hostiles = cacheUtils.getHostiles(room);
@@ -37,7 +37,7 @@ const managerRemote = {
 
                 Memory.remoteRooms[room.name] = {
                     sources: sources,
-                    controllerPos: room.controller ? { x: room.controller.pos.x, y: room.controller.pos.y } : undefined,
+                    controller: room.controller ? { id: room.controller.id, pos: room.controller.pos } : undefined, // Save as RoomPosition
                     needsReserving: room.controller && !room.controller.my && (!room.controller.reservation || room.controller.reservation.ticksToEnd < 2000),
                     lastScouted: Game.time,
                     safe: hostiles.length === 0,
