@@ -18,8 +18,25 @@ const layoutGenerator = {
         // 1. Capturar estruturas existentes que queremos manter (ex: estradas, extensões próximas ao spawn)
         // Para o RCL 1, vamos focar nas estradas ao redor do spawn e extensões básicas.
         const structuresToCapture = room.find(FIND_STRUCTURES, {
-            filter: (s: Structure) => (s.structureType === STRUCTURE_ROAD || s.structureType === STRUCTURE_EXTENSION)
-                        && s.pos.getRangeTo(spawn.pos) <= 3 // Exemplo: dentro de um raio de 3 do spawn
+            filter: (s: Structure) => {
+                const isBuildable = (
+                    s.structureType === STRUCTURE_ROAD ||
+                    s.structureType === STRUCTURE_EXTENSION ||
+                    s.structureType === STRUCTURE_RAMPART ||
+                    s.structureType === STRUCTURE_WALL ||
+                    s.structureType === STRUCTURE_CONTAINER ||
+                    s.structureType === STRUCTURE_TOWER ||
+                    s.structureType === STRUCTURE_STORAGE ||
+                    s.structureType === STRUCTURE_LINK ||
+                    s.structureType === STRUCTURE_EXTRACTOR ||
+                    s.structureType === STRUCTURE_LAB ||
+                    s.structureType === STRUCTURE_TERMINAL ||
+                    s.structureType === STRUCTURE_NUKER ||
+                    s.structureType === STRUCTURE_FACTORY ||
+                    s.structureType === STRUCTURE_SPAWN
+                );
+                return isBuildable && s.pos.getRangeTo(spawn.pos) <= 3;
+            }
         });
 
         for (const s of structuresToCapture) {
