@@ -59,10 +59,14 @@ export const loop = function () {
         const rcl = room.controller ? room.controller.level : 1;
         const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
+        // Metas Ajustadas para Eficiência Inicial
         const firstHarvester = harvesters[0];
         const workCount = firstHarvester ? _.filter(firstHarvester.body, (p) => p.type === WORK).length : 0;
         const targetHarvesters = (workCount < 5) ? safeSources.length * 2 : safeSources.length;
-        const targetSuppliers = Math.max(1, harvesters.length + 1);
+        
+        // Reduzido meta de Suppliers para evitar congestionamento (1 por Harvester + 1 extra se necessário)
+        const targetSuppliers = Math.max(1, harvesters.length); 
+        
         const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
