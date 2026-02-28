@@ -6,7 +6,7 @@ import { runBuilder } from './role.builder';
 import { runUpgrader } from './role.upgrader';
 import { isSourceSafe, generateBody } from './tools';
 
-console.log("--- GEMINI DEPLOY: v28 (Pre-Planner Sync) ---");
+console.log("--- GEMINI DEPLOY: v28.1 (Spawning Cost Fix) ---");
 
 export const loop = function () {
     for (const name in Memory.creeps) {
@@ -81,7 +81,9 @@ export const loop = function () {
 
         if (roleToSpawn) {
             const body = generateBody(roleToSpawn, energyForBody);
-            const cost = _.sum(body, p => BODYPART_COST[p]);
+            let cost = 0;
+            for (const part of body) cost += BODYPART_COST[part];
+            
             if (room.energyAvailable >= cost) {
                 spawn.spawnCreep(body, roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time, { memory: { role: roleToSpawn } });
             }
