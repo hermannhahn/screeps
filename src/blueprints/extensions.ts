@@ -1,4 +1,5 @@
-import { isSafePosition } from './utils';
+import { isSafePosition } from './utils'; 
+// PlannedStructure is now global via declarations.d.ts
 
 /**
  * Gera as posições planejadas para Extensões para um dado RCL,
@@ -13,10 +14,8 @@ export function generateExtensionsLayout(room: Room, spawn: StructureSpawn, rcl:
     if (rcl < 2) return planned; // Extensões só são permitidas a partir do RCL 2
 
     const maxExtensionsForRCL = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][rcl];
-    let currentExtensions = 0;
+    let currentExtensionsCount = 0;
 
-    // Posições relativas ao spawn para um padrão de extensão (ex: em espiral ou anel)
-    // Este é um exemplo, pode ser ajustado para um layout específico
     const relativePositions = [
         { dx: 0, dy: -2 }, { dx: 1, dy: -2 }, { dx: 2, dy: -1 }, { dx: 2, dy: 0 }, { dx: 2, dy: 1 },
         { dx: 1, dy: 2 }, { dx: 0, dy: 2 }, { dx: -1, dy: 2 }, { dx: -2, dy: -1 }, { dx: -2, dy: 0 },
@@ -34,7 +33,7 @@ export function generateExtensionsLayout(room: Room, spawn: StructureSpawn, rcl:
     ];
 
     for (const relPos of relativePositions) {
-        if (currentExtensions >= maxExtensionsForRCL) break;
+        if (currentExtensionsCount >= maxExtensionsForRCL) break;
 
         const x = spawn.pos.x + relPos.dx;
         const y = spawn.pos.y + relPos.dy;
@@ -44,16 +43,44 @@ export function generateExtensionsLayout(room: Room, spawn: StructureSpawn, rcl:
 
         const pos = new RoomPosition(x, y, room.name);
 
-        // Verificar se a posição é segura (não é wall e está longe do spawn)
+        // 1. Verificar terreno (wall)
         if (room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) continue;
-        // Evita construir muito perto do spawn ou em posições importantes (como o próprio spawn)
+
+        // 2. Evitar construir muito perto do spawn (ou em cima dele)
         if (pos.getRangeTo(spawn.pos) <= 1) continue; 
         
-        // No novo planner, a verificação de "isSafePosition" e "não ter outra estrutura" será feita pelo manager.planner.ts
-        // Aqui, apenas geramos as posições "ideais".
+        // 3. Verificar estruturas existentes e canteiros de obra que BLOQUEIAM uma EXTENSION
+        const look = pos.look();
+        const hasBlockingElement = look.some(obj => {
+            if (obj.type === LOOK_STRUCTURES) {
+                // Extensões NÃO podem ser construídas sobre:
+                // SPWANS, CONTROLLERS, SOURCES, MINERALS, TOWERS, STORAGE, LINKS, EXTRACTORS, LABS, TERMINALS, NUKERS, FACTORIES, OBSERVERS, POWER_SPAWNS
+                // E, CRITICAMENTE, RAMPARTS são bloqueadores para EXTENSIONS.
+                // APENAS ROADS e CONTAINERS não bloqueiam a construção de EXTENSIONS.
+                return obj.structure && (
+                    obj.structure.structureType !== STRUCTURE_ROAD &&
+                    obj.structure.structureType !== STRUCTURE_CONTAINER
+                    // Qualquer outra estrutura aqui bloqueia, incluindo RAMPARTS.
+                );
+            }
+            if (obj.type === LOOK_CONSTRUCTION_SITES) {
+                // Se já existe um CS de qualquer coisa, ele bloqueia a criação de um NOVO CS de extensão.
+                return true;
+            }
+            // Check para fontes, minerais, controller (recursos não construíveis)
+            if (obj.type === LOOK_SOURCES || obj.type === LOOK_MINERALS || obj.type === LOOK_CONTROLLERS) {
+                return true;
+            }
+            return false;
+        });
+
+        if (hasBlockingElement) {
+            // console.log(`[generateExtensionsLayout] Skipping ${x},${y} due to blocking element.`);
+            continue; // Pular esta posição se houver algo bloqueando
+        }
 
         planned.push({ x: x, y: y, structureType: STRUCTURE_EXTENSION });
-        currentExtensions++;
+        currentExtensionsCount++;
     }
 
     return planned;
