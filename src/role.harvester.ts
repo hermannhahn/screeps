@@ -4,7 +4,6 @@ import { isSourceSafe } from './tools';
 export function runHarvester(creep: Creep): void {
     const room = creep.room;
 
-    // --- 1. VALIDAÇÃO DE MEMÓRIA ---
     if (creep.memory.sourceId) {
         const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
         if (!source) {
@@ -13,7 +12,6 @@ export function runHarvester(creep: Creep): void {
         }
     }
 
-    // --- 2. ATRIBUIÇÃO ---
     if (!creep.memory.sourceId) {
         const sources = room.find(FIND_SOURCES);
         const safeSources = _.filter(sources, (s) => isSourceSafe(s));
@@ -31,60 +29,46 @@ export function runHarvester(creep: Creep): void {
         }
     }
 
-    if (!creep.memory.sourceId) {
-        console.log(`${creep.name}: Sem source disponível/seguro.`);
-        return;
-    }
+    if (!creep.memory.sourceId) return;
 
     const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
     if (!source) return;
 
-    // --- 3. LOGICA DE TRABALHO ---
     const isFull = creep.store.getFreeCapacity() === 0;
     
     if (!isFull) {
-        // Tentar colher
         const result = creep.harvest(source);
-        console.log(`${creep.name}: Harvest Result=${result}, Pos=${creep.pos}`);
-
         if (result === ERR_NOT_IN_RANGE || result === OK || result === ERR_NOT_ENOUGH_RESOURCES) {
-            // Se não estiver perto, move. Se estiver perto mas vazio, fica perto.
             if (creep.pos.getRangeTo(source) > 1) {
-                const moveResult = creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
-                console.log(`${creep.name}: Moving to Source, Result=${moveResult}`);
+                creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
             }
         }
     } else {
-        // Tentar depositar
         const suppliers = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name && c.memory.role === 'supplier');
         let target: AnyStructure | null = null;
 
         if (suppliers.length === 0) {
             target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
-                filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
+                filter: (s: AnyStructure) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
+                               s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+            }) as AnyStructure;
+        } else {
+            // Filtrar apenas Link ou Container
+            const potentialTargets = creep.pos.findInRange(FIND_STRUCTURES, 3, {
+                filter: (s: AnyStructure) => (s.structureType === STRUCTURE_LINK || s.structureType === STRUCTURE_CONTAINER) && 
                                s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
             });
-        } else {
-            // Com suppliers: Link ou Container
-            target = creep.pos.findInRange(FIND_MY_STRUCTURES, 3, {
-                filter: (s) => (s.structureType === STRUCTURE_LINK || s.structureType === STRUCTURE_CONTAINER) && 
-                               s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-            })[0] as AnyStructure;
+            if (potentialTargets.length > 0) target = potentialTargets[0] as AnyStructure;
         }
 
         if (target) {
-            const transferResult = creep.transfer(target, RESOURCE_ENERGY);
-            console.log(`${creep.name}: Transfer Result=${transferResult} to ${target.structureType}`);
-            if (transferResult === ERR_NOT_IN_RANGE) {
+            if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
             }
         } else {
-            // Se estiver cheio e sem alvo, upgrade ou drop
             if (suppliers.length > 0) {
-                console.log(`${creep.name}: Dropping energy (Suppliers alive)`);
                 creep.drop(RESOURCE_ENERGY);
             } else {
-                console.log(`${creep.name}: Upgrading as fallback`);
                 if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(room.controller!);
                 }
