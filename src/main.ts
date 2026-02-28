@@ -176,21 +176,6 @@ function displayCreepCounts(room: Room) {
 export const loop = () => {
     Watcher();
 
-    // --- TEMPORARY EMERGENCY RESET for E25S11 ---
-    const roomToReset = Game.rooms['E25S11'];
-    if (roomToReset) {
-        const structures = roomToReset.find(FIND_STRUCTURES, {
-            filter: (s: any) => s.structureType !== STRUCTURE_SPAWN && s.structureType !== STRUCTURE_CONTROLLER
-        });
-        for (const s of structures) {
-            s.destroy();
-        }
-        if (structures.length > 0) {
-            console.log(`[Main] Emergency Reset: Destroyed ${structures.length} structures in E25S11.`);
-        }
-    }
-    // --------------------------------------------
-
     // Run Remote Manager to update data from scouts
     managerRemote.run();
 
