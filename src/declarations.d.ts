@@ -10,17 +10,21 @@ interface CreepMemory {
     targetEnergyId?: Id<AnyStructure | Creep | ConstructionSite | Resource>;
     targetBuildId?: Id<ConstructionSite>;
     targetRepairId?: Id<AnyStructure>;
-    targetDeliverId?: Id<AnyStructure>;
+    deliveryTargetId?: Id<AnyStoreStructure>; // Adicionado para task.deliver e carrier
     assignedSupplier?: Id<Creep>;
     targetRoom?: string;
     homeRoom?: string;
     remoteContainerId?: Id<StructureContainer>;
     travelPath?: RoomPosition[];
     fleePath?: RoomPosition[];
+    delivering?: boolean; // Adicionado para role.supplier e carrier
+    remoteSourceId?: Id<Source>; // Adicionado para remoteHarvester
 }
 
 interface RoomMemory {
     // Other room memory properties
+    layout?: RoomLayoutMemory; // Adicionado para o novo planner
+    primaryHostileTargetId?: Id<Creep>; // Adicionado para manager.tower
 }
 
 interface SourceMemory {
@@ -45,6 +49,8 @@ interface RemoteRoomMemory {
     sources: { id: Id<Source>, pos: RoomPosition }[];
     controller?: { id: Id<StructureController>, pos: RoomPosition };
     lastHarvestTick?: number;
+    hasEnemyStructures?: boolean; // Adicionado para manager.spawner
+    needsReserving?: boolean; // Adicionado para manager.spawner
 }
 
 interface PlannedStructure {
@@ -63,10 +69,7 @@ interface RoomLayoutMemory {
 
 interface Memory {
     rooms: {
-        [roomName: string]: {
-            layout?: RoomLayoutMemory;
-            // ... outras propriedades da sala
-        };
+        [roomName: string]: RoomMemory; // Usa a nova RoomMemory
     };
     creeps: {
         [name: string]: CreepMemory;
@@ -82,6 +85,7 @@ interface Memory {
     };
     uuid: number;
     log: any;
+    roomsToExplore?: string[]; // Adicionado para manager.spawner e role.scout
 }
 
 
