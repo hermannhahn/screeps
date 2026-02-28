@@ -46,10 +46,17 @@ export function planRoadFromTo(room: Room, startPos: RoomPosition, endPos: RoomP
         ignoreCreeps: true, swampCost: 1, plainCost: 1, maxOps: 2000
     });
 
+    if (path.length === 0 && startPos.getRangeTo(endPos) > 1) {
+        console.log(`[BlueprintUtils] Failed to find path from ${startPos} to ${endPos}`);
+    }
+
     let sitesCreated = 0;
     for (const segment of path) {
-        if (room.createConstructionSite(segment.x, segment.y, STRUCTURE_ROAD) === OK) {
+        const result = room.createConstructionSite(segment.x, segment.y, STRUCTURE_ROAD);
+        if (result === OK) {
             sitesCreated++;
+        } else if (result !== ERR_INVALID_TARGET && result !== ERR_FULL) {
+            // console.log(`[BlueprintUtils] createConstructionSite failed at ${segment.x},${segment.y}: ${result}`);
         }
     }
     return sitesCreated;
@@ -73,7 +80,14 @@ export function isSafePosition(pos: RoomPosition): boolean {
     const room = Game.rooms[pos.roomName];
     if (!room) return true;
 
-    const enemiesInRange = pos.findInRange(cacheUtils.getHostiles(room), 5); // 5 tiles radius
+    const hostiles = cacheUtils.getHostiles(room).filter(c => 
+        c.getActiveBodyparts(ATTACK) > 0 || 
+        c.getActiveBodyparts(RANGED_ATTACK) > 0 || 
+        c.getActiveBodyparts(WORK) > 0 ||
+        c.getActiveBodyparts(HEAL) > 0
+    );
+
+    const enemiesInRange = pos.findInRange(hostiles, 5); // 5 tiles radius
     if (enemiesInRange.length > 0) return false;
 
     const hostileStructuresInRange = pos.findInRange(cacheUtils.findInRoom(room, FIND_HOSTILE_STRUCTURES), 5);
@@ -86,9 +100,12 @@ export function isRoadPathComplete(room: Room, startPos: RoomPosition, endPos: R
     });
 
     if (path.length === 0) {
-        // If the path is empty but start and end are far apart, it might be a pathing failure.
-        // But if they are the same spot, it's "complete".
-        return startPos.getRangeTo(endPos) === 0;
+        const range = startPos.getRangeTo(endPos);
+        if (range > 1) {
+            // console.log(`[BlueprintUtils] isRoadPathComplete: Empty path found for range ${range} between ${startPos} and ${endPos}`);
+            return false;
+        }
+        return true;
     }
 
     return path.every(segment => {

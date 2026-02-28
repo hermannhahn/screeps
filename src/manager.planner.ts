@@ -18,12 +18,17 @@ const managerPlanner = {
     run: function(room: Room) {
         if (Game.time % 20 !== 0) return;
 
-        const hostileCreepsInRoom = cacheUtils.getHostiles(room);
-        const damagedStructures = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.hits < s.hitsMax, 5);
+        const hostileCreepsInRoom = cacheUtils.getHostiles(room).filter(c => 
+            c.getActiveBodyparts(ATTACK) > 0 || 
+            c.getActiveBodyparts(RANGED_ATTACK) > 0 || 
+            c.getActiveBodyparts(WORK) > 0 ||
+            c.getActiveBodyparts(HEAL) > 0
+        );
+        const damagedStructures = cacheUtils.findInRoom(room, FIND_MY_STRUCTURES, (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_RAMPART && s.structureType !== STRUCTURE_WALL, 5);
         const isRoomActivelyUnderAttack = hostileCreepsInRoom.length > 0 && damagedStructures.length > 0;
 
         if (isRoomActivelyUnderAttack) {
-            console.log(`[ManagerPlanner] Room ${room.name} actively under attack, suspending planning.`);
+            console.log(`[ManagerPlanner] Room ${room.name} actively under attack (Hostiles: ${hostileCreepsInRoom.length}), suspending planning.`);
             return;
         }
 
@@ -49,6 +54,12 @@ const managerPlanner = {
         const spawn = spawns[0] as StructureSpawn;
 
         const totalConstructionSites = cacheUtils.findInRoom(room, FIND_CONSTRUCTION_SITES).length;
+        const globalCSCount = Object.keys(Game.constructionSites).length;
+
+        if (globalCSCount >= 100) {
+            console.log(`[ManagerPlanner] Global Construction Site limit reached (100). Cannot plan more.`);
+            return;
+        }
 
         // SEQUENTIAL REVIEW: Check every blueprint from the start.
         for (let i = 0; i < MAX_BLUEPRINT_STAGES; i++) {
@@ -61,9 +72,9 @@ const managerPlanner = {
             }
 
             // Blueprint is NOT complete. Try to plan it.
-            // ROADS priority: Plan roads even if there are many CS (up to 80), to ensure logistics don't break.
             const csLimit = isRoadBlueprint ? 80 : 20;
             if (totalConstructionSites >= csLimit) {
+                // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) skipped: too many CS (${totalConstructionSites}/${csLimit})`);
                 continue; 
             }
 
@@ -72,12 +83,9 @@ const managerPlanner = {
             if (sitesCreated > 0) {
                 console.log(`[ManagerPlanner] Planned ${sitesCreated} sites for stage ${i}: ${currentBlueprint.name}`);
                 room.memory.currentBlueprintStage = i;
-                break; // Stop after planning one blueprint to avoid flooding and maintain order
+                break; 
             } else {
-                // Stage is incomplete but could not be planned.
-                // This could be due to RCL, unsafe conditions, or no valid spots found.
-                // We SKIP this stage for now instead of breaking, to allow higher RCL structures to be planned if this one is stuck.
-                // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) is incomplete and could not be planned. Skipping.`);
+                // console.log(`[ManagerPlanner] Stage ${i} (${currentBlueprint.name}) is incomplete but planned 0 sites.`);
                 continue; 
             }
         }
