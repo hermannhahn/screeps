@@ -19,17 +19,13 @@ export function planStructures(room: Room): void {
     const unsafeSources = sources.filter(s => !isSourceSafe(s));
     
     if (unsafeSources.length > 0) {
-        // 1. Remover da memória
         planning.plannedStructures = planning.plannedStructures.filter(p => {
             const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
-            return !unsafeSources.some(us => pPos.inRangeTo(us, 10)); // Usar range 10 para ser consistente
+            return !unsafeSources.some(us => pPos.inRangeTo(us, 10));
         });
-
-        // 2. Cancelar Construction Sites reais em áreas inseguras
         for (const cs of activeCS) {
             if (unsafeSources.some(us => cs.pos.inRangeTo(us, 10))) {
                 cs.remove();
-                console.log(`Planner: Removed unsafe CS at ${cs.pos.x},${cs.pos.y}`);
             }
         }
     }
@@ -136,7 +132,7 @@ export function planStructures(room: Room): void {
                     }
                 }
             }
-            if (addedAny) console.log("Planner Stage 3: New road positions added for SAFE sources.");
+            if (addedAny) console.log("Planner Stage 3: New road positions added.");
         }
 
         const stage3Roads = planning.plannedStructures.filter(p => 
@@ -151,8 +147,62 @@ export function planStructures(room: Room): void {
         }
     }
 
-    // --- ESTÁGIO 4: ESTRADAS DO CONTROLLER ---
+    // --- ESTÁGIO 4: CONTAINERS (Sources, Controller, Torres) ---
     if (stage === 4) {
+        let addedAny = false;
+
+        // 1. Containers nas Sources Seguras
+        const safeSources = sources.filter(s => isSourceSafe(s));
+        for (const source of safeSources) {
+            const hasContainer = room.find(FIND_STRUCTURES, { filter: s => s.structureType === STRUCTURE_CONTAINER && s.pos.inRangeTo(source, 2) }).length > 0 ||
+                                 planning.plannedStructures.some(p => p.structureType === STRUCTURE_CONTAINER && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).inRangeTo(source, 2));
+            
+            if (!hasContainer) {
+                // Tenta colocar a 1 bloco de distância
+                const spots = source.pos.findInRange(FIND_PATH, 1); // Simples busca de vizinhos
+                // Alternativa: usar a estrada que já chega perto da source
+                const roadNearSource = planning.plannedStructures.find(p => p.structureType === STRUCTURE_ROAD && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).isNearTo(source.pos));
+                const targetPos = roadNearSource ? new RoomPosition(roadNearSource.pos.x, roadNearSource.pos.y, roadNearSource.pos.roomName) : null;
+
+                if (targetPos && addPlannedStructure(planning.plannedStructures, targetPos, STRUCTURE_CONTAINER, 'to_build', room)) {
+                    addedAny = true;
+                }
+            }
+        }
+
+        // 2. Container no Controller
+        if (room.controller) {
+            const hasCont = room.find(FIND_STRUCTURES, { filter: s => s.structureType === STRUCTURE_CONTAINER && s.pos.inRangeTo(room.controller!, 3) }).length > 0 ||
+                            planning.plannedStructures.some(p => p.structureType === STRUCTURE_CONTAINER && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).inRangeTo(room.controller!, 3));
+            
+            if (!hasCont) {
+                const pos = new RoomPosition(room.controller.pos.x + 1, room.controller.pos.y + 1, room.name); // Spot simples
+                if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_CONTAINER, 'to_build', room)) addedAny = true;
+            }
+        }
+
+        // 3. Container nas Torres
+        const towers = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
+        for (const tower of towers) {
+            const hasCont = tower.pos.findInRange(FIND_STRUCTURES, 1, { filter: { structureType: STRUCTURE_CONTAINER } }).length > 0 ||
+                            planning.plannedStructures.some(p => p.structureType === STRUCTURE_CONTAINER && new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName).isNearTo(tower.pos));
+            if (!hasCont) {
+                const pos = new RoomPosition(tower.pos.x, tower.pos.y + 1, room.name);
+                if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_CONTAINER, 'to_build', room)) addedAny = true;
+            }
+        }
+
+        const stage4Conts = planning.plannedStructures.filter(p => p.structureType === STRUCTURE_CONTAINER);
+        const allBuilt = stage4Conts.length > 0 && stage4Conts.every(p => p.status === 'built');
+
+        if (allBuilt && activeCS.length === 0) {
+            console.log("Planner: Stage 4 Complete. Advancing to Stage 5.");
+            planning.currentStage = 5;
+        }
+    }
+
+    // --- ESTÁGIO 5: ESTRADAS DO CONTROLLER ---
+    if (stage === 5) {
         const controller = room.controller;
         if (!controller) return;
         const anchorsRaw = planning.spawnSquareRoadAnchorPositions;
@@ -169,13 +219,10 @@ export function planStructures(room: Room): void {
             }
         }
 
-        const stage4Roads = planning.plannedStructures.filter(p => 
-            p.status !== 'built' && 
-            !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y)
-        );
-        if (stage4Roads.length === 0 && activeCS.length === 0) {
-            console.log("Planner: Stage 4 Complete.");
-            planning.currentStage = 5;
+        const stage5Roads = planning.plannedStructures.filter(p => p.status !== 'built' && !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y));
+        if (stage5Roads.length === 0 && activeCS.length === 0) {
+            console.log("Planner: Stage 5 Complete.");
+            planning.currentStage = 6;
         }
     }
 }
