@@ -1,5 +1,5 @@
 // src/main.ts
-console.log("--- GEMINI DEPLOY TEST: Código Atualizado v1 ---");
+console.log("--- GEMINI DEPLOY TEST: Código Atualizado v2 ---");
 
 import { planStructures } from './manager.planner';
 import { runHarvester } from './role.harvester';
@@ -22,7 +22,7 @@ export const loop = function () {
 
     // Processar construções planejadas
     if (Memory.planning && Memory.planning.plannedStructures) {
-        const toBuild = Memory.planning.plannedStructures.filter(p => p.status === 'to_build');
+        const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
         for (const p of toBuild) {
             if (room.createConstructionSite(p.pos.x, p.pos.y, p.structureType) === OK) {
                 p.status = 'building';
@@ -34,11 +34,13 @@ export const loop = function () {
     // Spawner básico
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (spawn && !spawn.spawning && room.energyAvailable >= 200) {
-        const harvesters = _.filter(Game.creeps, (creep) => creep.memory.role === 'harvester');
+        const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name);
+        const harvesters = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'harvester');
+        
         if (harvesters.length < 2) {
             spawn.spawnCreep([WORK, CARRY, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
         } else {
-            const builders = _.filter(Game.creeps, (creep) => creep.memory.role === 'builder');
+            const builders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'builder');
             if (builders.length < 2 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) {
                 spawn.spawnCreep([WORK, CARRY, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
             }

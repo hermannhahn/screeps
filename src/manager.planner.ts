@@ -1,5 +1,5 @@
 // src/manager.planner.ts
-import { isTerrainValidForRoad, addPlannedStructure, findClosestAnchor } from './tools';
+import { addPlannedStructure } from './tools';
 
 export function planStructures(room: Room): void {
     if (!Memory.planning) {
@@ -25,11 +25,10 @@ export function planStructures(room: Room): void {
             if (added > 0) console.log(`Planner: Stage 1 - Planned ${added} roads.`);
         }
         
-        const pending = Memory.planning.plannedStructures.filter(p => p.status === 'to_build').length;
+        const pending = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build').length;
         if (pending === 0 && Memory.planning.spawnSquareRoadAnchorPositions.length > 0) {
             console.log("Planner: Stage 1 Complete. Advancing to Stage 2.");
             Memory.planning.currentStage = 2;
         }
     }
-    // Adicionar lógicas de estágios 2 e 3 aqui posteriormente...
 }

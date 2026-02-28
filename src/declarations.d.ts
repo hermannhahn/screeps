@@ -1,20 +1,30 @@
 // src/declarations.d.ts
+import { LoDashStatic } from 'lodash';
 
-// Declare global types that are not statically known to TypeScript.
-// This is common in environments like Screeps where global objects are augmented at runtime.
-
-// Declare the global Memory object, adding properties that are set at runtime.
 declare global {
-    interface Memory {
-        initialized?: boolean;
-        planning?: MemoryPlanning; // Corresponds to MemoryPlanning interface from manager.planner.ts
-        // Add other global memory properties here as they are introduced.
+    const _: LoDashStatic;
+
+    interface CreepMemory {
+        role: string;
+        building?: boolean;
     }
 
-    // Note: The interfaces MemoryPlanning and PlannedStructure are defined in src/manager.planner.ts
-    // and should be resolvable via module imports. If TypeScript still complains about them,
-    // they might need to be declared here as well, but typically module imports suffice.
+    interface Memory {
+        initialized?: boolean;
+        planning?: MemoryPlanning;
+    }
+
+    interface MemoryPlanning {
+        plannedStructures: PlannedStructure[];
+        spawnSquareRoadAnchorPositions: RoomPosition[];
+        currentStage: number;
+    }
+
+    interface PlannedStructure {
+        pos: RoomPosition;
+        structureType: StructureConstant;
+        status: 'planning' | 'to_build' | 'building' | 'built' | 'blocked';
+    }
 }
 
-// This export is good practice for declaration files.
 export {};
