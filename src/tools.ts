@@ -119,7 +119,7 @@ export function handleDefensiveState(creep: Creep): boolean {
 // Exibe um emoji apenas quando a ação do creep muda
 export function sayAction(creep: Creep, message: string): void {
     if (creep.memory.lastAction !== message) {
-        creep.say(message, true);
+        creep.say(message, false);
         creep.memory.lastAction = message;
     }
 }
