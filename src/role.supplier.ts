@@ -3,43 +3,59 @@ export function runSupplier(creep: Creep): void {
     const room = creep.room;
 
     if (creep.store.getUsedCapacity() === 0) {
-        // --- COLETA ---
-        // Encontrar containers/links que estão a até 3 blocos de sources
+        // --- COLETA (Supplier) ---
+        
+        // 1. Container inRange de 3 blocos dos sources
         const sources = room.find(FIND_SOURCES);
-        const collectionPoints = room.find(FIND_STRUCTURES, {
-            filter: (s) => {
-                const isCollectionType = s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_LINK;
-                const nearSource = sources.some(source => s.pos.inRangeTo(source, 3));
-                return isCollectionType && nearSource && s.store.getUsedCapacity(RESOURCE_ENERGY) > 0;
-            }
+        const sourceContainers = room.find(FIND_STRUCTURES, {
+            filter: (s) => s.structureType === STRUCTURE_CONTAINER && 
+                           sources.some(source => s.pos.inRangeTo(source, 3)) &&
+                           s.store.getUsedCapacity(RESOURCE_ENERGY) > 0
         });
-
-        // Caso não haja em containers, pegar do chão (drop) perto das sources
-        if (collectionPoints.length > 0) {
-            const target = creep.pos.findClosestByPath(collectionPoints);
+        if (sourceContainers.length > 0) {
+            const target = creep.pos.findClosestByPath(sourceContainers);
             if (target && creep.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
+                creep.moveTo(target);
             }
-        } else {
-            const drops = room.find(FIND_DROPPED_RESOURCES, {
-                filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 50
+            return;
+        }
+
+        // 2. Link inRange de 3 blocos do Storage
+        if (room.storage) {
+            const storageLinks = room.find(FIND_MY_STRUCTURES, {
+                filter: (s) => s.structureType === STRUCTURE_LINK && 
+                               s.pos.inRangeTo(room.storage!, 3) &&
+                               s.store.getUsedCapacity(RESOURCE_ENERGY) > 0
             });
-            if (drops.length > 0) {
-                const target = creep.pos.findClosestByPath(drops);
-                if (target && creep.pickup(target) === ERR_NOT_IN_RANGE) {
+            if (storageLinks.length > 0) {
+                const target = creep.pos.findClosestByPath(storageLinks);
+                if (target && creep.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target);
                 }
+                return;
             }
         }
+
+        // 3. Drop mais próximo
+        const drop = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+            filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 50
+        });
+        if (drop) {
+            if (creep.pickup(drop) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(drop);
+            }
+            return;
+        }
+
     } else {
-        // --- ENTREGA ---
+        // --- ENTREGA (Supplier) ---
         // Prioridade 1: Spawn e Extensions
         let target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
             filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
                            s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
         });
 
-        // Prioridade 2: Containers de entrega (NÃO estão perto de sources, ex: Controller Container)
+        // Prioridade 2: Outros Containers (ex: Controller Container)
         if (!target) {
             const sources = room.find(FIND_SOURCES);
             target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
@@ -53,10 +69,10 @@ export function runSupplier(creep: Creep): void {
 
         if (target) {
             if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+                creep.moveTo(target);
             }
         } else {
-            // Se não houver onde entregar, dar upgrade para ajudar
+            // Backup: Upgrade se nada mais precisar de energia
             if (creep.upgradeController(room.controller!) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(room.controller!);
             }

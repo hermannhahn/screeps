@@ -21,32 +21,47 @@ export function runBuilder(creep: Creep): void {
             }
         }
     } else {
-        // Obter energia
-        // 1. Retirar de containers/links
+        // --- COLETA DE ENERGIA (Builder) ---
+        // Prioridade 1: Storage
+        const storage = creep.room.storage;
+        if (storage && storage.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+            if (creep.withdraw(storage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(storage);
+            }
+            return;
+        }
+
+        // Prioridade 2: Container mais próximo
         const container = creep.pos.findClosestByPath(FIND_STRUCTURES, {
-            filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_LINK) && 
-                           s.store.getUsedCapacity(RESOURCE_ENERGY) > 50
+            filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store.getUsedCapacity(RESOURCE_ENERGY) > 50
         });
         if (container) {
             if (creep.withdraw(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(container);
             }
-        } else {
-            // 2. Pegar drops
-            const drop = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
-                filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 50
-            });
-            if (drop) {
-                if (creep.pickup(drop) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(drop);
-                }
-            } else {
-                // 3. Harvestar (último recurso)
-                const source = creep.pos.findClosestByPath(FIND_SOURCES);
-                if (source && creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(source);
-                }
+            return;
+        }
+
+        // Prioridade 3: Drop mais próximo
+        const drop = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+            filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 50
+        });
+        if (drop) {
+            if (creep.pickup(drop) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(drop);
             }
+            return;
+        }
+
+        // Prioridade 4: Link mais próximo
+        const link = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+            filter: (s) => s.structureType === STRUCTURE_LINK && s.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+        });
+        if (link) {
+            if (creep.withdraw(link, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(link);
+            }
+            return;
         }
     }
 }
