@@ -61,14 +61,14 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
             }
         }
 
-        if (data.reserverNeeded && room.controller && room.controller.level >= 3) {
-            const reservers = _.filter(remoteCreeps, c => c.memory.role === 'reserver');
-            if (reservers.length < 1) return { role: 'reserver', targetRoom: remoteRoomName };
-        }
-
         const carriers = _.filter(remoteCreeps, c => c.memory.role === 'remoteCarrier');
         if (carriers.length < harvesters.length) {
             return { role: 'remoteCarrier', targetRoom: remoteRoomName };
+        }
+
+        if (data.reserverNeeded && room.controller && room.controller.level >= 3) {
+            const reservers = _.filter(remoteCreeps, c => c.memory.role === 'reserver');
+            if (reservers.length < 1) return { role: 'reserver', targetRoom: remoteRoomName };
         }
     }
 
