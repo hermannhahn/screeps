@@ -38,7 +38,10 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
         }
 
         // BLOQUEIO TOTAL: Se a sala é hostil, não spawna mais nada para lá
-        if (data.isHostile) continue;
+        if (data.isHostile) {
+            // Apenas o Scout pode ir para sala hostil (já tratado no início do loop)
+            continue;
+        }
 
         if (data.sources.length === 0) continue;
 

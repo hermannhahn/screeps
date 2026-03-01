@@ -25,12 +25,13 @@ export function runScout(creep: Creep): void {
             
             const controller = creep.room.controller;
             const hasHostileCreeps = creep.room.find(FIND_HOSTILE_CREEPS).length > 0;
-            const hasHostileStructures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
-                filter: (s) => s.owner && s.owner.username !== 'Invader' && s.owner.username !== 'Source Keeper'
-            }).length > 0;
+            const hasHostileStructures = creep.room.find(FIND_HOSTILE_STRUCTURES).length > 0;
             const isControllerHostile = !!(controller && controller.owner && !controller.my);
             const isHostile = hasHostileCreeps || hasHostileStructures || isControllerHostile;
             
+            if (isHostile) console.log(`Scout ${creep.name}: Room ${creep.room.name} marked as HOSTILE!`);
+            else if (data && data.isHostile) console.log(`Scout ${creep.name}: Room ${creep.room.name} is now SAFE.`);
+
             Memory.remoteMining[creep.room.name] = {
                 sources: sourceIds,
                 sourcePositions: sourcePositions,

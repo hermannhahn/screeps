@@ -15,13 +15,28 @@ export function planStructures(room: Room): void {
     const localActiveCS = room.find(FIND_MY_CONSTRUCTION_SITES);
 
     // --- LIMPEZA DE SEGURANÇA ---
-    const sources = room.find(FIND_SOURCES);
-    const unsafeSources = sources.filter(s => !isSourceSafe(s));
     planning.plannedStructures = planning.plannedStructures.filter(p => {
         const isMainRoom = (p.pos.roomName === room.name);
+        
+        // Se for sala remota, verifica se está marcada como hostil na memória
+        if (!isMainRoom && Memory.remoteMining && Memory.remoteMining[p.pos.roomName]?.isHostile) {
+            // Se tivermos visão, tentamos remover o Construction Site real
+            const targetRoom = Game.rooms[p.pos.roomName];
+            if (targetRoom) {
+                const sites = targetRoom.find(FIND_MY_CONSTRUCTION_SITES);
+                sites.forEach(s => s.remove());
+            }
+            return false; // Remove do planejamento
+        }
+
         if (!isMainRoom && stage < 7) return false; 
+        
+        // Limpeza de estruturas perto de fontes inseguras na sala atual
+        const sources = room.find(FIND_SOURCES);
+        const unsafeSources = sources.filter(s => !isSourceSafe(s));
         const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
         if (unsafeSources.some(us => pPos.inRangeTo(us, 10))) return false;
+        
         return true;
     });
 
