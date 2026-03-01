@@ -2,36 +2,41 @@
 
 export function isTerrainValidForRoad(pos: RoomPosition, room: Room): boolean {
     if (!pos || !pos.roomName || pos.x < 0 || pos.y < 0 || pos.x >= 50 || pos.y >= 50) return false;
-    
-    // Usa Game.map para obter o terreno da sala correta, mesmo que não tenhamos visibilidade total
     const terrain = Game.map.getRoomTerrain(pos.roomName).get(pos.x, pos.y);
     if (terrain === TERRAIN_MASK_WALL) return false;
     return true;
 }
 
 export function addPlannedStructure(plans: PlannedStructure[], pos: RoomPosition, structureType: StructureConstant, status: PlannedStructure['status'] = 'to_build', room: Room): boolean {
-    // Verificação de duplicata corrigida: agora inclui o roomName
     const exists = plans.some(p => p.pos.x === pos.x && p.pos.y === pos.y && p.pos.roomName === pos.roomName && p.structureType === structureType);
     if (exists) return false;
-
     if (!isTerrainValidForRoad(pos, room)) return false;
-
     plans.push({ 
-        pos: { x: pos.x, y: pos.y, roomName: pos.roomName } as any, // Salva como objeto simples para compatibilidade JSON
+        pos: { x: pos.x, y: pos.y, roomName: pos.roomName } as any, 
         structureType, 
         status 
     });
     return true;
 }
 
+// Função aprimorada para encontrar o âncora mais próxima, inclusive em outras salas
 export function findClosestAnchor(fromPos: RoomPosition, anchors: RoomPosition[]): RoomPosition | null {
     if (anchors.length === 0) return null;
     let closest: RoomPosition | null = null;
-    let minRange = Infinity;
+    let minDistance = Infinity;
+
     for (const anchor of anchors) {
-        const range = fromPos.getRangeTo(anchor);
-        if (range < minRange) {
-            minRange = range;
+        let distance: number;
+        if (fromPos.roomName === anchor.roomName) {
+            distance = fromPos.getRangeTo(anchor);
+        } else {
+            // Se estiver em salas diferentes, usa a distância linear entre salas + distância local
+            const roomDist = Game.map.getRoomLinearDistance(fromPos.roomName, anchor.roomName);
+            distance = (roomDist * 50) + (Math.abs(fromPos.x - anchor.x) + Math.abs(fromPos.y - anchor.y));
+        }
+
+        if (distance < minDistance) {
+            minDistance = distance;
             closest = anchor;
         }
     }
