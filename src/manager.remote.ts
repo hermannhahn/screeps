@@ -4,19 +4,22 @@ import { isSourceSafe } from './tools';
 export function manageRemoteMining(room: Room): void {
     if (!Memory.remoteMining) Memory.remoteMining = {};
 
-    const exits = Game.map.describeExits(room.name);
-    if (exits) {
-        Object.values(exits).forEach(neighborName => {
-            if (!Memory.remoteMining![neighborName]) {
-                Memory.remoteMining![neighborName] = {
-                    sources: [],
-                    sourcePositions: [],
-                    reserverNeeded: false,
-                    isHostile: false,
-                    lastScouted: 0
-                };
-            }
-        });
+    // Descoberta dinâmica de salas vizinhas a partir de QUALQUER sala com visão
+    for (const visibleRoomName in Game.rooms) {
+        const exits = Game.map.describeExits(visibleRoomName);
+        if (exits) {
+            Object.values(exits).forEach(neighborName => {
+                if (!Memory.remoteMining![neighborName]) {
+                    Memory.remoteMining![neighborName] = {
+                        sources: [],
+                        sourcePositions: [],
+                        reserverNeeded: false,
+                        isHostile: false,
+                        lastScouted: 0
+                    };
+                }
+            });
+        }
     }
 }
 

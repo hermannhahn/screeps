@@ -84,11 +84,14 @@ export const loop = function () {
         const sources = room.find(FIND_SOURCES);
         const safeSources = _.filter(sources, (s) => isSourceSafe(s));
         const rcl = room.controller ? room.controller.level : 1;
-        const hasCS = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
+        
+        // CORREÇÃO: Contagem global de Construction Sites para o Builder
+        const globalCSCount = Object.keys(Game.constructionSites).length;
+        const localCS = room.find(FIND_MY_CONSTRUCTION_SITES);
 
         const targetHarvesters = safeSources.length * 2;
-        const targetSuppliers = Math.max(1, harvesters.length + 1);
-        const targetBuilders = hasCS ? (rcl <= 2 ? 2 : 1) : 0;
+        const targetSuppliers = Math.min(6, Math.max(2, harvesters.length)); // No mínimo 2 suppliers
+        const targetBuilders = globalCSCount > 0 ? (rcl <= 3 ? 2 : 1) : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
         const remoteRequest = getRemoteSpawnRequest(room);
@@ -97,8 +100,10 @@ export const loop = function () {
         let tRoom: string | undefined = undefined;
         let sId: string | undefined = undefined;
 
+        // PRIORIDADES REAJUSTADAS: Logística e Manutenção primeiro
         if (harvesters.length < safeSources.length) roleToSpawn = 'harvester';
         else if (suppliers.length < 1) roleToSpawn = 'supplier';
+        else if (suppliers.length < targetSuppliers / 2) roleToSpawn = 'supplier'; // Garante metade dos suppliers antes de outras roles
         else if (upgraders.length < 1) roleToSpawn = 'upgrader';
         else if (remoteRequest && remoteRequest.role === 'scout') {
             roleToSpawn = 'scout';
