@@ -31,11 +31,18 @@ export function runBuilder(creep: Creep): void {
             if (!site) {
                 const globalSites = Object.values(Game.constructionSites);
                 if (globalSites.length > 0) {
-                    site = _.min(globalSites, (s: ConstructionSite) => {
-                        if (s.pos.roomName === creep.room.name) return creep.pos.getRangeTo(s);
-                        const dist = Game.map.getRoomLinearDistance(creep.room.name, s.pos.roomName);
-                        return dist * 50;
-                    }) as ConstructionSite;
+                    // Busca manual para evitar problemas com Lodash
+                    let minVal = Infinity;
+                    for (const s of globalSites) {
+                        let dist: number;
+                        if (s.pos.roomName === creep.room.name) dist = creep.pos.getRangeTo(s);
+                        else dist = Game.map.getRoomLinearDistance(creep.room.name, s.pos.roomName) * 50;
+                        
+                        if (dist < minVal) {
+                            minVal = dist;
+                            site = s;
+                        }
+                    }
                 }
             }
             
@@ -58,14 +65,12 @@ export function runBuilder(creep: Creep): void {
                 delete creep.memory.targetId;
             }
         } else {
-            const homeRoom = Game.rooms[creep.memory.homeRoom || ''];
-            const targetRoom = homeRoom || creep.room;
-            
-            if (creep.room.name !== targetRoom.name) {
-                travelToRoom(creep, targetRoom.name);
-            } else if (targetRoom.controller) {
-                if (creep.upgradeController(targetRoom.controller) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(targetRoom.controller, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 10 });
+            const homeRoomName = creep.memory.homeRoom || '';
+            if (creep.room.name !== homeRoomName) {
+                travelToRoom(creep, homeRoomName);
+            } else if (creep.room.controller) {
+                if (creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(creep.room.controller, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 10 });
                 } else {
                     sayAction(creep, '⚡');
                 }
