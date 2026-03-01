@@ -14,6 +14,8 @@ declare global {
         lastAction?: string;
         targetRoom?: string;
         homeRoom?: string;
+        lastRoom?: string;
+        enteredRoomTick?: number;
     }
 
     interface Memory {
