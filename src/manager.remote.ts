@@ -18,9 +18,6 @@ export function manageRemoteMining(room: Room): void {
             }
         });
     }
-
-    // 2. Limpeza de dados antigos (opcional, para economizar memória)
-    // Se quiser focar apenas em vizinhos imediatos, pode remover salas que não são mais adjacentes.
 }
 
 // Função para retornar a próxima demanda de spawn remoto
@@ -31,13 +28,16 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
         const data = Memory.remoteMining[remoteRoomName];
         const remoteCreeps = _.filter(Game.creeps, c => c.memory.targetRoom === remoteRoomName);
 
-        // A. Prioridade 1: Scouting (se não explorado há 10.000 ticks)
-        if (Game.time - data.lastScouted > 10000) {
+        // A. Prioridade 1: Scouting
+        // Se a sala for hostil, esperamos 50.000 ticks para tentar scoutar novamente.
+        // Se for segura, esperamos 10.000 ticks.
+        const scoutInterval = data.isHostile ? 50000 : 10000;
+        if (Game.time - data.lastScouted > scoutInterval) {
             const scouts = _.filter(remoteCreeps, c => c.memory.role === 'scout');
             if (scouts.length < 1) return { role: 'scout', targetRoom: remoteRoomName };
         }
 
-        // B. Se a sala for hostil ou não tiver fontes mapeadas, pula
+        // B. Se a sala for hostil ou não tiver fontes mapeadas, pula os papéis de mineração
         if (data.isHostile || data.sources.length === 0) continue;
 
         // C. Prioridade 2: Remote Harvesters (1 por fonte)
@@ -52,7 +52,7 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
             if (reservers.length < 1) return { role: 'reserver', targetRoom: remoteRoomName };
         }
 
-        // E. Prioridade 4: Remote Carriers (2 por harvester para garantir transporte)
+        // E. Prioridade 4: Remote Carriers (2 por harvester)
         const carriers = _.filter(remoteCreeps, c => c.memory.role === 'remoteCarrier');
         if (carriers.length < harvesters.length * 2) {
             return { role: 'remoteCarrier', targetRoom: remoteRoomName };

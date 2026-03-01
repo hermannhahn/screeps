@@ -17,10 +17,18 @@ export function runScout(creep: Creep): void {
         
         const sources = creep.room.find(FIND_SOURCES);
         const sourceIds = sources.map(s => s.id);
-        const sourcePositions = sources.map(s => ({ x: s.pos.x, y: s.pos.y })); // Salva as coordenadas
+        const sourcePositions = sources.map(s => ({ x: s.pos.x, y: s.pos.y }));
         
         const controller = creep.room.controller;
-        const isHostile = !!(controller && controller.owner && !controller.my);
+        
+        // Verificação aprimorada de hostilidade
+        const hasHostileCreeps = creep.room.find(FIND_HOSTILE_CREEPS).length > 0;
+        const hasHostileStructures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
+            filter: (s) => s.owner && s.owner.username !== 'Invader' && s.owner.username !== 'Source Keeper'
+        }).length > 0;
+        const isControllerHostile = !!(controller && controller.owner && !controller.my);
+        
+        const isHostile = hasHostileCreeps || hasHostileStructures || isControllerHostile;
         
         Memory.remoteMining[creep.room.name] = {
             sources: sourceIds,
