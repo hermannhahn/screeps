@@ -6,6 +6,9 @@ export function planStructures(room: Room): void {
         Memory.planning = { plannedStructures: [], spawnSquareRoadAnchorPositions: [], currentStage: 1 };
     }
     
+    // OTIMIZAÇÃO: O planner só roda a cada 10 ticks
+    if (Game.time % 10 !== 0) return;
+
     const planning = Memory.planning;
     if (planning.currentStage === undefined) planning.currentStage = 1;
     if (!planning.plannedStructures) planning.plannedStructures = [];

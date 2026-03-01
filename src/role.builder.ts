@@ -27,7 +27,10 @@ export function runBuilder(creep: Creep): void {
         if (!creep.memory.targetId) {
             let site = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES);
             
-            if (!site) {
+            // OTIMIZAÇÃO: Só busca globalmente a cada 10 ticks se não houver sites locais
+            const timeSinceLastCheck = Game.time - (creep.memory.lastGlobalSiteCheck || 0);
+            if (!site && timeSinceLastCheck > 10) {
+                creep.memory.lastGlobalSiteCheck = Game.time;
                 const globalSites = Object.values(Game.constructionSites);
                 if (globalSites.length > 0) {
                     let minVal = Infinity;

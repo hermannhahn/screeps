@@ -16,6 +16,7 @@ declare global {
         homeRoom?: string;
         lastRoom?: string;
         enteredRoomTick?: number;
+        lastGlobalSiteCheck?: number;
     }
 
     interface Memory {

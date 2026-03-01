@@ -4,6 +4,9 @@ import { isSourceSafe } from './tools';
 export function manageRemoteMining(room: Room): void {
     if (!Memory.remoteMining) Memory.remoteMining = {};
 
+    // OTIMIZAÇÃO: Só roda a descoberta pesada a cada 20 ticks
+    if (Game.time % 20 !== 0) return;
+
     // Descoberta dinâmica de salas vizinhas a partir de QUALQUER sala com visão
     for (const visibleRoomName in Game.rooms) {
         if (visibleRoomName === room.name) {
