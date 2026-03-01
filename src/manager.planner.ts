@@ -14,10 +14,12 @@ export function planStructures(room: Room): void {
     const stage = planning.currentStage;
     const localActiveCS = room.find(FIND_MY_CONSTRUCTION_SITES);
 
-    // --- LIMPEZA DE SEGURANÇA E ISOLAMENTO ---
+    // --- LOG DE INÍCIO DO PLANNER ---
+    // console.log(`Planner tick: Stage ${stage}, PlannedItems: ${planning.plannedStructures.length}`);
+
+    // --- LIMPEZA DE SEGURANÇA ---
     const sources = room.find(FIND_SOURCES);
     const unsafeSources = sources.filter(s => !isSourceSafe(s));
-    
     planning.plannedStructures = planning.plannedStructures.filter(p => {
         const isMainRoom = (p.pos.roomName === room.name);
         if (!isMainRoom && stage < 7) return false; 
@@ -26,7 +28,7 @@ export function planStructures(room: Room): void {
         return true;
     });
 
-    // --- ESTÁGIO 1 ---
+    // --- ESTÁGIOS 1-4 (Resumidos para focar no 6->7) ---
     if (stage === 1) {
         const spawns = room.find(FIND_MY_SPAWNS);
         if (spawns.length > 0) {
@@ -43,7 +45,6 @@ export function planStructures(room: Room): void {
         if (stage1Roads.length > 0 && stage1Roads.every((p: any) => p.status === 'built') && localActiveCS.length === 0) planning.currentStage = 2;
     }
 
-    // --- ESTÁGIO 2 ---
     if (stage === 2) {
         const spawn = room.find(FIND_MY_SPAWNS)[0];
         if (!spawn) return;
@@ -67,7 +68,6 @@ export function planStructures(room: Room): void {
         if (stage2Exts.length >= 5 && stage2Exts.every(p => p.status === 'built') && localActiveCS.length === 0) planning.currentStage = 3;
     }
 
-    // --- ESTÁGIO 3 ---
     if (stage === 3) {
         const safeSources = room.find(FIND_SOURCES).filter(s => isSourceSafe(s));
         const anchors = planning.spawnSquareRoadAnchorPositions.map(a => new RoomPosition(a.x, a.y, a.roomName));
@@ -96,7 +96,6 @@ export function planStructures(room: Room): void {
         if (stage3Roads.length > 0 && stage3Roads.every(p => p.status === 'built') && localActiveCS.length === 0) planning.currentStage = 4;
     }
 
-    // --- ESTÁGIO 4 ---
     if (stage === 4) {
         if (room.controller) {
             const anchors = planning.spawnSquareRoadAnchorPositions.map(a => new RoomPosition(a.x, a.y, a.roomName));
@@ -110,7 +109,7 @@ export function planStructures(room: Room): void {
         if (stage4Roads.length === 0 && localActiveCS.length === 0) planning.currentStage = 6; 
     }
 
-    // --- ESTÁGIO 6 ---
+    // --- ESTÁGIO 6: CONTAINERS LOCAIS ---
     if (stage === 6) {
         const safeSources = room.find(FIND_SOURCES).filter(s => isSourceSafe(s));
         for (const source of safeSources) {
@@ -135,9 +134,16 @@ export function planStructures(room: Room): void {
                 }
             }
         }
+        
         const stage6Conts = planning.plannedStructures.filter(p => p.pos.roomName === room.name && p.structureType === STRUCTURE_CONTAINER);
-        if ((stage6Conts.length === 0 || stage6Conts.every(p => p.status === 'built')) && localActiveCS.length === 0) {
-            console.log("Planner: Stage 6 Complete. Advancing to Stage 7 (Remote Roads).");
+        const allBuilt = stage6Conts.length > 0 && stage6Conts.every(p => p.status === 'built');
+        
+        // Log detalhado para entender por que não avança
+        const pendingCount = stage6Conts.filter(p => p.status !== 'built').length;
+        console.log(`Planner Stage 6 Check: Pending=${pendingCount}, LocalActiveCS=${localActiveCS.length}`);
+
+        if ((stage6Conts.length === 0 || allBuilt || pendingCount === 0) && localActiveCS.length === 0) {
+            console.log("Planner: Stage 6 Complete. Advancing to Stage 7.");
             planning.currentStage = 7;
         }
     }
@@ -145,6 +151,7 @@ export function planStructures(room: Room): void {
     // --- ESTÁGIO 7: ESTRADAS REMOTAS ---
     if (stage === 7) {
         if (!Memory.remoteMining) return;
+        console.log("Planner: Stage 7 (Remote Roads) active.");
         const anchors = planning.spawnSquareRoadAnchorPositions.map(a => new RoomPosition(a.x, a.y, a.roomName));
         let addedAny = false;
         
@@ -153,23 +160,20 @@ export function planStructures(room: Room): void {
             if (data.isHostile || data.sources.length === 0) continue;
 
             for (const sourceId of data.sources) {
-                // Tenta pegar o objeto se visível, senão usa dados do scouting
+                // Tenta pegar o objeto se visível, senão tenta encontrar a posição se o Scout estiver lá
                 const source = Game.getObjectById(sourceId);
-                let sourcePos: RoomPosition | null = null;
-                if (source) sourcePos = source.pos;
-                // Nota: se a sala não estiver visível, Game.getObjectById retorna null.
-                // No futuro, podemos salvar a posição exata da source na RemoteMiningData para planejar sem visibilidade.
-
-                if (sourcePos) {
+                const remoteRoom = Game.rooms[remoteRoomName];
+                
+                if (source) {
                     const alreadyPlanned = planning.plannedStructures.some(p => {
                         const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
-                        return p.pos.roomName === remoteRoomName && p.structureType === STRUCTURE_ROAD && pPos.isNearTo(sourcePos!);
+                        return p.pos.roomName === remoteRoomName && p.structureType === STRUCTURE_ROAD && pPos.isNearTo(source.pos);
                     });
 
                     if (!alreadyPlanned) {
-                        const closestAnchor = findClosestAnchor(sourcePos, anchors);
+                        const closestAnchor = findClosestAnchor(source.pos, anchors);
                         if (closestAnchor) {
-                            const path = PathFinder.search(sourcePos, { pos: closestAnchor, range: 1 }, {
+                            const path = PathFinder.search(source.pos, { pos: closestAnchor, range: 1 }, {
                                 plainCost: 2, swampCost: 10,
                                 roomCallback: (r) => {
                                     const costs = new PathFinder.CostMatrix();
@@ -177,7 +181,11 @@ export function planStructures(room: Room): void {
                                     return costs;
                                 }
                             }).path;
-                            for (const pos of path) { if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) addedAny = true; }
+                            for (const pos of path) {
+                                if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) {
+                                    addedAny = true;
+                                }
+                            }
                         }
                     }
                 }
