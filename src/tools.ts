@@ -130,10 +130,14 @@ export function sayAction(creep: Creep, message: string): void {
 export function travelToRoom(creep: Creep, roomName: string): boolean {
     if (creep.room.name === roomName) {
         // Se estiver na borda, força a entrada profunda na sala
-        if (creep.pos.x === 0) { creep.move(RIGHT); return true; }
-        if (creep.pos.x === 49) { creep.move(LEFT); return true; }
-        if (creep.pos.y === 0) { creep.move(BOTTOM); return true; }
-        if (creep.pos.y === 49) { creep.move(TOP); return true; }
+        if (creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49) {
+            console.log(`Creep ${creep.name}: At edge of ${creep.room.name}, pushing inside...`);
+            if (creep.pos.x === 0) creep.move(RIGHT);
+            else if (creep.pos.x === 49) creep.move(LEFT);
+            else if (creep.pos.y === 0) creep.move(BOTTOM);
+            else if (creep.pos.y === 49) creep.move(TOP);
+            return true;
+        }
         return false;
     }
 
