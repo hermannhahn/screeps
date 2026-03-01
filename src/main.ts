@@ -123,7 +123,7 @@ export const loop = function () {
             if (room.energyAvailable >= cost) {
                 const name = roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time;
                 mainSpawn.spawnCreep(body, name, { 
-                    memory: { role: roleToSpawn, targetRoom: tRoom, homeRoom: room.name, sourceId: sId } 
+                    memory: { role: roleToSpawn, targetRoom: tRoom, homeRoom: room.name, sourceId: sId as Id<Source> } 
                 });
             }
         }
