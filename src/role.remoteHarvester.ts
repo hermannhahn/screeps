@@ -9,16 +9,10 @@ export function runRemoteHarvester(creep: Creep): void {
     const data = Memory.remoteMining ? Memory.remoteMining[creep.memory.targetRoom] : null;
     if (data && data.isHostile) {
         sayAction(creep, '⚠️');
-        // Se a sala é hostil e não temos nada, melhor suicidar para liberar CPU e spawner
-        if (creep.store.getUsedCapacity() === 0) {
-            console.log(`${creep.name}: Suicidando - sala alvo ${creep.memory.targetRoom} é hostil.`);
-            creep.suicide();
-        } else {
-            // Se tiver carga, volta para o centro da homeRoom
-            const spawn = creep.room.find(FIND_MY_SPAWNS)[0];
-            if (spawn) creep.moveTo(spawn);
-            else if (creep.memory.homeRoom) travelToRoom(creep, creep.memory.homeRoom);
-        }
+        // Se a sala é hostil, volta para o centro da homeRoom e espera a morte natural
+        const spawn = Game.rooms[creep.memory.homeRoom || '']?.find(FIND_MY_SPAWNS)[0];
+        if (spawn) creep.moveTo(spawn);
+        else if (creep.memory.homeRoom) travelToRoom(creep, creep.memory.homeRoom);
         return;
     }
 

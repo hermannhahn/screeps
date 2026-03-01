@@ -9,8 +9,10 @@ export function runRemoteCarrier(creep: Creep): void {
     const data = Memory.remoteMining ? Memory.remoteMining[creep.memory.targetRoom] : null;
     if (data && data.isHostile && creep.store.getUsedCapacity() === 0) {
         sayAction(creep, '⚠️');
-        console.log(`${creep.name}: Suicidando - sala alvo ${creep.memory.targetRoom} é hostil.`);
-        creep.suicide();
+        // Volta para casa e espera a morte natural
+        const spawn = Game.rooms[creep.memory.homeRoom || '']?.find(FIND_MY_SPAWNS)[0];
+        if (spawn) creep.moveTo(spawn);
+        else travelToRoom(creep, creep.memory.homeRoom);
         return;
     }
 
