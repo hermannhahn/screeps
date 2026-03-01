@@ -128,28 +128,39 @@ export function sayAction(creep: Creep, message: string): void {
 }
 
 export function travelToRoom(creep: Creep, roomName: string): boolean {
-    // 1. Registro de Entrada Estrito (Só atualiza se MUDAR de sala)
+    // 1. Registro de Entrada e Direção de Afastamento
     if (creep.memory.lastRoom !== creep.room.name) {
+        let entryDir: DirectionConstant | undefined = undefined;
+        if (creep.pos.x === 0) entryDir = RIGHT;
+        else if (creep.pos.x === 49) entryDir = LEFT;
+        else if (creep.pos.y === 0) entryDir = BOTTOM;
+        else if (creep.pos.y === 49) entryDir = TOP;
+
         creep.memory.enteredRoomTick = Game.time;
         creep.memory.lastRoom = creep.room.name;
-        console.log(`Creep ${creep.name}: Entered ${creep.room.name} at tick ${Game.time}`);
+        // @ts-ignore
+        creep.memory.entryDir = entryDir;
+        console.log(`Creep ${creep.name}: Entered ${creep.room.name}, pushing in direction ${entryDir}`);
     }
 
-    // 2. Lógica de Inércia (Força movimento para o centro por 5 ticks após entrada)
+    // 2. Lógica de Afastamento Vetorial (Força movimento manual por 3 ticks)
     const ticksSinceEntry = Game.time - (creep.memory.enteredRoomTick || 0);
+    // @ts-ignore
+    const entryDir = creep.memory.entryDir as DirectionConstant;
     const atEdge = creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49;
     
-    if (ticksSinceEntry < 5 || atEdge) {
-        if (atEdge) {
-            console.log(`Creep ${creep.name}: Pushing deep into ${creep.room.name}...`);
-            if (creep.pos.x === 0) creep.move(RIGHT);
-            else if (creep.pos.x === 49) creep.move(LEFT);
-            else if (creep.pos.y === 0) creep.move(BOTTOM);
-            else if (creep.pos.y === 49) creep.move(TOP);
-            return true;
-        }
-        // Move para o centro da sala para garantir saída da borda
-        creep.moveTo(new RoomPosition(25, 25, creep.room.name), { range: 5 });
+    if (ticksSinceEntry < 3 && entryDir) {
+        console.log(`Creep ${creep.name}: Blind pushing inside ${creep.room.name}...`);
+        creep.move(entryDir);
+        return true;
+    }
+    
+    if (atEdge) {
+        console.log(`Creep ${creep.name}: At edge of ${creep.room.name}, forcing exit...`);
+        if (creep.pos.x === 0) creep.move(RIGHT);
+        else if (creep.pos.x === 49) creep.move(LEFT);
+        else if (creep.pos.y === 0) creep.move(BOTTOM);
+        else if (creep.pos.y === 49) creep.move(TOP);
         return true;
     }
 
