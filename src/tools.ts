@@ -128,37 +128,37 @@ export function sayAction(creep: Creep, message: string): void {
 }
 
 export function travelToRoom(creep: Creep, roomName: string): boolean {
-    // Registra quando o creep entra em uma nova sala
-    if (!creep.memory.enteredRoomTick || creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49) {
-        if (creep.memory.lastRoom !== creep.room.name) {
-            creep.memory.enteredRoomTick = Game.time;
-            creep.memory.lastRoom = creep.room.name;
-        }
+    // 1. Registro de Entrada Estrito (Só atualiza se MUDAR de sala)
+    if (creep.memory.lastRoom !== creep.room.name) {
+        creep.memory.enteredRoomTick = Game.time;
+        creep.memory.lastRoom = creep.room.name;
+        console.log(`Creep ${creep.name}: Entered ${creep.room.name} at tick ${Game.time}`);
     }
 
-    if (creep.room.name === roomName) {
-        // Se estiver na borda, força a entrada profunda na sala
-        if (creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49) {
-            console.log(`Creep ${creep.name}: At edge of ${creep.room.name}, pushing inside...`);
+    // 2. Lógica de Inércia (Força movimento para dentro por 3 ticks após entrada)
+    const ticksSinceEntry = Game.time - (creep.memory.enteredRoomTick || 0);
+    const atEdge = creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49;
+    
+    if (ticksSinceEntry < 3 || atEdge) {
+        if (atEdge) {
+            console.log(`Creep ${creep.name}: Pushing deep into ${creep.room.name}...`);
             if (creep.pos.x === 0) creep.move(RIGHT);
             else if (creep.pos.x === 49) creep.move(LEFT);
             else if (creep.pos.y === 0) creep.move(BOTTOM);
             else if (creep.pos.y === 49) creep.move(TOP);
             return true;
         }
-        return false;
+        // Se ainda estiver muito perto da borda (pos 1 ou 48), continua empurrando se for a sala destino
+        if (creep.room.name === roomName && (creep.pos.x === 1 || creep.pos.x === 48 || creep.pos.y === 1 || creep.pos.y === 48)) {
+             if (creep.pos.x === 1) creep.move(RIGHT);
+             else if (creep.pos.x === 48) creep.move(LEFT);
+             else if (creep.pos.y === 1) creep.move(BOTTOM);
+             else if (creep.pos.y === 48) creep.move(TOP);
+             return true;
+        }
     }
 
-    // TRAVA ANTI-OSCILAÇÃO: Se acabou de entrar na sala (nos últimos 5 ticks), não sai dela
-    const ticksSinceEntry = Game.time - (creep.memory.enteredRoomTick || 0);
-    if (ticksSinceEntry < 5 && (creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49)) {
-        console.log(`Creep ${creep.name}: Recently entered ${creep.room.name}, blocking bounce-back...`);
-        if (creep.pos.x === 0) creep.move(RIGHT);
-        else if (creep.pos.x === 49) creep.move(LEFT);
-        else if (creep.pos.y === 0) creep.move(BOTTOM);
-        else if (creep.pos.y === 49) creep.move(TOP);
-        return true;
-    }
+    if (creep.room.name === roomName) return false;
 
     // Sistema de rota para múltiplas salas
     const route = Game.map.findRoute(creep.room.name, roomName);
