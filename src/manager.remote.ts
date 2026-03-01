@@ -51,24 +51,28 @@ export function manageRemoteMining(room: Room): void {
 export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: string, sourceId?: string } | null {
     if (!Memory.remoteMining) return null;
 
-    // PASSAGEM 1: PRIORIDADE ABSOLUTA PARA SCOUTS (Todas as salas)
-    for (const remoteRoomName in Memory.remoteMining) {
-        const data = Memory.remoteMining[remoteRoomName];
-        const remoteCreeps = _.filter(Game.creeps, c => c.memory.targetRoom === remoteRoomName);
-        const scoutInterval = data.isHostile ? 50000 : 10000;
-        if (data.lastScouted === 0 || Game.time - data.lastScouted > scoutInterval) {
-            const scouts = _.filter(remoteCreeps, c => c.memory.role === 'scout');
-            if (scouts.length < 1) return { role: 'scout', targetRoom: remoteRoomName };
+    // LIMITE GLOBAL DE SCOUTS: No máximo 2 para todo o império
+    const allScouts = _.filter(Game.creeps, c => c.memory.role === 'scout');
+    
+    // PASSAGEM 1: PRIORIDADE PARA SCOUTS (Apenas se tivermos menos de 2)
+    if (allScouts.length < 2) {
+        for (const remoteRoomName in Memory.remoteMining) {
+            const data = Memory.remoteMining[remoteRoomName];
+            
+            // Só explora se estiver perto da base (raio 2)
+            if (Game.map.getRoomLinearDistance(room.name, remoteRoomName) > 2) continue;
+
+            const scoutInterval = data.isHostile ? 50000 : 10000;
+            if (data.lastScouted === 0 || Game.time - data.lastScouted > scoutInterval) {
+                const scoutsTargeting = _.filter(allScouts, c => c.memory.targetRoom === remoteRoomName);
+                if (scoutsTargeting.length < 1) return { role: 'scout', targetRoom: remoteRoomName };
+            }
         }
     }
 
-    // PASSAGEM 2: OUTRAS ROLES (Harvesters, Reservers, Carriers)
+    // PASSAGEM 2: OUTRAS ROLES (Mineradores focados no raio 1 e 2)
     for (const remoteRoomName in Memory.remoteMining) {
-        const data = Memory.remoteMining[remoteRoomName];
-        const remoteCreeps = _.filter(Game.creeps, c => c.memory.targetRoom === remoteRoomName);
-
-        if (data.isHostile) continue;
-        if (data.sources.length === 0) continue;
+        // ... resto da lógica de harvester/carrier ...
 
         const harvesters = _.filter(remoteCreeps, c => c.memory.role === 'remoteHarvester');
         for (const sourceId of data.sources) {

@@ -44,7 +44,22 @@ export function runScout(creep: Creep): void {
             };
         }
         
-        // Se a sala já foi escaneada e não há nada pra fazer aqui, o scout pode ficar como vigia
+        // NÔMADE: Se terminou aqui, procura o próximo alvo vizinho
+        const neighbors = Game.map.describeExits(creep.room.name);
+        if (neighbors) {
+            for (const nName of Object.values(neighbors)) {
+                const nData = Memory.remoteMining[nName];
+                if (nData && (nData.lastScouted === 0 || Game.time - nData.lastScouted > 10000)) {
+                    // Limita o nomadismo ao raio 3 da base principal
+                    const homeRoom = creep.memory.homeRoom || '';
+                    if (homeRoom && Game.map.getRoomLinearDistance(homeRoom, nName) <= 3) {
+                        console.log(`Scout ${creep.name}: Moving from ${creep.room.name} to next target ${nName}`);
+                        creep.memory.targetRoom = nName;
+                        return;
+                    }
+                }
+            }
+        }
         return; 
     }
 
