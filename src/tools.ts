@@ -128,43 +128,48 @@ export function sayAction(creep: Creep, message: string): void {
 }
 
 export function travelToRoom(creep: Creep, roomName: string): boolean {
-    // 1. Registro de Entrada e Direção de Afastamento
+    const x = creep.pos.x;
+    const y = creep.pos.y;
+    const atEdge = x === 0 || x === 49 || y === 0 || y === 49;
+    const nearEdge = x <= 2 || x >= 47 || y <= 2 || y >= 47;
+
+    // 1. Registro de Sala
     if (creep.memory.lastRoom !== creep.room.name) {
-        let entryDir: DirectionConstant | undefined = undefined;
-        if (creep.pos.x === 0) entryDir = RIGHT;
-        else if (creep.pos.x === 49) entryDir = LEFT;
-        else if (creep.pos.y === 0) entryDir = BOTTOM;
-        else if (creep.pos.y === 49) entryDir = TOP;
-
-        creep.memory.enteredRoomTick = Game.time;
         creep.memory.lastRoom = creep.room.name;
-        // @ts-ignore
-        creep.memory.entryDir = entryDir;
-        console.log(`Creep ${creep.name}: Entered ${creep.room.name}, pushing in direction ${entryDir}`);
+        creep.memory.enteredRoomTick = Game.time;
     }
 
-    // 2. Lógica de Afastamento Vetorial (Força movimento manual por 3 ticks)
-    const ticksSinceEntry = Game.time - (creep.memory.enteredRoomTick || 0);
-    // @ts-ignore
-    const entryDir = creep.memory.entryDir as DirectionConstant;
-    const atEdge = creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49;
-    
-    if (ticksSinceEntry < 3 && entryDir) {
-        console.log(`Creep ${creep.name}: Blind pushing inside ${creep.room.name}...`);
-        creep.move(entryDir);
-        return true;
+    // 2. PROTOCOLO DE INVASÃO: Se estiver na borda ou muito perto, força entrada manual
+    if (creep.room.name === roomName && nearEdge) {
+        console.log(`Creep ${creep.name}: Near edge of target room ${creep.room.name}, forcing deep entry...`);
+        let moveDir: DirectionConstant | undefined = undefined;
+        if (x <= 2) moveDir = RIGHT;
+        else if (x >= 47) moveDir = LEFT;
+        else if (y <= 2) moveDir = BOTTOM;
+        else if (y >= 47) moveDir = TOP;
+
+        if (moveDir) {
+            // Tenta mover na direção principal ou diagonais se bloqueado
+            const res = creep.move(moveDir);
+            if (res !== OK) {
+                // Tenta diagonais como fallback
+                if (moveDir === RIGHT) creep.move(Math.random() > 0.5 ? TOP_RIGHT : BOTTOM_RIGHT);
+                else if (moveDir === LEFT) creep.move(Math.random() > 0.5 ? TOP_LEFT : BOTTOM_LEFT);
+            }
+            return true;
+        }
     }
-    
-    if (atEdge) {
-        console.log(`Creep ${creep.name}: At edge of ${creep.room.name}, forcing exit...`);
-        if (creep.pos.x === 0) creep.move(RIGHT);
-        else if (creep.pos.x === 49) creep.move(LEFT);
-        else if (creep.pos.y === 0) creep.move(BOTTOM);
-        else if (creep.pos.y === 49) creep.move(TOP);
+
+    // Se estiver em outra sala e na borda, força a saída
+    if (creep.room.name !== roomName && atEdge) {
+        if (x === 0) creep.move(RIGHT);
+        else if (x === 49) creep.move(LEFT);
+        else if (y === 0) creep.move(BOTTOM);
+        else if (y === 49) creep.move(TOP);
         return true;
     }
 
-    if (creep.room.name === roomName) return false;
+    if (creep.room.name === roomName && !nearEdge) return false;
 
     // Sistema de rota para múltiplas salas
     const route = Game.map.findRoute(creep.room.name, roomName);
