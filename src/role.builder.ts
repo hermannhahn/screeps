@@ -83,12 +83,19 @@ export function runBuilder(creep: Creep): void {
         }
     } else {
         if (!creep.memory.targetId) {
-            if (creep.memory.homeRoom && creep.room.name !== creep.memory.homeRoom) {
-                travelToRoom(creep, creep.memory.homeRoom);
-                return;
-            }
+            // Tenta pegar energia caída na sala ATUAL primeiro (ex: do drop do remote harvester)
+            const drop = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+                filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 50 && isTargetAvailable(creep, r)
+            });
+            if (drop) creep.memory.targetId = drop.id;
 
-            const storage = creep.room.storage;
+            if (!creep.memory.targetId) {
+                if (creep.memory.homeRoom && creep.room.name !== creep.memory.homeRoom) {
+                    travelToRoom(creep, creep.memory.homeRoom);
+                    return;
+                }
+
+                const storage = creep.room.storage;
             if (storage && storage.store[RESOURCE_ENERGY] > 0 && isTargetAvailable(creep, storage)) {
                 creep.memory.targetId = storage.id;
             }
