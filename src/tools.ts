@@ -41,48 +41,28 @@ export function isSourceSafe(source: Source): boolean {
 
 export function generateBody(role: string, energy: number): BodyPartConstant[] {
     let body: BodyPartConstant[] = [];
-    
     if (role === 'harvester' || role === 'remoteHarvester') {
-        body.push(CARRY);
-        body.push(MOVE);
-        let remaining = energy - 100;
-        let workParts = Math.floor(remaining / 100);
-        if (workParts > 6) workParts = 6;
-        if (workParts < 1) workParts = 1;
-        for (let i = 0; i < workParts; i++) body.push(WORK);
-    } 
-    else if (role === 'supplier' || role === 'remoteCarrier') {
+        body.push(CARRY); body.push(MOVE);
+        let rem = energy - 100;
+        let w = Math.floor(rem / 100);
+        if (w > 6) w = 6; if (w < 1) w = 1;
+        for (let i = 0; i < w; i++) body.push(WORK);
+    } else if (role === 'supplier' || role === 'remoteCarrier') {
         body.push(WORK);
-        let remaining = energy - 100;
-        let pairs = Math.floor(remaining / 100);
-        if (pairs > 15) pairs = 15;
-        if (pairs < 1) pairs = 1;
-        for (let i = 0; i < pairs; i++) {
-            body.push(CARRY);
-            body.push(MOVE);
-        }
-    } 
-    else if (role === 'reserver') {
-        let sets = Math.floor(energy / 650);
-        if (sets > 2) sets = 2;
-        if (sets < 1) sets = 1;
-        for (let i = 0; i < sets; i++) {
-            body.push(CLAIM);
-            body.push(MOVE);
-        }
-    }
-    else if (role === 'scout') {
+        let rem = energy - 100;
+        let p = Math.floor(rem / 100);
+        if (p > 15) p = 15; if (p < 1) p = 1;
+        for (let i = 0; i < p; i++) { body.push(CARRY); body.push(MOVE); }
+    } else if (role === 'reserver') {
+        let s = Math.floor(energy / 650);
+        if (s > 2) s = 2; if (s < 1) s = 1;
+        for (let i = 0; i < s; i++) { body.push(CLAIM); body.push(MOVE); }
+    } else if (role === 'scout') {
         body = [MOVE];
-    }
-    else {
-        let sets = Math.floor(energy / 200);
-        if (sets > 15) sets = 15;
-        if (sets < 1) sets = 1;
-        for (let i = 0; i < sets; i++) {
-            body.push(WORK);
-            body.push(CARRY);
-            body.push(MOVE);
-        }
+    } else {
+        let s = Math.floor(energy / 200);
+        if (s > 15) s = 15; if (s < 1) s = 1;
+        for (let i = 0; i < s; i++) { body.push(WORK); body.push(CARRY); body.push(MOVE); }
     }
     return body;
 }
@@ -98,15 +78,9 @@ export function isTargetAvailable(creep: Creep, target: any): boolean {
     if (!target) return false;
     let energyAvailable = getEnergyAmount(target);
     if (energyAvailable <= 0) return false;
-    const others = _.filter(Game.creeps, (c) => 
-        c.room.name === creep.room.name && 
-        c.id !== creep.id && 
-        c.memory.targetId === target.id
-    );
+    const others = _.filter(Game.creeps, (c) => c.room.name === creep.room.name && c.id !== creep.id && c.memory.targetId === target.id);
     let reservedAmount = 0;
-    for (const other of others) {
-        reservedAmount += other.store.getFreeCapacity(RESOURCE_ENERGY);
-    }
+    for (const other of others) reservedAmount += other.store.getFreeCapacity(RESOURCE_ENERGY);
     return (energyAvailable - reservedAmount) > 0;
 }
 
@@ -139,15 +113,24 @@ export function sayAction(creep: Creep, message: string): void {
     }
 }
 
+// Auxiliar para mover entre salas (Aprimorado para evitar ping-pong)
 export function travelToRoom(creep: Creep, roomName: string): boolean {
-    if (creep.room.name !== roomName) {
-        const exitDir = creep.room.findExitTo(roomName);
-        if (exitDir !== ERR_NO_PATH && exitDir !== ERR_INVALID_ARGS) {
-            const exit = creep.pos.findClosestByRange(exitDir as ExitConstant);
-            if (exit) {
-                creep.moveTo(exit, { visualizePathStyle: { stroke: '#ffffff' } });
-                return true;
-            }
+    // 1. Se estiver exatamente na borda, dar um passo para dentro
+    if (creep.pos.x === 0) { creep.move(RIGHT); return true; }
+    if (creep.pos.x === 49) { creep.move(LEFT); return true; }
+    if (creep.pos.y === 0) { creep.move(BOTTOM); return true; }
+    if (creep.pos.y === 49) { creep.move(TOP); return true; }
+
+    // 2. Se já estiver na sala alvo e não na borda, objetivo cumprido
+    if (creep.room.name === roomName) return false;
+
+    // 3. Caso contrário, buscar a saída
+    const exitDir = creep.room.findExitTo(roomName);
+    if (exitDir !== ERR_NO_PATH && exitDir !== ERR_INVALID_ARGS) {
+        const exit = creep.pos.findClosestByRange(exitDir as ExitConstant);
+        if (exit) {
+            creep.moveTo(exit, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 20 });
+            return true;
         }
     }
     return false;
