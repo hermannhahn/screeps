@@ -5,6 +5,11 @@ export function runScout(creep: Creep): void {
     const targetRoom = creep.memory.targetRoom;
     if (!targetRoom) return;
 
+    // LOG DE RASTREAMENTO (Para depuração autônoma)
+    if (Game.time % 5 === 0) {
+        console.log(`Scout ${creep.name}: In ${creep.room.name}, target ${targetRoom}, pos ${creep.pos.x},${creep.pos.y}`);
+    }
+
     // Primeiro garantimos que ele chegue e saia da borda usando a ferramenta centralizada
     if (travelToRoom(creep, targetRoom)) return;
 

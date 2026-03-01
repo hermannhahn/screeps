@@ -165,10 +165,13 @@ export function travelToRoom(creep: Creep, roomName: string): boolean {
     if (Array.isArray(route) && route.length > 0) {
         const exit = creep.pos.findClosestByRange(route[0].exit);
         if (exit) {
-            creep.moveTo(exit, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 20 });
+            // Se estiver perto da borda, não usamos reusePath para evitar bug de cache
+            const nearEdge = creep.pos.x <= 1 || creep.pos.x >= 48 || creep.pos.y <= 1 || creep.pos.y >= 48;
+            creep.moveTo(exit, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: nearEdge ? 0 : 20 });
             return true;
         }
-    } else {
+    }
+ else {
         // Backup: tenta mover direto se a rota falhar
         creep.moveTo(new RoomPosition(25, 25, roomName), { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 50 });
     }
