@@ -9,6 +9,7 @@ import { runScout } from './role.scout';
 import { runReserver } from './role.reserver';
 import { runRemoteHarvester } from './role.remoteHarvester';
 import { runRemoteCarrier } from './role.remoteCarrier';
+import { runRepairer } from './role.repairer';
 import { isSourceSafe, generateBody } from './tools';
 
 export const loop = function () {
@@ -80,6 +81,7 @@ export const loop = function () {
         const suppliers = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'supplier');
         const builders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'builder');
         const upgraders = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'upgrader');
+        const repairers = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'repairer');
 
         const sources = room.find(FIND_SOURCES);
         const safeSources = _.filter(sources, (s) => isSourceSafe(s));
@@ -92,6 +94,7 @@ export const loop = function () {
         const targetHarvesters = safeSources.length * 2;
         const targetSuppliers = Math.min(6, Math.max(2, harvesters.length)); // No mínimo 2 suppliers
         const targetBuilders = globalCSCount > 0 ? (rcl <= 3 ? 2 : 1) : 0;
+        const targetRepairers = rcl >= 3 ? 1 : 0;
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
         const remoteRequest = getRemoteSpawnRequest(room);
@@ -105,6 +108,7 @@ export const loop = function () {
         else if (suppliers.length < 1) roleToSpawn = 'supplier';
         else if (suppliers.length < targetSuppliers / 2) roleToSpawn = 'supplier'; 
         else if (globalCSCount > 0 && builders.length < 1) roleToSpawn = 'builder'; // GARANTIA DE BUILDER GLOBAL
+        else if (repairers.length < targetRepairers) roleToSpawn = 'repairer';
         else if (upgraders.length < 1) roleToSpawn = 'upgrader';
         else if (remoteRequest && remoteRequest.role === 'scout') {
             roleToSpawn = 'scout';
@@ -149,6 +153,7 @@ export const loop = function () {
             case 'reserver': runReserver(creep); break;
             case 'remoteHarvester': runRemoteHarvester(creep); break;
             case 'remoteCarrier': runRemoteCarrier(creep); break;
+            case 'repairer': runRepairer(creep); break;
         }
     }
 }
