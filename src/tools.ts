@@ -128,14 +128,26 @@ export function sayAction(creep: Creep, message: string): void {
 }
 
 export function travelToRoom(creep: Creep, roomName: string): boolean {
-    if (creep.room.name === roomName) return false;
-    const exitDir = creep.room.findExitTo(roomName);
-    if (exitDir !== ERR_NO_PATH && exitDir !== ERR_INVALID_ARGS) {
-        const exit = creep.pos.findClosestByRange(exitDir as ExitConstant);
+    if (creep.room.name === roomName) {
+        // Se estiver na borda, entra na sala
+        if (creep.pos.x === 0) creep.move(RIGHT);
+        else if (creep.pos.x === 49) creep.move(LEFT);
+        else if (creep.pos.y === 0) creep.move(BOTTOM);
+        else if (creep.pos.y === 49) creep.move(TOP);
+        return false;
+    }
+
+    // Sistema de rota para múltiplas salas
+    const route = Game.map.findRoute(creep.room.name, roomName);
+    if (Array.isArray(route) && route.length > 0) {
+        const exit = creep.pos.findClosestByRange(route[0].exit);
         if (exit) {
             creep.moveTo(exit, { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 20 });
             return true;
         }
+    } else {
+        // Backup: tenta mover direto se a rota falhar
+        creep.moveTo(new RoomPosition(25, 25, roomName), { visualizePathStyle: { stroke: '#ffffff' }, reusePath: 50 });
     }
     return false;
 }
