@@ -61,7 +61,7 @@ export function planStructures(room: Room): void {
     if (stage === 2) {
         const spawn = room.find(FIND_MY_SPAWNS)[0];
         if (!spawn) return;
-        const extensionsToBuild = 5;
+        const extensionsToBuild = 10;
         const currentExtCount = planning.plannedStructures.filter(p => p.pos.roomName === room.name && p.structureType === STRUCTURE_EXTENSION).length + room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } }).length;
         if (currentExtCount < extensionsToBuild) {
             for (const roadPosRaw of planning.spawnSquareRoadAnchorPositions) {
@@ -78,7 +78,7 @@ export function planStructures(room: Room): void {
             }
         }
         const stage2Exts = planning.plannedStructures.filter(p => p.pos.roomName === room.name && p.structureType === STRUCTURE_EXTENSION);
-        if (stage2Exts.length >= 5 && stage2Exts.every(p => p.status === 'built') && localActiveCS.length === 0) planning.currentStage = 3;
+        if (stage2Exts.length >= 10 && stage2Exts.every(p => p.status === 'built') && localActiveCS.length === 0) planning.currentStage = 3;
     }
 
     // --- ESTÁGIO 3 ---
@@ -226,5 +226,33 @@ export function planStructures(room: Room): void {
             }
         }
         if (addedAny) console.log("Planner Stage 8: Planned remote source roads.");
+
+        // Avança para o estágio 9 se as estradas remotas básicas estiverem planejadas e construídas
+        const stage8Roads = planning.plannedStructures.filter(p => p.pos.roomName !== room.name && p.structureType === STRUCTURE_ROAD);
+        if ((stage8Roads.length === 0 || stage8Roads.every(p => p.status === 'built')) && localActiveCS.length === 0) {
+             console.log("Planner: Stage 8 Complete. Advancing to Stage 9.");
+             planning.currentStage = 9;
+        }
+    }
+
+    // --- ESTÁGIO 9 (Consolidação RCL 3 e Preparação RCL 4) ---
+    if (stage === 9) {
+        const spawn = room.find(FIND_MY_SPAWNS)[0];
+        if (!spawn || !room.controller) return;
+
+        // 1. Planejamento do Storage (perto do Spawn) - RCL 4
+        const hasStoragePlanned = planning.plannedStructures.some(p => p.pos.roomName === room.name && p.structureType === STRUCTURE_STORAGE);
+        if (!hasStoragePlanned) {
+            const storageSpots = [{dx: 0, dy: -2}, {dx: 0, dy: 2}, {dx: -2, dy: 0}, {dx: 2, dy: 0}];
+            for (const off of storageSpots) {
+                const pos = new RoomPosition(spawn.pos.x + off.dx, spawn.pos.y + off.dy, room.name);
+                if (room.getTerrain().get(pos.x, pos.y) !== TERRAIN_MASK_WALL && !planning.plannedStructures.some(p => p.pos.x === pos.x && p.pos.y === pos.y)) {
+                    if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_STORAGE, 'to_build', room)) {
+                        console.log("Planner Stage 9: Planned Storage location.");
+                        break;
+                    }
+                }
+            }
+        }
     }
 }
