@@ -35,13 +35,16 @@ export function manageRemoteMining(room: Room): void {
         const data = Memory.remoteMining[visibleRoomName];
         if (data && (Game.time - data.lastScouted > 100 || data.sources.length === 0)) {
             const sources = visibleRoom.find(FIND_SOURCES);
-            data.sources = sources.map(s => s.id);
-            data.sourcePositions = sources.map(s => ({ x: s.pos.x, y: s.pos.y }));
-            const controller = visibleRoom.controller;
-            data.reserverNeeded = !!controller && !controller.owner;
-            const hostiles = visibleRoom.find(FIND_HOSTILE_CREEPS).length > 0 || visibleRoom.find(FIND_HOSTILE_STRUCTURES).length > 0;
-            data.isHostile = hostiles || !!(controller && controller.owner && !controller.my);
-            data.lastScouted = Game.time;
+            if (sources.length > 0) {
+                console.log(`RemoteManager: Updating data for visible room ${visibleRoomName} (${sources.length} sources found)`);
+                data.sources = sources.map(s => s.id);
+                data.sourcePositions = sources.map(s => ({ x: s.pos.x, y: s.pos.y }));
+                const controller = visibleRoom.controller;
+                data.reserverNeeded = !!controller && !controller.owner;
+                const hostiles = visibleRoom.find(FIND_HOSTILE_CREEPS).length > 0 || visibleRoom.find(FIND_HOSTILE_STRUCTURES).length > 0;
+                data.isHostile = hostiles || !!(controller && controller.owner && !controller.my);
+                data.lastScouted = Game.time;
+            }
         }
     }
 }
