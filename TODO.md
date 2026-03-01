@@ -6,7 +6,7 @@
 - [x] **Estágio 3**: Estradas conectando as Sources locais ao Spawn.
 - [x] **Estágio 4**: Estradas do Controller local.
 - [x] **Estágio 6**: Containers (Sources, Controller e Torres).
-- [ ] **Estágio 7**: Estradas Remotas (Sources vizinhas -> Sala Principal). (PRÓXIMO)
+- [ ] **Estágio 7**: Estradas Remotas (Sources vizinhas -> Sala Principal). (EM ANDAMENTO)
 - [ ] **Estágio 8**: Planejamento da primeira Torre (RCL 3).
 
 ## 🛡️ Fase 2: Segurança e Escalabilidade (RCL 3-4)
@@ -20,3 +20,4 @@
 - [x] **Remote Roles**: Scout, Reserver, RemoteHarvester, RemoteCarrier.
 - [x] **Evasão**: Sistema de fuga contra inimigos.
 - [x] **Logística Inteligente**: Reserva de energia e persistência de alvos.
+- [x] **Emoji Say**: Feedback visual privado (amarelo) das ações.
