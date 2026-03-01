@@ -147,6 +147,34 @@ export function planStructures(room: Room): void {
 
     // --- ESTÁGIO 7 ---
     if (stage === 7) {
+        if (!room.controller || room.controller.level < 3) {
+            planning.currentStage = 8; // Pula para o remoto se não puder construir torre ainda
+            return;
+        }
+        const spawn = room.find(FIND_MY_SPAWNS)[0];
+        if (!spawn) return;
+        const hasTower = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } }).length > 0 || 
+                         planning.plannedStructures.some(p => p.pos.roomName === room.name && p.structureType === STRUCTURE_TOWER);
+        
+        if (!hasTower) {
+            const towerSpots = [{dx: 0, dy: -3}, {dx: 0, dy: 3}, {dx: -3, dy: 0}, {dx: 3, dy: 0}];
+            for (const off of towerSpots) {
+                const pos = new RoomPosition(spawn.pos.x + off.dx, spawn.pos.y + off.dy, room.name);
+                if (room.getTerrain().get(pos.x, pos.y) !== TERRAIN_MASK_WALL && !planning.plannedStructures.some(p => p.pos.x === pos.x && p.pos.y === pos.y)) {
+                    if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_TOWER, 'to_build', room)) break;
+                }
+            }
+        }
+
+        const stage7Towers = planning.plannedStructures.filter(p => p.pos.roomName === room.name && p.structureType === STRUCTURE_TOWER);
+        if (stage7Towers.length > 0 && stage7Towers.every(p => p.status === 'built') && localActiveCS.length === 0) {
+            console.log("Planner: Stage 7 (Tower) Complete. Advancing to Stage 8.");
+            planning.currentStage = 8;
+        }
+    }
+
+    // --- ESTÁGIO 8 ---
+    if (stage === 8) {
         if (!Memory.remoteMining) return;
         const anchors = planning.spawnSquareRoadAnchorPositions.map(a => new RoomPosition(a.x, a.y, a.roomName));
         let addedAny = false;
@@ -182,23 +210,6 @@ export function planStructures(room: Room): void {
                 }
             }
         }
-        if (addedAny) console.log("Planner Stage 7: Planned remote source roads.");
-    }
-
-    // --- ESTÁGIO 8 ---
-    if (stage === 8) {
-        if (!room.controller || room.controller.level < 3) return;
-        const spawn = room.find(FIND_MY_SPAWNS)[0];
-        if (!spawn) return;
-        const hasTower = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } }).length > 0 || planning.plannedStructures.some(p => p.pos.roomName === room.name && p.structureType === STRUCTURE_TOWER);
-        if (!hasTower) {
-            const towerSpots = [{dx: 0, dy: -3}, {dx: 0, dy: 3}, {dx: -3, dy: 0}, {dx: 3, dy: 0}];
-            for (const off of towerSpots) {
-                const pos = new RoomPosition(spawn.pos.x + off.dx, spawn.pos.y + off.dy, room.name);
-                if (room.getTerrain().get(pos.x, pos.y) !== TERRAIN_MASK_WALL && !planning.plannedStructures.some(p => p.pos.x === pos.x && p.pos.y === pos.y)) {
-                    if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_TOWER, 'to_build', room)) break;
-                }
-            }
-        }
+        if (addedAny) console.log("Planner Stage 8: Planned remote source roads.");
     }
 }
