@@ -54,7 +54,6 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
 
         if (data.sources.length === 0) continue;
 
-        // Atribuição inteligente de fontes para harvesters
         const harvesters = _.filter(remoteCreeps, c => c.memory.role === 'remoteHarvester');
         for (const sourceId of data.sources) {
             const harvestersAtSource = _.filter(harvesters, h => h.memory.sourceId === sourceId);
@@ -63,6 +62,7 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
             }
         }
 
+        // RESERVER: Prioridade aumentada se a sala não estiver reservada
         if (data.reserverNeeded && room.controller && room.controller.level >= 3) {
             const reservers = _.filter(remoteCreeps, c => c.memory.role === 'reserver');
             if (reservers.length < 1) return { role: 'reserver', targetRoom: remoteRoomName };
