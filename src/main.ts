@@ -116,16 +116,26 @@ export const loop = function () {
         
         else if (globalCSCount > 0 && builders.length < 1) roleToSpawn = 'builder'; 
         else if (repairers.length < targetRepairers) roleToSpawn = 'repairer';
+        
+        // REMOTE HARVESTER E CARRIER ESSENCIAIS
+        else if (remoteRequest && (remoteRequest.role === 'remoteHarvester' || remoteRequest.role === 'remoteCarrier')) {
+            roleToSpawn = remoteRequest.role;
+            tRoom = remoteRequest.targetRoom;
+            sId = remoteRequest.sourceId;
+        }
+
         else if (upgraders.length < 1) roleToSpawn = 'upgrader';
         
         // RESERVERS E OUTROS REMOTOS DEPOIS
         else if (harvesters.length < targetHarvesters) roleToSpawn = 'harvester';
         else if (builders.length < targetBuilders) roleToSpawn = 'builder';
-        else if (remoteRequest) {
-            roleToSpawn = remoteRequest.role;
+        
+        // RESERVER (Só após o essencial)
+        else if (remoteRequest && remoteRequest.role === 'reserver') {
+            roleToSpawn = 'reserver';
             tRoom = remoteRequest.targetRoom;
-            sId = remoteRequest.sourceId;
         }
+
         else if (suppliers.length < targetSuppliers) roleToSpawn = 'supplier';
         else if (upgraders.length < targetUpgraders) roleToSpawn = 'upgrader';
 
