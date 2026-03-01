@@ -131,45 +131,27 @@ export function travelToRoom(creep: Creep, roomName: string): boolean {
     const x = creep.pos.x;
     const y = creep.pos.y;
     const atEdge = x === 0 || x === 49 || y === 0 || y === 49;
-    const nearEdge = x <= 2 || x >= 47 || y <= 2 || y >= 47;
+    const veryNearEdge = x <= 1 || x >= 48 || y <= 1 || y >= 48;
 
     // 1. Registro de Sala
     if (creep.memory.lastRoom !== creep.room.name) {
         creep.memory.lastRoom = creep.room.name;
         creep.memory.enteredRoomTick = Game.time;
+        console.log(`Creep ${creep.name}: Entered ${creep.room.name}, activating 5-tick stay-lock.`);
     }
 
-    // 2. PROTOCOLO DE INVASÃO: Se estiver na borda ou muito perto, força entrada manual
-    if (creep.room.name === roomName && nearEdge) {
-        console.log(`Creep ${creep.name}: Near edge of target room ${creep.room.name}, forcing deep entry...`);
-        let moveDir: DirectionConstant | undefined = undefined;
-        if (x <= 2) moveDir = RIGHT;
-        else if (x >= 47) moveDir = LEFT;
-        else if (y <= 2) moveDir = BOTTOM;
-        else if (y >= 47) moveDir = TOP;
-
-        if (moveDir) {
-            // Tenta mover na direção principal ou diagonais se bloqueado
-            const res = creep.move(moveDir);
-            if (res !== OK) {
-                // Tenta diagonais como fallback
-                if (moveDir === RIGHT) creep.move(Math.random() > 0.5 ? TOP_RIGHT : BOTTOM_RIGHT);
-                else if (moveDir === LEFT) creep.move(Math.random() > 0.5 ? TOP_LEFT : BOTTOM_LEFT);
-            }
-            return true;
-        }
-    }
-
-    // Se estiver em outra sala e na borda, força a saída
-    if (creep.room.name !== roomName && atEdge) {
-        if (x === 0) creep.move(RIGHT);
-        else if (x === 49) creep.move(LEFT);
-        else if (y === 0) creep.move(BOTTOM);
-        else if (y === 49) creep.move(TOP);
+    // 2. TICKET DE ESTADIA UNIVERSAL: Força saída da borda em QUALQUER sala recém-adentrada
+    const ticksSinceEntry = Game.time - (creep.memory.enteredRoomTick || 0);
+    if (ticksSinceEntry < 5 && veryNearEdge) {
+        console.log(`Creep ${creep.name}: In stay-lock at ${creep.room.name}, pushing inside...`);
+        if (x <= 1) creep.move(RIGHT);
+        else if (x >= 48) creep.move(LEFT);
+        else if (y <= 1) creep.move(BOTTOM);
+        else if (y >= 48) creep.move(TOP);
         return true;
     }
 
-    if (creep.room.name === roomName && !nearEdge) return false;
+    if (creep.room.name === roomName && !atEdge) return false;
 
     // Sistema de rota para múltiplas salas
     const route = Game.map.findRoute(creep.room.name, roomName);
