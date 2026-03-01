@@ -103,7 +103,8 @@ export const loop = function () {
         // PRIORIDADES REAJUSTADAS: Logística e Manutenção primeiro
         if (harvesters.length < safeSources.length) roleToSpawn = 'harvester';
         else if (suppliers.length < 1) roleToSpawn = 'supplier';
-        else if (suppliers.length < targetSuppliers / 2) roleToSpawn = 'supplier'; // Garante metade dos suppliers antes de outras roles
+        else if (suppliers.length < targetSuppliers / 2) roleToSpawn = 'supplier'; 
+        else if (globalCSCount > 0 && builders.length < 1) roleToSpawn = 'builder'; // GARANTIA DE BUILDER GLOBAL
         else if (upgraders.length < 1) roleToSpawn = 'upgrader';
         else if (remoteRequest && remoteRequest.role === 'scout') {
             roleToSpawn = 'scout';
@@ -120,6 +121,7 @@ export const loop = function () {
         else if (upgraders.length < targetUpgraders) roleToSpawn = 'upgrader';
 
         if (roleToSpawn) {
+            console.log(`Main: Spawning ${roleToSpawn} for ${tRoom || 'home'}...`);
             const energyLimit = (harvesters.length === 0) ? room.energyAvailable : room.energyCapacityAvailable;
             const body = generateBody(roleToSpawn, energyLimit);
             let cost = 0;
