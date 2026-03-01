@@ -31,12 +31,17 @@ export function runBuilder(creep: Creep): void {
             if (!site) {
                 const globalSites = Object.values(Game.constructionSites);
                 if (globalSites.length > 0) {
-                    // Busca manual para evitar problemas com Lodash
                     let minVal = Infinity;
                     for (const s of globalSites) {
                         let dist: number;
-                        if (s.pos.roomName === creep.room.name) dist = creep.pos.getRangeTo(s);
-                        else dist = Game.map.getRoomLinearDistance(creep.room.name, s.pos.roomName) * 50;
+                        if (s.pos.roomName === creep.room.name) {
+                            dist = creep.pos.getRangeTo(s);
+                        } else {
+                            // Reduzimos o peso da distância linear para sites remotos
+                            // para permitir que construções importantes fora concorram com reparos menores em casa
+                            const roomDist = Game.map.getRoomLinearDistance(creep.room.name, s.pos.roomName);
+                            dist = (roomDist * 50) - 20; // Heurística mais agressiva para o remoto
+                        }
                         
                         if (dist < minVal) {
                             minVal = dist;

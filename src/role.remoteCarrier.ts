@@ -21,12 +21,33 @@ export function runRemoteCarrier(creep: Creep): void {
             sayAction(creep, '🏃');
             travelToRoom(creep, creep.memory.targetRoom);
         } else {
-            const target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-                filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 50
-            });
+            // Tenta encontrar energia caída perto de um harvester
+            const harvesters = _.filter(Game.creeps, c => c.memory.targetRoom === creep.room.name && c.memory.role === 'remoteHarvester');
+            let target: any = null;
+            
+            for (const h of harvesters) {
+                const dropped = h.pos.findInRange(FIND_DROPPED_RESOURCES, 1, {
+                    filter: r => r.resourceType === RESOURCE_ENERGY && r.amount > 50
+                })[0];
+                if (dropped) { target = dropped; break; }
+            }
+
+            if (!target) {
+                target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
+                    filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 50
+                });
+            }
+
+            if (!target) {
+                target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] > 100
+                });
+            }
+
             if (target) {
-                if (creep.pickup(target) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target);
+                const res = (target instanceof Resource) ? creep.pickup(target) : creep.withdraw(target, RESOURCE_ENERGY);
+                if (res === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
                 } else {
                     sayAction(creep, '📦');
                 }

@@ -95,6 +95,7 @@ export const loop = function () {
 
         let roleToSpawn: string | null = null;
         let tRoom: string | undefined = undefined;
+        let sId: string | undefined = undefined;
 
         if (harvesters.length < safeSources.length) roleToSpawn = 'harvester';
         else if (suppliers.length < 1) roleToSpawn = 'supplier';
@@ -108,6 +109,7 @@ export const loop = function () {
         else if (remoteRequest) {
             roleToSpawn = remoteRequest.role;
             tRoom = remoteRequest.targetRoom;
+            sId = remoteRequest.sourceId;
         }
         else if (suppliers.length < targetSuppliers) roleToSpawn = 'supplier';
         else if (upgraders.length < targetUpgraders) roleToSpawn = 'upgrader';
@@ -121,7 +123,7 @@ export const loop = function () {
             if (room.energyAvailable >= cost) {
                 const name = roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time;
                 mainSpawn.spawnCreep(body, name, { 
-                    memory: { role: roleToSpawn, targetRoom: tRoom, homeRoom: room.name } 
+                    memory: { role: roleToSpawn, targetRoom: tRoom, homeRoom: room.name, sourceId: sId } 
                 });
             }
         }

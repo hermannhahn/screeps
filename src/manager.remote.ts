@@ -20,7 +20,7 @@ export function manageRemoteMining(room: Room): void {
     }
 }
 
-export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: string } | null {
+export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: string, sourceId?: string } | null {
     if (!Memory.remoteMining) return null;
 
     for (const remoteRoomName in Memory.remoteMining) {
@@ -39,9 +39,13 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
 
         if (data.sources.length === 0) continue;
 
+        // Atribuição inteligente de fontes para harvesters
         const harvesters = _.filter(remoteCreeps, c => c.memory.role === 'remoteHarvester');
-        if (harvesters.length < data.sources.length) {
-            return { role: 'remoteHarvester', targetRoom: remoteRoomName };
+        for (const sourceId of data.sources) {
+            const harvestersAtSource = _.filter(harvesters, h => h.memory.sourceId === sourceId);
+            if (harvestersAtSource.length < 1) {
+                return { role: 'remoteHarvester', targetRoom: remoteRoomName, sourceId: sourceId };
+            }
         }
 
         if (data.reserverNeeded && room.controller && room.controller.level >= 3) {
@@ -50,7 +54,8 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
         }
 
         const carriers = _.filter(remoteCreeps, c => c.memory.role === 'remoteCarrier');
-        if (carriers.length < harvesters.length * 2) {
+        // Carriers: 1 para cada harvester em salas próximas, talvez mais se longe
+        if (carriers.length < harvesters.length) {
             return { role: 'remoteCarrier', targetRoom: remoteRoomName };
         }
     }

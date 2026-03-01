@@ -22,7 +22,13 @@ export function runRemoteHarvester(creep: Creep): void {
     } else {
         if (!creep.memory.sourceId) {
             const sources = creep.room.find(FIND_SOURCES);
-            if (sources.length > 0) creep.memory.sourceId = sources[0].id;
+            if (sources.length > 0) {
+                // Se não tiver sourceId na memória, tenta pegar um que não esteja ocupado
+                const remoteCreeps = _.filter(Game.creeps, c => c.memory.targetRoom === creep.room.name && c.memory.role === 'remoteHarvester' && c.id !== creep.id);
+                const busySources = remoteCreeps.map(c => c.memory.sourceId);
+                const freeSource = sources.find(s => !busySources.includes(s.id));
+                creep.memory.sourceId = freeSource ? freeSource.id : sources[0].id;
+            }
         }
 
         const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
