@@ -39,9 +39,9 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
         const data = Memory.remoteMining[remoteRoomName];
         const remoteCreeps = _.filter(Game.creeps, c => c.memory.targetRoom === remoteRoomName);
 
-        // Se a sala for hostil, ignoramos ela completamente por um longo período
+        // Se a sala nunca foi explorada ou o intervalo expirou
         const scoutInterval = data.isHostile ? 50000 : 10000;
-        if (Game.time - data.lastScouted > scoutInterval) {
+        if (data.lastScouted === 0 || Game.time - data.lastScouted > scoutInterval) {
             const scouts = _.filter(remoteCreeps, c => c.memory.role === 'scout');
             if (scouts.length < 1) return { role: 'scout', targetRoom: remoteRoomName };
         }
