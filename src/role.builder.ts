@@ -13,7 +13,6 @@ export function runBuilder(creep: Creep): void {
         delete creep.memory.targetId;
     }
 
-    // Validação de alvo persistente
     if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (!target) {
@@ -27,19 +26,16 @@ export function runBuilder(creep: Creep): void {
 
     if (creep.memory.building) {
         if (!creep.memory.targetId) {
-            // 1. Procura primeiro na sala atual
             let site = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES);
             
-            // 2. Se não achar na sala atual, procura globalmente (para estradas remotas)
             if (!site) {
                 const globalSites = Object.values(Game.constructionSites);
                 if (globalSites.length > 0) {
-                    // Ordena por distância (aproximada se em salas diferentes)
-                    site = _.min(globalSites, (s) => {
+                    site = _.min(globalSites, (s: ConstructionSite) => {
                         if (s.pos.roomName === creep.room.name) return creep.pos.getRangeTo(s);
                         const dist = Game.map.getRoomLinearDistance(creep.room.name, s.pos.roomName);
                         return dist * 50;
-                    });
+                    }) as ConstructionSite;
                 }
             }
             
@@ -49,7 +45,6 @@ export function runBuilder(creep: Creep): void {
         if (creep.memory.targetId) {
             const target = Game.getObjectById(creep.memory.targetId as Id<ConstructionSite>);
             if (target) {
-                // Se o alvo está em outra sala, viaja para lá
                 if (target.pos.roomName !== creep.room.name) {
                     travelToRoom(creep, target.pos.roomName);
                 } else {
@@ -63,7 +58,6 @@ export function runBuilder(creep: Creep): void {
                 delete creep.memory.targetId;
             }
         } else {
-            // Se não houver NADA para construir no mundo, ajuda no upgrade local
             const homeRoom = Game.rooms[creep.memory.homeRoom || ''];
             const targetRoom = homeRoom || creep.room;
             
@@ -78,9 +72,7 @@ export function runBuilder(creep: Creep): void {
             }
         }
     } else {
-        // --- COLETA DE ENERGIA ---
         if (!creep.memory.targetId) {
-            // Se estiver fora da homeRoom e sem energia, volta para a homeRoom buscar
             if (creep.memory.homeRoom && creep.room.name !== creep.memory.homeRoom) {
                 travelToRoom(creep, creep.memory.homeRoom);
                 return;
