@@ -2,16 +2,25 @@
 
 export function isTerrainValidForRoad(pos: RoomPosition, room: Room): boolean {
     if (!pos || !pos.roomName || pos.x < 0 || pos.y < 0 || pos.x >= 50 || pos.y >= 50) return false;
-    const terrain = room.getTerrain().get(pos.x, pos.y);
+    
+    // Usa Game.map para obter o terreno da sala correta, mesmo que não tenhamos visibilidade total
+    const terrain = Game.map.getRoomTerrain(pos.roomName).get(pos.x, pos.y);
     if (terrain === TERRAIN_MASK_WALL) return false;
     return true;
 }
 
 export function addPlannedStructure(plans: PlannedStructure[], pos: RoomPosition, structureType: StructureConstant, status: PlannedStructure['status'] = 'to_build', room: Room): boolean {
-    const exists = plans.some(p => p.pos.x === pos.x && p.pos.y === pos.y && p.structureType === structureType);
+    // Verificação de duplicata corrigida: agora inclui o roomName
+    const exists = plans.some(p => p.pos.x === pos.x && p.pos.y === pos.y && p.pos.roomName === pos.roomName && p.structureType === structureType);
     if (exists) return false;
+
     if (!isTerrainValidForRoad(pos, room)) return false;
-    plans.push({ pos, structureType, status });
+
+    plans.push({ 
+        pos: { x: pos.x, y: pos.y, roomName: pos.roomName } as any, // Salva como objeto simples para compatibilidade JSON
+        structureType, 
+        status 
+    });
     return true;
 }
 
@@ -113,12 +122,8 @@ export function sayAction(creep: Creep, message: string): void {
     }
 }
 
-// Auxiliar para mover entre salas
 export function travelToRoom(creep: Creep, roomName: string): boolean {
-    // 1. Se já estiver na sala alvo, não faz nada (a role cuida de sair da borda)
     if (creep.room.name === roomName) return false;
-
-    // 2. Caso contrário, buscar a saída
     const exitDir = creep.room.findExitTo(roomName);
     if (exitDir !== ERR_NO_PATH && exitDir !== ERR_INVALID_ARGS) {
         const exit = creep.pos.findClosestByRange(exitDir as ExitConstant);
