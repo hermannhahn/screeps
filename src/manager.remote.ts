@@ -6,7 +6,6 @@ export function manageRemoteMining(room: Room): void {
 
     // Descoberta dinâmica de salas vizinhas a partir de QUALQUER sala com visão
     for (const visibleRoomName in Game.rooms) {
-        // Pula a própria sala principal
         if (visibleRoomName === room.name) {
              const exits = Game.map.describeExits(visibleRoomName);
              if (exits) {
@@ -24,14 +23,12 @@ export function manageRemoteMining(room: Room): void {
         
         if (exits) {
             Object.values(exits).forEach(neighborName => {
-                // SÓ EXPLORA SE: não for a home room e não estiver na memória
                 if (neighborName !== room.name && !Memory.remoteMining![neighborName]) {
                     Memory.remoteMining![neighborName] = { sources: [], sourcePositions: [], reserverNeeded: false, isHostile: false, lastScouted: 0 };
                 }
             });
         }
 
-        // Se a sala está visível, atualizamos os dados dela mesmo sem o Scout
         const data = Memory.remoteMining[visibleRoomName];
         if (data && (Game.time - data.lastScouted > 100 || data.sources.length === 0)) {
             const sources = visibleRoom.find(FIND_SOURCES);
@@ -48,51 +45,55 @@ export function manageRemoteMining(room: Room): void {
         }
     }
 }
+
 export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: string, sourceId?: string } | null {
     if (!Memory.remoteMining) return null;
 
-    // LIMITE GLOBAL DE SCOUTS: No máximo 2 para todo o império
-    const allScouts = _.filter(Game.creeps, c => c.memory.role === 'scout');
+    const allCreeps = Object.values(Game.creeps);
+    const allScouts = allCreeps.filter(c => c.memory.role === 'scout');
     
-    // PASSAGEM 1: PRIORIDADE PARA SCOUTS (Apenas se tivermos menos de 2)
+    // PASSAGEM 1: PRIORIDADE PARA SCOUTS (Limite global 2)
     if (allScouts.length < 2) {
         for (const remoteRoomName in Memory.remoteMining) {
             const data = Memory.remoteMining[remoteRoomName];
-            
-            // Só explora se estiver perto da base (raio 2)
             if (Game.map.getRoomLinearDistance(room.name, remoteRoomName) > 2) continue;
 
             const scoutInterval = data.isHostile ? 50000 : 10000;
             if (data.lastScouted === 0 || Game.time - data.lastScouted > scoutInterval) {
-                const scoutsTargeting = _.filter(allScouts, c => c.memory.targetRoom === remoteRoomName);
+                const scoutsTargeting = allScouts.filter(c => c.memory.targetRoom === remoteRoomName);
                 if (scoutsTargeting.length < 1) return { role: 'scout', targetRoom: remoteRoomName };
             }
         }
     }
 
-    // PASSAGEM 2: OUTRAS ROLES (Mineradores focados no raio 1 e 2)
+    // PASSAGEM 2: OUTRAS ROLES (Harvesters, Carriers, Reservers)
     for (const remoteRoomName in Memory.remoteMining) {
-        // ... resto da lógica de harvester/carrier ...
+        const data = Memory.remoteMining[remoteRoomName];
+        if (Game.map.getRoomLinearDistance(room.name, remoteRoomName) > 2) continue;
+        if (data.isHostile || data.sources.length === 0) continue;
 
-        const harvesters = _.filter(remoteCreeps, c => c.memory.role === 'remoteHarvester');
+        const creepsInTarget = allCreeps.filter(c => c.memory.targetRoom === remoteRoomName);
+        const harvesters = creepsInTarget.filter(c => c.memory.role === 'remoteHarvester');
+        const carriers = creepsInTarget.filter(c => c.memory.role === 'remoteCarrier');
+        const reservers = creepsInTarget.filter(c => c.memory.role === 'reserver');
+
+        // Spawna Harvesters para cada fonte
         for (const sourceId of data.sources) {
-            const harvestersAtSource = _.filter(harvesters, h => h.memory.sourceId === sourceId);
-            if (harvestersAtSource.length < 1) {
+            if (!harvesters.some(h => h.memory.sourceId === sourceId)) {
                 return { role: 'remoteHarvester', targetRoom: remoteRoomName, sourceId: sourceId };
             }
         }
 
-        const carriers = _.filter(remoteCreeps, c => c.memory.role === 'remoteCarrier');
+        // Spawna Carriers (1 por harvester)
         if (carriers.length < harvesters.length) {
             return { role: 'remoteCarrier', targetRoom: remoteRoomName };
         }
 
+        // Spawna Reservers
         if (data.reserverNeeded && room.controller && room.controller.level >= 3) {
-            const reservers = _.filter(remoteCreeps, c => c.memory.role === 'reserver');
             if (reservers.length < 1) return { role: 'reserver', targetRoom: remoteRoomName };
         }
     }
 
     return null;
 }
-
