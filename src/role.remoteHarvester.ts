@@ -36,6 +36,14 @@ export function runRemoteHarvester(creep: Creep): void {
             if (creep.pos.isNearTo(source)) {
                 if (creep.harvest(source) === OK) {
                     sayAction(creep, '⛏️');
+                    
+                    // Se houver um builder na sala, dropamos a energia para ele pegar mais rápido
+                    if (creep.store.getUsedCapacity() > 0) {
+                        const builderPresent = creep.room.find(FIND_MY_CREEPS, {
+                            filter: (c) => c.memory.role === 'builder'
+                        }).length > 0;
+                        if (builderPresent) creep.drop(RESOURCE_ENERGY);
+                    }
                 }
             } else {
                 creep.moveTo(source, { range: 1, visualizePathStyle: { stroke: '#ffaa00' } });
