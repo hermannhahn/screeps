@@ -174,4 +174,9 @@ export const loop = function () {
             case 'repairer': runRepairer(creep); break;
         }
     }
+
+    // MONITORAMENTO DE CPU (Obrigatório para validação autônoma)
+    if (Game.time % 10 === 0) {
+        console.log(`CPU: ${Game.cpu.getUsed().toFixed(2)} | Bucket: ${Game.cpu.bucket} | Creeps: ${Object.keys(Game.creeps).length}`);
+    }
 }
