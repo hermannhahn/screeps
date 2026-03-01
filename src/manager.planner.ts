@@ -14,12 +14,10 @@ export function planStructures(room: Room): void {
     const stage = planning.currentStage;
     const localActiveCS = room.find(FIND_MY_CONSTRUCTION_SITES);
 
-    // --- LOG DE INÍCIO DO PLANNER ---
-    // console.log(`Planner tick: Stage ${stage}, PlannedItems: ${planning.plannedStructures.length}`);
-
-    // --- LIMPEZA DE SEGURANÇA ---
+    // --- LIMPEZA DE SEGURANÇA E ISOLAMENTO ---
     const sources = room.find(FIND_SOURCES);
     const unsafeSources = sources.filter(s => !isSourceSafe(s));
+    
     planning.plannedStructures = planning.plannedStructures.filter(p => {
         const isMainRoom = (p.pos.roomName === room.name);
         if (!isMainRoom && stage < 7) return false; 
@@ -28,7 +26,7 @@ export function planStructures(room: Room): void {
         return true;
     });
 
-    // --- ESTÁGIOS 1-4 (Resumidos para focar no 6->7) ---
+    // (Estágios 1 a 6 mantidos...)
     if (stage === 1) {
         const spawns = room.find(FIND_MY_SPAWNS);
         if (spawns.length > 0) {
@@ -109,7 +107,6 @@ export function planStructures(room: Room): void {
         if (stage4Roads.length === 0 && localActiveCS.length === 0) planning.currentStage = 6; 
     }
 
-    // --- ESTÁGIO 6: CONTAINERS LOCAIS ---
     if (stage === 6) {
         const safeSources = room.find(FIND_SOURCES).filter(s => isSourceSafe(s));
         for (const source of safeSources) {
@@ -134,64 +131,50 @@ export function planStructures(room: Room): void {
                 }
             }
         }
-        
         const stage6Conts = planning.plannedStructures.filter(p => p.pos.roomName === room.name && p.structureType === STRUCTURE_CONTAINER);
-        const allBuilt = stage6Conts.length > 0 && stage6Conts.every(p => p.status === 'built');
-        
-        // Log detalhado para entender por que não avança
-        const pendingCount = stage6Conts.filter(p => p.status !== 'built').length;
-        console.log(`Planner Stage 6 Check: Pending=${pendingCount}, LocalActiveCS=${localActiveCS.length}`);
-
-        if ((stage6Conts.length === 0 || allBuilt || pendingCount === 0) && localActiveCS.length === 0) {
-            console.log("Planner: Stage 6 Complete. Advancing to Stage 7.");
+        if ((stage6Conts.length === 0 || stage6Conts.every(p => p.status === 'built')) && localActiveCS.length === 0) {
+            console.log("Planner: Stage 6 Complete. Advancing to Stage 7 (Remote Roads).");
             planning.currentStage = 7;
         }
     }
 
-    // --- ESTÁGIO 7: ESTRADAS REMOTAS ---
+    // --- ESTÁGIO 7: ESTRADAS REMOTAS (Usando posições salvas) ---
     if (stage === 7) {
         if (!Memory.remoteMining) return;
-        console.log("Planner: Stage 7 (Remote Roads) active.");
         const anchors = planning.spawnSquareRoadAnchorPositions.map(a => new RoomPosition(a.x, a.y, a.roomName));
         let addedAny = false;
         
         for (const remoteRoomName in Memory.remoteMining) {
             const data = Memory.remoteMining[remoteRoomName];
-            if (data.isHostile || data.sources.length === 0) continue;
+            if (data.isHostile || !data.sourcePositions) continue;
 
-            for (const sourceId of data.sources) {
-                // Tenta pegar o objeto se visível, senão tenta encontrar a posição se o Scout estiver lá
-                const source = Game.getObjectById(sourceId);
-                const remoteRoom = Game.rooms[remoteRoomName];
+            for (const sPos of data.sourcePositions) {
+                const sourcePos = new RoomPosition(sPos.x, sPos.y, remoteRoomName);
                 
-                if (source) {
-                    const alreadyPlanned = planning.plannedStructures.some(p => {
-                        const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
-                        return p.pos.roomName === remoteRoomName && p.structureType === STRUCTURE_ROAD && pPos.isNearTo(source.pos);
-                    });
+                const alreadyPlanned = planning.plannedStructures.some(p => {
+                    const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
+                    return p.pos.roomName === remoteRoomName && p.structureType === STRUCTURE_ROAD && pPos.isNearTo(sourcePos);
+                });
 
-                    if (!alreadyPlanned) {
-                        const closestAnchor = findClosestAnchor(source.pos, anchors);
-                        if (closestAnchor) {
-                            const path = PathFinder.search(source.pos, { pos: closestAnchor, range: 1 }, {
-                                plainCost: 2, swampCost: 10,
-                                roomCallback: (r) => {
-                                    const costs = new PathFinder.CostMatrix();
-                                    planning.plannedStructures.forEach(p => { if (p.pos.roomName === r && p.structureType === STRUCTURE_ROAD) costs.set(p.pos.x, p.pos.y, 1); });
-                                    return costs;
-                                }
-                            }).path;
-                            for (const pos of path) {
-                                if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) {
-                                    addedAny = true;
-                                }
+                if (!alreadyPlanned) {
+                    const closestAnchor = findClosestAnchor(sourcePos, anchors);
+                    if (closestAnchor) {
+                        const path = PathFinder.search(sourcePos, { pos: closestAnchor, range: 1 }, {
+                            plainCost: 2, swampCost: 10,
+                            roomCallback: (r) => {
+                                const costs = new PathFinder.CostMatrix();
+                                planning.plannedStructures.forEach(p => { if (p.pos.roomName === r && p.structureType === STRUCTURE_ROAD) costs.set(p.pos.x, p.pos.y, 1); });
+                                return costs;
                             }
+                        }).path;
+                        for (const pos of path) {
+                            if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) addedAny = true;
                         }
                     }
                 }
             }
         }
-        if (addedAny) console.log("Planner Stage 7: Planned remote source roads.");
+        if (addedAny) console.log("Planner Stage 7: Planned remote source roads using memory coordinates.");
     }
 
     // --- ESTÁGIO 8: PRIMEIRA TORRE (RCL 3) ---

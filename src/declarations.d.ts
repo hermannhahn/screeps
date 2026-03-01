@@ -23,6 +23,7 @@ declare global {
 
     interface RemoteMiningData {
         sources: Id<Source>[];
+        sourcePositions?: { x: number, y: number }[]; // NOVO: Posições salvas
         reserverNeeded: boolean;
         isHostile: boolean;
         lastScouted: number;
