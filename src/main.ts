@@ -12,22 +12,27 @@ import { runRemoteCarrier } from './role.remoteCarrier';
 import { isSourceSafe, generateBody } from './tools';
 
 export const loop = function () {
+    // console.log(`--- LOOP TICK ${Game.time} ---`);
+
     for (const name in Memory.creeps) {
         if (!Game.creeps[name]) {
             delete Memory.creeps[name];
         }
     }
 
-    // Identificar a sala principal (aquela que tem o Spawn)
+    // Identificação de sala resiliente
     const mainSpawn = Object.values(Game.spawns)[0];
-    if (!mainSpawn) return;
-    const room = mainSpawn.room;
+    let room = mainSpawn ? mainSpawn.room : Object.values(Game.rooms)[0];
+    
+    if (!room) {
+        console.log("Main: No visible rooms or spawns found.");
+        return;
+    }
 
-    // --- 1. SINCRONIZAÇÃO DE STATUS (Com Verificação de Visibilidade) ---
+    // --- 1. SINCRONIZAÇÃO DE STATUS ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         for (const p of Memory.planning.plannedStructures) {
             if (p.status === 'built') continue;
-
             const targetRoom = Game.rooms[p.pos.roomName];
             if (targetRoom) {
                 const pos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
@@ -41,17 +46,18 @@ export const loop = function () {
         }
     }
 
-    // --- 2. MANAGERS (Apenas na Sala Principal) ---
+    // --- 2. MANAGERS ---
     planStructures(room);
     manageRemoteMining(room);
 
-    // --- 3. CRIAR CONSTRUCTION SITES (Usando a sala correta do plano) ---
+    // --- 3. CRIAR CONSTRUCTION SITES ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
         for (const p of toBuild) {
             const targetRoom = Game.rooms[p.pos.roomName];
             if (targetRoom) {
-                targetRoom.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
+                const res = targetRoom.createConstructionSite(p.pos.x, p.pos.y, p.structureType as BuildableStructureConstant);
+                if (res === OK) p.status = 'building';
             }
         }
     }
@@ -68,7 +74,7 @@ export const loop = function () {
     }
 
     // --- 5. LOGICA DE SPAWN DINAMICA ---
-    if (!mainSpawn.spawning) {
+    if (mainSpawn && !mainSpawn.spawning) {
         const creepsInRoom = _.filter(Game.creeps, (c: Creep) => c.room.name === room.name || c.memory.homeRoom === room.name);
         const harvesters = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'harvester');
         const suppliers = _.filter(creepsInRoom, (c: Creep) => c.memory.role === 'supplier');
