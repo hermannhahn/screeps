@@ -20,7 +20,7 @@ export function planStructures(room: Room): void {
     
     planning.plannedStructures = planning.plannedStructures.filter(p => {
         const isMainRoom = (p.pos.roomName === room.name);
-        if (!isMainRoom && stage < 7) return false; // Impede planejamento remoto antes do Estágio 7
+        if (!isMainRoom && stage < 7) return false; 
         const pPos = new RoomPosition(p.pos.x, p.pos.y, p.pos.roomName);
         if (unsafeSources.some(us => pPos.inRangeTo(us, 10))) return false;
         return true;
@@ -106,7 +106,7 @@ export function planStructures(room: Room): void {
             }
         }
         const stage4Roads = planning.plannedStructures.filter(p => p.pos.roomName === room.name && p.status !== 'built' && !planning.spawnSquareRoadAnchorPositions.some((a: any) => a.x === p.pos.x && a.y === p.pos.y) && p.structureType === STRUCTURE_ROAD);
-        if (stage4Roads.length === 0 && localActiveCS.length === 0) planning.currentStage = 6; // Pula 5 para o 6 (Containers)
+        if (stage4Roads.length === 0 && localActiveCS.length === 0) planning.currentStage = 6; 
     }
 
     // --- ESTÁGIO 6: CONTAINERS LOCAIS ---
@@ -136,8 +136,16 @@ export function planStructures(room: Room): void {
                 }
             }
         }
+        
         const stage6Conts = planning.plannedStructures.filter(p => p.pos.roomName === room.name && p.structureType === STRUCTURE_CONTAINER);
-        if (stage6Conts.length > 0 && stage6Conts.every(p => p.status === 'built') && localActiveCS.length === 0) {
+        const allBuilt = stage6Conts.length > 0 && stage6Conts.every(p => p.status === 'built');
+        
+        // Log de diagnóstico
+        if (Game.time % 10 === 0) {
+            console.log(`Planner Stage 6: Pending Containers=${stage6Conts.filter(p => p.status !== 'built').length}, Local CS=${localActiveCS.length}`);
+        }
+
+        if ((stage6Conts.length === 0 || allBuilt) && localActiveCS.length === 0) {
             console.log("Planner: Stage 6 (Containers) Complete. Advancing to Stage 7 (Remote Roads).");
             planning.currentStage = 7;
         }
@@ -152,7 +160,7 @@ export function planStructures(room: Room): void {
             const data = Memory.remoteMining[remoteRoomName];
             if (data.isHostile) continue;
             const remoteRoom = Game.rooms[remoteRoomName];
-            if (!remoteRoom) continue; // Precisa de visibilidade
+            if (!remoteRoom) continue; 
 
             for (const sourceId of data.sources) {
                 const source = Game.getObjectById(sourceId);
@@ -172,9 +180,7 @@ export function planStructures(room: Room): void {
                                 return costs;
                             }
                         }).path;
-                        for (const pos of path) {
-                            if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) addedAny = true;
-                        }
+                        for (const pos of path) { if (addPlannedStructure(planning.plannedStructures, pos, STRUCTURE_ROAD, 'to_build', room)) addedAny = true; }
                     }
                 }
             }
