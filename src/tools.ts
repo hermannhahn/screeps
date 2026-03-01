@@ -135,11 +135,11 @@ export function travelToRoom(creep: Creep, roomName: string): boolean {
         console.log(`Creep ${creep.name}: Entered ${creep.room.name} at tick ${Game.time}`);
     }
 
-    // 2. Lógica de Inércia (Força movimento para dentro por 3 ticks após entrada)
+    // 2. Lógica de Inércia (Força movimento para o centro por 5 ticks após entrada)
     const ticksSinceEntry = Game.time - (creep.memory.enteredRoomTick || 0);
     const atEdge = creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49;
     
-    if (ticksSinceEntry < 3 || atEdge) {
+    if (ticksSinceEntry < 5 || atEdge) {
         if (atEdge) {
             console.log(`Creep ${creep.name}: Pushing deep into ${creep.room.name}...`);
             if (creep.pos.x === 0) creep.move(RIGHT);
@@ -148,14 +148,9 @@ export function travelToRoom(creep: Creep, roomName: string): boolean {
             else if (creep.pos.y === 49) creep.move(TOP);
             return true;
         }
-        // Se ainda estiver muito perto da borda (pos 1 ou 48), continua empurrando se for a sala destino
-        if (creep.room.name === roomName && (creep.pos.x === 1 || creep.pos.x === 48 || creep.pos.y === 1 || creep.pos.y === 48)) {
-             if (creep.pos.x === 1) creep.move(RIGHT);
-             else if (creep.pos.x === 48) creep.move(LEFT);
-             else if (creep.pos.y === 1) creep.move(BOTTOM);
-             else if (creep.pos.y === 48) creep.move(TOP);
-             return true;
-        }
+        // Move para o centro da sala para garantir saída da borda
+        creep.moveTo(new RoomPosition(25, 25, creep.room.name), { range: 5 });
+        return true;
     }
 
     if (creep.room.name === roomName) return false;

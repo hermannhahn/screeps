@@ -6,12 +6,26 @@ export function manageRemoteMining(room: Room): void {
 
     // Descoberta dinâmica de salas vizinhas a partir de QUALQUER sala com visão
     for (const visibleRoomName in Game.rooms) {
+        // Pula a própria sala principal
+        if (visibleRoomName === room.name) {
+             const exits = Game.map.describeExits(visibleRoomName);
+             if (exits) {
+                 Object.values(exits).forEach(neighborName => {
+                     if (neighborName !== room.name && !Memory.remoteMining![neighborName]) {
+                         Memory.remoteMining![neighborName] = { sources: [], sourcePositions: [], reserverNeeded: false, isHostile: false, lastScouted: 0 };
+                     }
+                 });
+             }
+             continue;
+        }
+
         const visibleRoom = Game.rooms[visibleRoomName];
         const exits = Game.map.describeExits(visibleRoomName);
         
         if (exits) {
             Object.values(exits).forEach(neighborName => {
-                if (!Memory.remoteMining![neighborName]) {
+                // SÓ EXPLORA SE: não for a home room e não estiver na memória
+                if (neighborName !== room.name && !Memory.remoteMining![neighborName]) {
                     Memory.remoteMining![neighborName] = { sources: [], sourcePositions: [], reserverNeeded: false, isHostile: false, lastScouted: 0 };
                 }
             });
