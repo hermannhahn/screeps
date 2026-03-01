@@ -113,18 +113,12 @@ export function sayAction(creep: Creep, message: string): void {
     }
 }
 
-// Auxiliar para mover entre salas (Aprimorado para evitar ping-pong)
+// Auxiliar para mover entre salas
 export function travelToRoom(creep: Creep, roomName: string): boolean {
-    // 1. Se estiver exatamente na borda, dar um passo para dentro
-    if (creep.pos.x === 0) { creep.move(RIGHT); return true; }
-    if (creep.pos.x === 49) { creep.move(LEFT); return true; }
-    if (creep.pos.y === 0) { creep.move(BOTTOM); return true; }
-    if (creep.pos.y === 49) { creep.move(TOP); return true; }
-
-    // 2. Se já estiver na sala alvo e não na borda, objetivo cumprido
+    // 1. Se já estiver na sala alvo, não faz nada (a role cuida de sair da borda)
     if (creep.room.name === roomName) return false;
 
-    // 3. Caso contrário, buscar a saída
+    // 2. Caso contrário, buscar a saída
     const exitDir = creep.room.findExitTo(roomName);
     if (exitDir !== ERR_NO_PATH && exitDir !== ERR_INVALID_ARGS) {
         const exit = creep.pos.findClosestByRange(exitDir as ExitConstant);
