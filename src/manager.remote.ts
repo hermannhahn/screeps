@@ -4,10 +4,19 @@ import { isSourceSafe } from './tools';
 export function manageRemoteMining(room: Room): void {
     if (!Memory.remoteMining) Memory.remoteMining = {};
 
-    // OTIMIZAÇÃO: Throttling a cada 20 ticks (equilíbrio entre CPU e agilidade)
+    // OTIMIZAÇÃO: Roda apenas a cada 20 ticks
     if (Game.time % 20 !== 0) return;
 
-    // 1. DESCOBERTA DINÂMICA (Vizinhos da Home e de salas ativas)
+    // 1. LIMPEZA: Remove a Home Room e salas com raio > 2 da memória
+    if (Memory.remoteMining[room.name]) delete Memory.remoteMining[room.name];
+    
+    for (const roomName in Memory.remoteMining) {
+        if (Game.map.getRoomLinearDistance(room.name, roomName) > 2) {
+            delete Memory.remoteMining[roomName];
+        }
+    }
+
+    // 2. DESCOBERTA DINÂMICA (Vizinhos da Home e de salas ativas)
     const activeRooms = [room.name, ...Object.keys(Game.rooms)];
     activeRooms.forEach(visibleRoomName => {
         const exits = Game.map.describeExits(visibleRoomName);
@@ -23,9 +32,11 @@ export function manageRemoteMining(room: Room): void {
         }
     });
 
-    // 2. ATUALIZAÇÃO DE DADOS DE VISÃO
+    // 3. ATUALIZAÇÃO DE DADOS DE VISÃO
     for (const roomName in Game.rooms) {
         const visibleRoom = Game.rooms[roomName];
+        if (roomName === room.name) continue; // Pula a home room
+
         const data = Memory.remoteMining[roomName];
         if (data) {
             const sources = visibleRoom.find(FIND_SOURCES);
@@ -46,11 +57,11 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
     const allCreeps = Object.values(Game.creeps);
     const allScouts = allCreeps.filter(c => c.memory.role === 'scout');
     
-    // 1. PRIORIDADE: SCOUTS PARA SALAS SEM DADOS (Máximo 2)
+    // 1. PRIORIDADE: SCOUTS (Limite global 2)
     if (allScouts.length < 2) {
         for (const remoteRoomName in Memory.remoteMining) {
+            if (remoteRoomName === room.name) continue;
             const data = Memory.remoteMining[remoteRoomName];
-            // Se não temos as IDs mas sabemos que há fontes (ou nunca fomos lá)
             if (data.lastScouted === 0 || (data.sourcePositions && data.sourcePositions.length > 0 && data.sources.length === 0)) {
                 if (!allScouts.some(s => s.memory.targetRoom === remoteRoomName)) {
                     return { role: 'scout', targetRoom: remoteRoomName };
@@ -59,34 +70,32 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
         }
     }
 
-    // 2. PRIORIDADE: MINERADORES (Baseado no que o Planner "vê")
+    // 2. PRIORIDADE: MINERADORES (Apenas vizinhos válidos)
     for (const remoteRoomName in Memory.remoteMining) {
+        if (remoteRoomName === room.name) continue;
         const data = Memory.remoteMining[remoteRoomName];
-        if (data.isHostile) continue;
+        if (data.isHostile || data.sources.length === 0) continue;
 
-        // Se o planner já tem posições, nós já podemos tentar minerar (se houver visão/ID)
-        if (data.sources.length > 0) {
-            const creepsInTarget = allCreeps.filter(c => c.memory.targetRoom === remoteRoomName);
-            const harvesters = creepsInTarget.filter(c => c.memory.role === 'remoteHarvester');
-            const carriers = creepsInTarget.filter(c => c.memory.role === 'remoteCarrier');
+        const creepsInTarget = allCreeps.filter(c => c.memory.targetRoom === remoteRoomName);
+        const harvesters = creepsInTarget.filter(c => c.memory.role === 'remoteHarvester');
+        const carriers = creepsInTarget.filter(c => c.memory.role === 'remoteCarrier');
 
-            // Harvesters
-            for (const sourceId of data.sources) {
-                if (!harvesters.some(h => h.memory.sourceId === sourceId)) {
-                    return { role: 'remoteHarvester', targetRoom: remoteRoomName, sourceId: sourceId };
-                }
+        // Harvesters
+        for (const sourceId of data.sources) {
+            if (!harvesters.some(h => h.memory.sourceId === sourceId)) {
+                return { role: 'remoteHarvester', targetRoom: remoteRoomName, sourceId: sourceId };
             }
+        }
 
-            // Carriers
-            if (carriers.length < harvesters.length) {
-                return { role: 'remoteCarrier', targetRoom: remoteRoomName };
-            }
+        // Carriers
+        if (carriers.length < harvesters.length) {
+            return { role: 'remoteCarrier', targetRoom: remoteRoomName };
+        }
 
-            // Reservers (Apenas se sobrar muita energia)
-            if (data.reserverNeeded && room.energyAvailable >= 750) {
-                const reservers = creepsInTarget.filter(c => c.memory.role === 'reserver');
-                if (reservers.length < 1) return { role: 'reserver', targetRoom: remoteRoomName };
-            }
+        // Reservers
+        if (data.reserverNeeded && room.energyAvailable >= 750) {
+            const reservers = creepsInTarget.filter(c => c.memory.role === 'reserver');
+            if (reservers.length < 1) return { role: 'reserver', targetRoom: remoteRoomName };
         }
     }
 
