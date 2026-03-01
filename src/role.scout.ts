@@ -2,16 +2,28 @@
 import { travelToRoom, sayAction } from './tools';
 
 export function runScout(creep: Creep): void {
+    // AUTO-LIMPEZA: Se houver mais de 2 scouts globais, este se aposenta
+    const allScouts = Object.values(Game.creeps).filter(c => c.memory.role === 'scout');
+    if (allScouts.length > 2) {
+        // Se for um dos scouts "excedentes", ele se suicida para economizar CPU/Energia
+        const sortedScouts = allScouts.sort((a, b) => a.ticksToLive! - b.ticksToLive!);
+        if (creep.name === sortedScouts[0].name) {
+            console.log(`Scout ${creep.name}: Too many scouts globaly. Retiring...`);
+            creep.suicide();
+            return;
+        }
+    }
+
     const targetRoom = creep.memory.targetRoom;
     if (!targetRoom) return;
 
-    // LOG DE RASTREAMENTO (Para depuração autônoma)
-    if (Game.time % 5 === 0) {
-        console.log(`Scout ${creep.name}: In ${creep.room.name}, target ${targetRoom}, pos ${creep.pos.x},${creep.pos.y}`);
-    }
+    // OTIMIZAÇÃO DE CPU: Scouts só se movem a cada 2 ticks
+    if (Game.time % 2 !== 0) return;
 
-    // Primeiro garantimos que ele chegue e saia da borda usando a ferramenta centralizada
-    if (travelToRoom(creep, targetRoom)) return;
+    // LOG DE RASTREAMENTO
+    if (Game.time % 20 === 0) {
+        console.log(`Scout ${creep.name}: In ${creep.room.name}, target ${targetRoom}`);
+    }
 
     // Se chegou aqui, travelToRoom retornou false, o que significa que já está na sala e fora da borda
     if (creep.room.name === targetRoom) {
