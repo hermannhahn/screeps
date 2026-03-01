@@ -103,17 +103,22 @@ export const loop = function () {
         let tRoom: string | undefined = undefined;
         let sId: string | undefined = undefined;
 
-        // PRIORIDADES REAJUSTADAS: Logística e Manutenção primeiro
+        // PRIORIDADES REAJUSTADAS: Logística e Exploração barata primeiro
         if (harvesters.length < safeSources.length) roleToSpawn = 'harvester';
         else if (suppliers.length < 1) roleToSpawn = 'supplier';
         else if (suppliers.length < targetSuppliers / 2) roleToSpawn = 'supplier'; 
-        else if (globalCSCount > 0 && builders.length < 1) roleToSpawn = 'builder'; // GARANTIA DE BUILDER GLOBAL
-        else if (repairers.length < targetRepairers) roleToSpawn = 'repairer';
-        else if (upgraders.length < 1) roleToSpawn = 'upgrader';
+        
+        // SCOUT TEM PRIORIDADE ALTA (é barato e garante visão)
         else if (remoteRequest && remoteRequest.role === 'scout') {
             roleToSpawn = 'scout';
             tRoom = remoteRequest.targetRoom;
         }
+        
+        else if (globalCSCount > 0 && builders.length < 1) roleToSpawn = 'builder'; 
+        else if (repairers.length < targetRepairers) roleToSpawn = 'repairer';
+        else if (upgraders.length < 1) roleToSpawn = 'upgrader';
+        
+        // RESERVERS E OUTROS REMOTOS DEPOIS
         else if (harvesters.length < targetHarvesters) roleToSpawn = 'harvester';
         else if (builders.length < targetBuilders) roleToSpawn = 'builder';
         else if (remoteRequest) {
