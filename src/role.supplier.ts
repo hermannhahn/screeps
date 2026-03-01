@@ -58,7 +58,7 @@ export function runSupplier(creep: Creep): void {
     } else {
         if (!creep.memory.targetId) {
             let target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
-                filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
+                filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION || s.structureType === STRUCTURE_TOWER) && 
                                s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
             }) as AnyStructure;
 

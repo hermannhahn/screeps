@@ -6,19 +6,28 @@ export function manageRemoteMining(room: Room): void {
 
     // Descoberta dinâmica de salas vizinhas a partir de QUALQUER sala com visão
     for (const visibleRoomName in Game.rooms) {
+        const visibleRoom = Game.rooms[visibleRoomName];
         const exits = Game.map.describeExits(visibleRoomName);
+        
         if (exits) {
             Object.values(exits).forEach(neighborName => {
                 if (!Memory.remoteMining![neighborName]) {
-                    Memory.remoteMining![neighborName] = {
-                        sources: [],
-                        sourcePositions: [],
-                        reserverNeeded: false,
-                        isHostile: false,
-                        lastScouted: 0
-                    };
+                    Memory.remoteMining![neighborName] = { sources: [], sourcePositions: [], reserverNeeded: false, isHostile: false, lastScouted: 0 };
                 }
             });
+        }
+
+        // Se a sala está visível, atualizamos os dados dela mesmo sem o Scout
+        const data = Memory.remoteMining[visibleRoomName];
+        if (data && (Game.time - data.lastScouted > 100 || data.sources.length === 0)) {
+            const sources = visibleRoom.find(FIND_SOURCES);
+            data.sources = sources.map(s => s.id);
+            data.sourcePositions = sources.map(s => ({ x: s.pos.x, y: s.pos.y }));
+            const controller = visibleRoom.controller;
+            data.reserverNeeded = !!controller && !controller.owner;
+            const hostiles = visibleRoom.find(FIND_HOSTILE_CREEPS).length > 0 || visibleRoom.find(FIND_HOSTILE_STRUCTURES).length > 0;
+            data.isHostile = hostiles || !!(controller && controller.owner && !controller.my);
+            data.lastScouted = Game.time;
         }
     }
 }

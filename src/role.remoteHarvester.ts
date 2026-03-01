@@ -33,10 +33,13 @@ export function runRemoteHarvester(creep: Creep): void {
 
         const source = Game.getObjectById(creep.memory.sourceId as Id<Source>);
         if (source) {
-            if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
+            if (creep.pos.isNearTo(source)) {
+                if (creep.harvest(source) === OK) {
+                    sayAction(creep, '⛏️');
+                }
             } else {
-                sayAction(creep, '⛏️');
+                creep.moveTo(source, { range: 1, visualizePathStyle: { stroke: '#ffaa00' } });
+                sayAction(creep, '🏃');
             }
         }
     }
