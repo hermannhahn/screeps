@@ -4,17 +4,16 @@ import { travelToRoom, sayAction, handleDefensiveState } from './tools';
 export function runRemoteCarrier(creep: Creep): void {
     if (!creep.memory.targetRoom || !creep.memory.homeRoom) return;
 
-    // --- SISTEMA DEFENSIVO ---
     if (handleDefensiveState(creep)) return;
 
-    // Verifica se a sala alvo ainda é segura
-    if (Memory.remoteMining && Memory.remoteMining[creep.memory.targetRoom] && Memory.remoteMining[creep.memory.targetRoom].isHostile && creep.store.getUsedCapacity() === 0) {
+    const data = Memory.remoteMining ? Memory.remoteMining[creep.memory.targetRoom] : null;
+    if (data && data.isHostile && creep.store.getUsedCapacity() === 0) {
         sayAction(creep, '⚠️');
-        travelToRoom(creep, creep.memory.homeRoom);
+        console.log(`${creep.name}: Suicidando - sala alvo ${creep.memory.targetRoom} é hostil.`);
+        creep.suicide();
         return;
     }
 
-    // Se estiver vazio, vai para a sala remota buscar
     if (creep.store.getUsedCapacity() === 0) {
         if (creep.room.name !== creep.memory.targetRoom) {
             sayAction(creep, '🏃');
@@ -32,12 +31,17 @@ export function runRemoteCarrier(creep: Creep): void {
             }
         }
     } 
-    // Se estiver cheio, volta para a sala principal depositar
     else {
         if (creep.room.name !== creep.memory.homeRoom) {
             sayAction(creep, '💰');
             travelToRoom(creep, creep.memory.homeRoom);
         } else {
+            // Se estiver na homeRoom mas na borda, move para o centro
+            if (creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49) {
+                const spawn = creep.room.find(FIND_MY_SPAWNS)[0];
+                if (spawn) creep.moveTo(spawn);
+            }
+
             const target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
                 filter: (s) => (s.structureType === STRUCTURE_STORAGE || s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
                                s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
