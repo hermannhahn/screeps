@@ -42,5 +42,7 @@ Script de automação para o jogo de estratégia MMO **Screeps**. O código é f
 
 ## 🎯 Instruções Gerais
 
+- Autonomia Máxima: Deve atuar de forma independente para resolver problemas, usando logs e inspeção visual (Chrome DevTools) para validar resultados sem interromper o usuário.
+- Interação Mínima: Só solicitar feedback ou confirmação em casos de ambiguidade crítica ou mudanças arquiteturais profundas.
 - Ler o arquivo `TODO.md` para entender as tarefas pendentes e prioridades.
 - Manter o arquivo `TODO.md` atualizado com novas tarefas e status de progresso.

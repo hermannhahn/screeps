@@ -138,9 +138,12 @@ export const loop = function () {
             
             if (room.energyAvailable >= cost) {
                 const name = roleToSpawn.charAt(0).toUpperCase() + roleToSpawn.slice(1) + Game.time;
-                mainSpawn.spawnCreep(body, name, { 
+                const res = mainSpawn.spawnCreep(body, name, { 
                     memory: { role: roleToSpawn, targetRoom: tRoom, homeRoom: room.name, sourceId: sId as Id<Source> } 
                 });
+                if (res !== OK) console.log(`Main: Spawn error ${res} for ${roleToSpawn}`);
+            } else {
+                console.log(`Main: Waiting for energy (${room.energyAvailable}/${cost}) to spawn ${roleToSpawn}`);
             }
         }
     }
