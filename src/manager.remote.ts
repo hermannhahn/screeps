@@ -74,7 +74,21 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
         }
     }
 
-    // 2. PRIORIDADE: MINERADORES (Apenas vizinhos válidos)
+    // 2. PRIORIDADE: MINERADORES (Fase 1: Pelo menos 1 Harvester por sala segura)
+    for (const remoteRoomName of remoteRooms) {
+        if (remoteRoomName === room.name) continue;
+        const data = Memory.remoteMining[remoteRoomName];
+        if (data.isHostile || data.sources.length === 0) continue;
+
+        const creepsInTarget = allCreeps.filter(c => c.memory.targetRoom === remoteRoomName);
+        const harvesters = creepsInTarget.filter(c => c.memory.role === 'remoteHarvester');
+
+        if (harvesters.length === 0) {
+            return { role: 'remoteHarvester', targetRoom: remoteRoomName, sourceId: data.sources[0] };
+        }
+    }
+
+    // 3. PRIORIDADE: LOGÍSTICA (Fase 2: Carrier para cada Harvester existente)
     for (const remoteRoomName of remoteRooms) {
         if (remoteRoomName === room.name) continue;
         const data = Memory.remoteMining[remoteRoomName];
@@ -84,16 +98,25 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
         const harvesters = creepsInTarget.filter(c => c.memory.role === 'remoteHarvester');
         const carriers = creepsInTarget.filter(c => c.memory.role === 'remoteCarrier');
 
-        // Harvesters
+        if (carriers.length < harvesters.length) {
+            return { role: 'remoteCarrier', targetRoom: remoteRoomName };
+        }
+    }
+
+    // 4. PRIORIDADE: MINERADORES (Fase 3: Fontes secundárias e Reservers)
+    for (const remoteRoomName of remoteRooms) {
+        if (remoteRoomName === room.name) continue;
+        const data = Memory.remoteMining[remoteRoomName];
+        if (data.isHostile || data.sources.length === 0) continue;
+
+        const creepsInTarget = allCreeps.filter(c => c.memory.targetRoom === remoteRoomName);
+        const harvesters = creepsInTarget.filter(c => c.memory.role === 'remoteHarvester');
+
+        // Harvesters adicionais
         for (const sourceId of data.sources) {
             if (!harvesters.some(h => h.memory.sourceId === sourceId)) {
                 return { role: 'remoteHarvester', targetRoom: remoteRoomName, sourceId: sourceId };
             }
-        }
-
-        // Carriers
-        if (carriers.length < harvesters.length) {
-            return { role: 'remoteCarrier', targetRoom: remoteRoomName };
         }
 
         // Reservers
