@@ -51,7 +51,7 @@ export const loop = function () {
     planStructures(room);
     manageRemoteMining(room);
 
-    if (Game.time % 50 === 0) {
+    if (Game.time % 10 === 0) {
         console.log("DEBUG RemoteMining: " + JSON.stringify(Memory.remoteMining));
     }
 
