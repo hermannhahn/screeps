@@ -131,24 +131,33 @@ export function travelToRoom(creep: Creep, roomName: string): boolean {
     const x = creep.pos.x;
     const y = creep.pos.y;
     const atEdge = x === 0 || x === 49 || y === 0 || y === 49;
-    const veryNearEdge = x <= 1 || x >= 48 || y <= 1 || y >= 48;
 
-    // 1. Registro de Sala
+    // 1. Detecção de Entrada e Reset de Inércia
     if (creep.memory.lastRoom !== creep.room.name) {
         creep.memory.lastRoom = creep.room.name;
-        creep.memory.enteredRoomTick = Game.time;
-        console.log(`Creep ${creep.name}: Entered ${creep.room.name}, activating 5-tick stay-lock.`);
+        creep.memory.stepsRemaining = 3; // Precisa dar 3 passos para dentro
+        console.log(`Creep ${creep.name}: Entered ${creep.room.name}, inertia set to 3 steps.`);
     }
 
-    // 2. TICKET DE ESTADIA UNIVERSAL: Força saída da borda em QUALQUER sala recém-adentrada
-    const ticksSinceEntry = Game.time - (creep.memory.enteredRoomTick || 0);
-    if (ticksSinceEntry < 5 && veryNearEdge) {
-        console.log(`Creep ${creep.name}: In stay-lock at ${creep.room.name}, pushing inside...`);
-        if (x <= 1) creep.move(RIGHT);
-        else if (x >= 48) creep.move(LEFT);
-        else if (y <= 1) creep.move(BOTTOM);
-        else if (y >= 48) creep.move(TOP);
-        return true;
+    // 2. LÓGICA DE INÉRCIA FÍSICA (Imune a fadiga)
+    if ((creep.memory.stepsRemaining || 0) > 0 || atEdge) {
+        if (atEdge) {
+            console.log(`Creep ${creep.name}: At edge, forcing entry...`);
+            if (x === 0) creep.move(RIGHT);
+            else if (x === 49) creep.move(LEFT);
+            else if (y === 0) creep.move(BOTTOM);
+            else if (y === 49) creep.move(TOP);
+            // stepsRemaining NÃO diminui aqui, apenas quando sair da borda real
+            return true;
+        }
+        
+        // Se saiu da borda (pos 1, 48, etc), diminui a inércia e continua andando para o centro
+        if (creep.memory.stepsRemaining) {
+            console.log(`Creep ${creep.name}: Pushing deep (${creep.memory.stepsRemaining} steps left)...`);
+            creep.moveTo(new RoomPosition(25, 25, creep.room.name), { range: 10 });
+            creep.memory.stepsRemaining--;
+            return true;
+        }
     }
 
     if (creep.room.name === roomName && !atEdge) return false;
