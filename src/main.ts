@@ -51,6 +51,10 @@ export const loop = function () {
     planStructures(room);
     manageRemoteMining(room);
 
+    if (Game.time % 50 === 0) {
+        console.log("DEBUG RemoteMining: " + JSON.stringify(Memory.remoteMining));
+    }
+
     // --- 3. CRIAR CONSTRUCTION SITES ---
     if (Memory.planning && Memory.planning.plannedStructures) {
         const toBuild = Memory.planning.plannedStructures.filter((p: PlannedStructure) => p.status === 'to_build');
