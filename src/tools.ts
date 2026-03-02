@@ -143,11 +143,26 @@ export function travelToRoom(creep: Creep, roomName: string): boolean {
     if ((creep.memory.stepsRemaining || 0) > 0 || atEdge) {
         if (atEdge) {
             console.log(`Creep ${creep.name}: At edge, forcing entry...`);
-            if (x === 0) creep.move(RIGHT);
-            else if (x === 49) creep.move(LEFT);
-            else if (y === 0) creep.move(BOTTOM);
-            else if (y === 49) creep.move(TOP);
-            // stepsRemaining NÃO diminui aqui, apenas quando sair da borda real
+            // Tenta mover na direção principal
+            let moveDir: DirectionConstant | undefined = undefined;
+            if (x === 0) moveDir = RIGHT;
+            else if (x === 49) moveDir = LEFT;
+            else if (y === 0) moveDir = BOTTOM;
+            else if (y === 49) moveDir = TOP;
+
+            if (moveDir) {
+                const res = creep.move(moveDir);
+                if (res !== OK || Game.time % 2 === 0) { // Alterna com diagonais para evitar bloqueios
+                    const diagonals: {[key: number]: DirectionConstant[]} = {
+                        [RIGHT]: [TOP_RIGHT, BOTTOM_RIGHT],
+                        [LEFT]: [TOP_LEFT, BOTTOM_LEFT],
+                        [BOTTOM]: [BOTTOM_LEFT, BOTTOM_RIGHT],
+                        [TOP]: [TOP_LEFT, TOP_RIGHT]
+                    };
+                    const diag = diagonals[moveDir][Game.time % 2];
+                    creep.move(diag);
+                }
+            }
             return true;
         }
         
