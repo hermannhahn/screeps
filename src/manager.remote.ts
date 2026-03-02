@@ -58,8 +58,12 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
     const allScouts = allCreeps.filter(c => c.memory.role === 'scout');
     
     // 1. PRIORIDADE: SCOUTS (Limite global 2)
+    const remoteRooms = Object.keys(Memory.remoteMining).sort((a, b) => {
+        return Game.map.getRoomLinearDistance(room.name, a) - Game.map.getRoomLinearDistance(room.name, b);
+    });
+
     if (allScouts.length < 2) {
-        for (const remoteRoomName in Memory.remoteMining) {
+        for (const remoteRoomName of remoteRooms) {
             if (remoteRoomName === room.name) continue;
             const data = Memory.remoteMining[remoteRoomName];
             if (data.lastScouted === 0 || (data.sourcePositions && data.sourcePositions.length > 0 && data.sources.length === 0)) {
@@ -71,7 +75,7 @@ export function getRemoteSpawnRequest(room: Room): { role: string, targetRoom: s
     }
 
     // 2. PRIORIDADE: MINERADORES (Apenas vizinhos válidos)
-    for (const remoteRoomName in Memory.remoteMining) {
+    for (const remoteRoomName of remoteRooms) {
         if (remoteRoomName === room.name) continue;
         const data = Memory.remoteMining[remoteRoomName];
         if (data.isHostile || data.sources.length === 0) continue;

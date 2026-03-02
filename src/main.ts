@@ -98,6 +98,9 @@ export const loop = function () {
         const targetUpgraders = (rcl <= 3) ? 2 : 1;
 
         const remoteRequest = getRemoteSpawnRequest(room);
+        if (remoteRequest && Game.time % 10 === 0) {
+            console.log(`Main: Remote request found: ${remoteRequest.role} for ${remoteRequest.targetRoom}`);
+        }
 
         let roleToSpawn: string | null = null;
         let tRoom: string | undefined = undefined;
@@ -141,7 +144,14 @@ export const loop = function () {
 
         if (roleToSpawn) {
             console.log(`Main: Spawning ${roleToSpawn} for ${tRoom || 'home'}...`);
-            const energyLimit = (harvesters.length === 0) ? room.energyAvailable : room.energyCapacityAvailable;
+            let energyLimit = (harvesters.length === 0) ? room.energyAvailable : room.energyCapacityAvailable;
+            
+            // Flexibilidade para remotos: se for remoto e estiver travado por falta de energia, usa o que tem se for >= 300
+            const isRemoteRole = ['remoteHarvester', 'remoteCarrier', 'reserver', 'scout'].includes(roleToSpawn);
+            if (isRemoteRole && room.energyAvailable < energyLimit && room.energyAvailable >= 300) {
+                energyLimit = room.energyAvailable;
+            }
+
             const body = generateBody(roleToSpawn, energyLimit);
             let cost = 0;
             for (const part of body) cost += BODYPART_COST[part];
