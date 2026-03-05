@@ -10,6 +10,17 @@ The spawner follows a priority list to ensure the room's economy doesn't collaps
 3. **Upgrader**: Required for room progression.
 4. **Worker**: Needed for construction and maintenance.
 
+## Total of Population
+
+Harvester: Two per source in the room. After the room has 5 extensions, only one per source.
+Supplier: Two per harvester in the room.
+Upgrader: 2 upgraders for RCL 1 and 2, then 1 upgrader per controller.
+Worker: 2 workers.
+
+## High Priority Spawning Sequence
+
+Spawn 1 harvester and 1 supplier, repeat until reach the role limit. Only then proceed to the next item on the priority list.
+
 ## Body Scaling
 
 As the room develops (more Extensions), the spawner will automatically increase the number of body parts to create more efficient creeps.
