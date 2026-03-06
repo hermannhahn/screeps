@@ -53,19 +53,22 @@ export default class RoomPlanner {
       const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === type);
       
       if (!structure && !site) {
+        // Clear EVERYTHING blocking this position (except Spawn and same-type structures)
+        const blocking = pos.lookFor(LOOK_STRUCTURES).filter(s => s.structureType !== type && s.structureType !== STRUCTURE_SPAWN);
+        if (blocking.length > 0) {
+          for (const b of blocking) {
+            console.log(`[Planner] ${room.name}: Destroying blocking ${b.structureType} at ${pos} to place ${type}`);
+            b.destroy();
+          }
+          return true; // Wait for next tick to clear
+        }
+
         const result = room.createConstructionSite(pos, type);
         if (result === OK) {
           console.log(`[Planner] ${room.name}: Re-placed ${type} from Memory at ${pos}`);
           return true;
-        } else {
-           console.log(`[Planner] ${room.name}: Failed to place ${type} at ${pos}. Error: ${result}`);
-           if (result === ERR_INVALID_TARGET || result === ERR_FULL) {
-              const blocking = pos.lookFor(LOOK_STRUCTURES).filter(s => s.structureType !== type && s.structureType !== STRUCTURE_SPAWN);
-              for (const b of blocking) {
-                console.log(`[Planner] ${room.name}: Destroying blocking ${b.structureType} at ${pos} to place ${type}`);
-                b.destroy();
-              }
-           }
+        } else if (result !== ERR_RCL_NOT_ENOUGH) {
+          console.log(`[Planner] ${room.name}: Critical failure to place ${type} at ${pos}. Error: ${result}`);
         }
       }
     }
