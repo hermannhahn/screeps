@@ -8,7 +8,7 @@ import ToolUtils from "../tools/tool.utils";
  */
 export default class RoomPlanner {
   public static run(): void {
-    if (Game.time % 20 !== 0) return;
+    if (Game.time % 10 !== 0) return;
 
     for (const roomName in Game.rooms) {
       this.planRoom(Game.rooms[roomName]);
@@ -25,18 +25,18 @@ export default class RoomPlanner {
     if (!room.memory.planned.towers) room.memory.planned.towers = [];
     if (!room.memory.planned.containers) room.memory.planned.containers = [];
 
-    // Stop early if there are already active construction sites
-    if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) return;
+    // Stop if there are too many active construction sites
+    if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 10) return;
 
     // Orchestrate planning and execution based on strict priority
-    if (this.processDiamondRoads(room)) return;
-    if (this.processExtensions(room)) return;
-    if (this.processTowers(room)) return;
-    if (this.processSourceContainers(room)) return;
-    if (this.processSourceRoads(room)) return;
-    if (this.processControllerContainer(room)) return;
-    if (this.processControllerRoads(room)) return;
-    if (this.processExitContainers(room)) return;
+    this.processDiamondRoads(room);
+    this.processExtensions(room);
+    this.processTowers(room);
+    this.processSourceContainers(room);
+    this.processSourceRoads(room);
+    this.processControllerContainer(room);
+    this.processControllerRoads(room);
+    this.processExitContainers(room);
   }
 
   /**
@@ -53,9 +53,17 @@ export default class RoomPlanner {
       const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === type);
       
       if (!structure && !site) {
-        if (room.createConstructionSite(pos, type) === OK) {
+        const result = room.createConstructionSite(pos, type);
+        if (result === OK) {
           console.log(`[Planner] ${room.name}: Re-placed ${type} from Memory at ${pos}`);
           return true;
+        } else if (result === ERR_INVALID_TARGET || result === ERR_RCL_NOT_ENOUGH) {
+           // If blocked by another structure, destroy it (except Spawn)
+           const blocking = pos.lookFor(LOOK_STRUCTURES).filter(s => s.structureType !== type && s.structureType !== STRUCTURE_SPAWN);
+           for (const b of blocking) {
+             console.log(`[Planner] ${room.name}: Destroying blocking ${b.structureType} at ${pos} to place ${type}`);
+             b.destroy();
+           }
         }
       }
     }
