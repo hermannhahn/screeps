@@ -10,6 +10,7 @@
 - [x] **Static Mining**: Refactor Harvesters to mine and drop (initially completed).
 - [x] **Supplier**: Refactor distribution logic with priority system and fallbacks (initially completed).
 - [x] **Upgrader**: Refactor upgrade logic with collection system and fallbacks (initially completed).
+- [x] **Pixel Generator**: Automated pixel generation for official server.
 - [ ] **Containers**: Add logic for the Planner to build containers at sources and the controller.
 - [ ] **Towers**: Implement initial tower logic for defense and basic repairs.
 - [ ] **Road Structures**: Add logic to the Planner to create roads between points of interest (Spawn -> Sources -> Controller).

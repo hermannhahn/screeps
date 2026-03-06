@@ -1,6 +1,7 @@
 import RoomScanner from "./rooms/room.scanner";
 import RoomPlanner from "./rooms/room.planner";
 import SpawnLogic from "./spawns/spawn.logic";
+import ToolPixel from "./tools/tool.pixel";
 import RoleHarvester from "./roles/role.harvester";
 import RoleSupplier from "./roles/role.supplier";
 import RoleUpgrader from "./roles/role.upgrader";
@@ -22,6 +23,9 @@ export const loop = () => {
 
   // Run Spawner
   SpawnLogic.run();
+
+  // Run Pixel Generator
+  ToolPixel.run();
 
   // Run Creeps
   for (const name in Game.creeps) {
