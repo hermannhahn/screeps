@@ -72,18 +72,33 @@ export default class RoomPlanner {
     if (planned.length < max) {
       const spawn = room.find(FIND_MY_SPAWNS)[0];
       if (spawn) {
-        for (let r = 5; r <= 15; r++) {
+        // Spiral search pattern starting from radius 2
+        for (let r = 2; r <= 15; r++) {
+          if (planned.length >= max) break;
           for (let x = -r; x <= r; x++) {
+            if (planned.length >= max) break;
             for (let y = -r; y <= r; y++) {
               if (planned.length >= max) break;
               if (Math.abs(x) !== r && Math.abs(y) !== r) continue;
-              if ((x + y) % 2 !== 0) continue; 
+              if ((x + y) % 2 !== 0) continue; // Checkerboard for movement
 
               const pos = new RoomPosition(spawn.pos.x + x, spawn.pos.y + y, room.name);
+              
+              // Validate position
+              if (pos.x < 2 || pos.x > 47 || pos.y < 2 || pos.y > 47) continue;
               const isBlocked = planned.some(p => p.x === pos.x && p.y === pos.y) || 
                                 pos.isEqualTo(spawn.pos) || 
                                 room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_WALL;
-              if (!isBlocked) planned.push({ x: pos.x, y: pos.y });
+              
+              if (!isBlocked) {
+                // Try to create CS immediately to verify validity
+                const res = room.createConstructionSite(pos, STRUCTURE_EXTENSION);
+                if (res === OK) {
+                  planned.push({ x: pos.x, y: pos.y });
+                  console.log(`[Planner] ${room.name}: Placed extension at ${pos}`);
+                  return true; 
+                }
+              }
             }
           }
         }
