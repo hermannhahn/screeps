@@ -9,8 +9,11 @@ export default class TaskCollect {
     let targetId = creep.memory.targetId as Id<Resource | StructureContainer>;
     let target = Game.getObjectById(targetId);
 
-    // If no persistent target or target is gone/invalid
-    if (!target || (target instanceof StructureContainer && target.store[RESOURCE_ENERGY] === 0)) {
+    // Validate current target type
+    const isValidTarget = target && (target instanceof Resource || target instanceof StructureContainer);
+
+    // If no persistent target or target is invalid/empty
+    if (!isValidTarget || (target instanceof StructureContainer && target.store[RESOURCE_ENERGY] === 0)) {
       creep.memory.targetId = undefined;
 
       // 1. Find Nearest Drop
@@ -36,7 +39,7 @@ export default class TaskCollect {
       if (targetId) creep.memory.targetId = targetId;
     }
 
-    if (target) {
+    if (target && (target instanceof Resource || target instanceof StructureContainer)) {
       const action = (target instanceof Resource) ? creep.pickup(target) : creep.withdraw(target, RESOURCE_ENERGY);
       if (action === ERR_NOT_IN_RANGE) {
         CreepLogic.moveTo(creep, target);
