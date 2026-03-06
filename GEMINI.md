@@ -33,7 +33,8 @@ This file provides context and instructions for the Gemini AI to act within this
   2. Analise o progresso da base, estoque de energia e comportamento dos creeps.
   3. Realize ajustes proativos no código (`src/`) para otimizar a expansão e eficiência.
   4. Sempre execute a sequência: `git commit` -> `git push` -> `npm run deploy` após cada alteração.
-  5. O objetivo final é um script 100% autônomo e resiliente.
+  5. **CRITICAL**: NUNCA utilize a ferramenta `yield_turn` após um `gemini_sleep` ou comandos em background. Isso causa um loop de "System: Please continue" neste terminal. Apenas pare de responder e aguarde a notificação de término do sleep.
+  6. O objetivo final é um script 100% autônomo e resiliente.
 
 ## 🛡️ Private Servers
 Abaixo estão os dados dos servidores privados para monitoramento e verificações:
