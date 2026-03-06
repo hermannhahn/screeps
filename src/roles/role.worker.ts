@@ -37,6 +37,7 @@ export default class RoleWorker {
         if (target instanceof ConstructionSite) TaskBuild.run(creep);
         else if (target instanceof StructureController) TaskUpgrade.run(creep);
         else if (target instanceof Structure) TaskRepair.run(creep);
+        else creep.memory.targetId = undefined; // CLEAR if target is wrong type
       }
     } else {
       // 1. If no targetId, search for energy
@@ -67,7 +68,8 @@ export default class RoleWorker {
       if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (target instanceof Source) TaskHarvest.run(creep);
-        else TaskCollect.run(creep);
+        else if (target instanceof Structure || target instanceof Resource) TaskCollect.run(creep);
+        else creep.memory.targetId = undefined; // CLEAR if target is wrong type
       }
     }
   }
