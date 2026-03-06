@@ -7,18 +7,24 @@ import CreepLogic from "../creeps/creep.logic";
 export default class TaskHarvest {
   public static run(creep: Creep): void {
     let sourceId = creep.memory.targetId as Id<Source>;
+    const isHarvester = creep.memory.role === 'harvester';
 
-    if (!sourceId) {
+    // Calculate max allowed creeps per source (2 initially, 1 if 5+ extensions)
+    const extensionCount = creep.room.find(FIND_MY_STRUCTURES, {
+      filter: { structureType: STRUCTURE_EXTENSION }
+    }).length;
+    const maxPerSource = extensionCount >= 5 ? 1 : 2;
+
+    // Harvesters keep their sourceId forever. Other roles can change to the closest free source.
+    if (!sourceId || !isHarvester) {
       const sources = creep.room.find(FIND_SOURCES);
       
-      // Calculate max allowed creeps per source (2 initially, 1 if 5+ extensions)
-      const extensionCount = creep.room.find(FIND_MY_STRUCTURES, {
-        filter: { structureType: STRUCTURE_EXTENSION }
-      }).length;
-      const maxPerSource = extensionCount >= 5 ? 1 : 2;
+      // Sort sources by range for non-harvesters
+      if (!isHarvester) {
+        sources.sort((a, b) => creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b));
+      }
 
       for (const source of sources) {
-        // Count ANY creep that has this source as its targetId
         const assignedCreeps = creep.room.find(FIND_MY_CREEPS, {
           filter: (c) => c.memory.targetId === source.id
         });

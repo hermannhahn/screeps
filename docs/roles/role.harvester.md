@@ -13,7 +13,7 @@ The `role.harvester.ts` module implements static mining to maximize energy throu
         3. **Drop**: Drop energy on the ground for Suppliers to collect.
 
 ## Strategy
-- **Source Assignment**: Each harvester is assigned to a specific source ID stored in `room.memory.sources`.
+- **Source Assignment**: Each harvester is assigned to a specific source ID stored in `room.memory.sources`. Once assigned, this source remains unchanged until the creep's death.
 - **Load Balancing**: Harvesters are distributed so that each source has a maximum of two miners (reducing to one after the room has 5+ extensions).
 - **Static Positioning**: Once adjacent to a source, the harvester remains stationary, focusing exclusively on the `harvest` action.
 
