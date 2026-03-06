@@ -7,8 +7,9 @@ The `role.supplier.ts` module handles energy distribution throughout the room.
 - **Behavior**: Collects energy from Harvesters or Containers and fills Spawns, Extensions, and Towers.
 - **Fallbacks**: If no logistics tasks are available, the supplier follows this priority:
     1. **Repair**: Maintain structures.
-    2. **Upgrade**: Assist with controller progression.
-    3. **Harvest**: Manually gather energy.
+    2. **Build**: Helping with construction sites.
+    3. **Upgrade**: Assist with controller progression.
+    4. **Harvest**: Manually gather energy.
 
 ## Strategy
 - **Energy Collection**: Before picking up energy, it verifies if the target has enough resources. If multiple creeps target the same resource, it ensures the total capacity of all assigned creeps does not exceed the available energy.

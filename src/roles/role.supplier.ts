@@ -3,6 +3,7 @@ import TaskCollect from "../tasks/task.collect";
 import TaskDeliver from "../tasks/task.deliver";
 import TaskRepair from "../tasks/task.repair";
 import TaskUpgrade from "../tasks/task.upgrade";
+import TaskBuild from "../tasks/task.build";
 import TaskHarvest from "../tasks/task.harvest";
 
 /**
@@ -44,14 +45,20 @@ export default class RoleSupplier {
             if (creep.room.storage && creep.room.storage.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
               creep.memory.targetId = creep.room.storage.id;
             } else {
-              // FALLBACK: Repair or Upgrade
+              // FALLBACK: Repair -> Build -> Upgrade
               const repairTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                 filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL
               });
+
               if (repairTarget) {
                 creep.memory.targetId = repairTarget.id;
-              } else if (creep.room.controller) {
-                creep.memory.targetId = creep.room.controller.id;
+              } else {
+                const buildTarget = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES);
+                if (buildTarget) {
+                  creep.memory.targetId = buildTarget.id;
+                } else if (creep.room.controller) {
+                  creep.memory.targetId = creep.room.controller.id;
+                }
               }
             }
           }
@@ -62,6 +69,7 @@ export default class RoleSupplier {
       if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (target instanceof StructureController) TaskUpgrade.run(creep);
+        else if (target instanceof ConstructionSite) TaskBuild.run(creep);
         else if (target instanceof StructureTower || target instanceof StructureSpawn || 
                  target instanceof StructureExtension || target instanceof StructureContainer ||
                  target instanceof StructureStorage) TaskDeliver.run(creep);
