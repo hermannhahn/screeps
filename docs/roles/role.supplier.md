@@ -24,3 +24,8 @@ To avoid code duplication, specific actions are encapsulated in the src/tasks/ d
 `task.repair.ts`: Logic to repair damaged structures.
 `task.upgrade.ts`: Logic to upgrade the controller.
 `task.harvest.ts`: Logic to find free source, save sourceId and harvest.
+
+## Tools
+To avoid code duplication, specific actions are encapsulated in the src/tools/ directory:
+
+`tool.example.ts`: Tool description
