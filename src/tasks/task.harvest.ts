@@ -25,6 +25,12 @@ export default class TaskHarvest {
       }
 
       for (const source of sources) {
+        // Safety check: Avoid sources near enemies (within range 10)
+        const hostiles = source.pos.findInRange(FIND_HOSTILE_CREEPS, 10).length > 0 ||
+                         source.pos.findInRange(FIND_HOSTILE_STRUCTURES, 10).length > 0;
+        
+        if (hostiles) continue;
+
         const assignedCreeps = creep.room.find(FIND_MY_CREEPS, {
           filter: (c) => c.memory.targetId === source.id
         });
