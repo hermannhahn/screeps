@@ -1,6 +1,7 @@
 import CreepLogic from "../creeps/creep.logic";
 import TaskBuild from "../tasks/task.build";
 import TaskRepair from "../tasks/task.repair";
+import TaskUpgrade from "../tasks/task.upgrade";
 import TaskCollect from "../tasks/task.collect";
 import TaskHarvest from "../tasks/task.harvest";
 
@@ -13,7 +14,7 @@ export default class RoleWorker {
     CreepLogic.updateState(creep);
 
     if (creep.memory.working) {
-      // 1. If no targetId, search for a work target (Build -> Repair)
+      // 1. If no targetId, search for a work target (Build -> Repair -> Upgrade)
       if (!creep.memory.targetId) {
         const buildSite = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
         if (buildSite) {
@@ -24,6 +25,8 @@ export default class RoleWorker {
           });
           if (repairTarget) {
             creep.memory.targetId = repairTarget.id;
+          } else {
+            if (creep.room.controller) creep.memory.targetId = creep.room.controller.id;
           }
         }
       }
@@ -32,11 +35,13 @@ export default class RoleWorker {
       if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (target instanceof ConstructionSite) TaskBuild.run(creep);
+        else if (target instanceof StructureController) TaskUpgrade.run(creep);
         else if (target instanceof Structure) TaskRepair.run(creep);
       }
     } else {
       // 1. If no targetId, search for energy
       if (!creep.memory.targetId) {
+        // A. Seek dropped energy first
         const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
           filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50
         });
@@ -44,17 +49,16 @@ export default class RoleWorker {
         if (dropped) {
           creep.memory.targetId = dropped.id;
         } else {
+          // B. Seek containers
           const container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] >= 50
           });
           if (container) {
             creep.memory.targetId = container.id;
           } else {
-            const harvesters = creep.room.find(FIND_MY_CREEPS, { filter: (c) => c.memory.role === 'harvester' });
-            if (harvesters.length === 0) {
-              const source = creep.pos.findClosestByRange(FIND_SOURCES);
-              if (source) creep.memory.targetId = source.id;
-            }
+            // C. EMERGENCY: Harvest directly if no resources available
+            const source = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE);
+            if (source) creep.memory.targetId = source.id;
           }
         }
       }
