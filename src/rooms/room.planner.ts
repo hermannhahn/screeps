@@ -1,6 +1,7 @@
 /**
  * Room Planner Module
  * Plans and persists structure coordinates in Memory for consistent rebuilding.
+ * Priorities: Diamond Roads -> Extensions -> Towers -> Containers.
  */
 export default class RoomPlanner {
   public static run(): void {
@@ -16,6 +17,7 @@ export default class RoomPlanner {
 
     // Initialize memory structure if missing
     if (!room.memory.planned) room.memory.planned = {};
+    if (!room.memory.planned.roads) room.memory.planned.roads = [];
     if (!room.memory.planned.extensions) room.memory.planned.extensions = [];
     if (!room.memory.planned.towers) room.memory.planned.towers = [];
     if (!room.memory.planned.containers) room.memory.planned.containers = [];
@@ -24,9 +26,53 @@ export default class RoomPlanner {
     if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) return;
 
     // Orchestrate planning and execution based on priority
+    if (this.processDiamondRoads(room)) return;
     if (this.processExtensions(room)) return;
     if (this.processTowers(room)) return;
     if (this.processContainers(room)) return;
+  }
+
+  /**
+   * Diamond Roads: Plans roads at radius 1 and 2 around Spawn.
+   */
+  private static processDiamondRoads(room: Room): boolean {
+    const spawn = room.find(FIND_MY_SPAWNS)[0];
+    if (!spawn) return false;
+
+    const planned = room.memory.planned!.roads!;
+    
+    // 1. Plan Diamond (Radius 1 and 2)
+    const ranges = [1, 2];
+    for (const r of ranges) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dy = -r; dy <= r; dy++) {
+          if (Math.abs(dx) + Math.abs(dy) === r) {
+            const pos = new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, room.name);
+            const isPlanned = planned.some(p => p.x === pos.x && p.y === pos.y);
+            const terrain = room.getTerrain().get(pos.x, pos.y);
+            
+            if (!isPlanned && terrain !== TERRAIN_MASK_WALL) {
+              planned.push({ x: pos.x, y: pos.y });
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Place sites
+    for (const coord of planned) {
+      const pos = new RoomPosition(coord.x, coord.y, room.name);
+      const structure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_ROAD);
+      const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === STRUCTURE_ROAD);
+      
+      if (!structure && !site) {
+        if (room.createConstructionSite(pos, STRUCTURE_ROAD) === OK) {
+          console.log(`[Planner] ${room.name}: Re-placed Diamond Road at ${pos}`);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -46,12 +92,12 @@ export default class RoomPlanner {
             if (planned.length >= maxExtensions) break;
             const pos = new RoomPosition(spawn.pos.x + x, spawn.pos.y + y, room.name);
             
-            // Check if spot is already planned, occupied or blocked
             const isPlanned = planned.some(p => p.x === pos.x && p.y === pos.y);
             const isSpawn = pos.isEqualTo(spawn.pos);
+            const isRoad = room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y);
             const terrain = room.getTerrain().get(pos.x, pos.y);
             
-            if (!isPlanned && !isSpawn && terrain === 0) {
+            if (!isPlanned && !isSpawn && !isRoad && terrain === 0) {
               planned.push({ x: pos.x, y: pos.y });
             }
           }
@@ -98,9 +144,10 @@ export default class RoomPlanner {
             const isPlanned = planned.some(p => p.x === pos.x && p.y === pos.y);
             const isSpawn = pos.isEqualTo(spawn.pos);
             const isExtension = room.memory.planned!.extensions!.some(p => p.x === pos.x && p.y === pos.y);
+            const isRoad = room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y);
             const terrain = room.getTerrain().get(pos.x, pos.y);
 
-            if (!isPlanned && !isSpawn && !isExtension && terrain === 0) {
+            if (!isPlanned && !isSpawn && !isExtension && !isRoad && terrain === 0) {
               planned.push({ x: pos.x, y: pos.y });
             }
           }
@@ -144,7 +191,8 @@ export default class RoomPlanner {
           for (let y = -1; y <= 1; y++) {
             const pos = new RoomPosition(source.pos.x + x, source.pos.y + y, room.name);
             const terrain = room.getTerrain().get(pos.x, pos.y);
-            if (terrain === 0) {
+            const isRoad = room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y);
+            if (terrain === 0 && !isRoad) {
               planned.push({ x: pos.x, y: pos.y });
               break;
             }
@@ -165,7 +213,8 @@ export default class RoomPlanner {
         for (let y = -2; y <= 2; y++) {
           const pos = new RoomPosition(controller.pos.x + x, controller.pos.y + y, room.name);
           const terrain = room.getTerrain().get(pos.x, pos.y);
-          if (terrain === 0) {
+          const isRoad = room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y);
+          if (terrain === 0 && !isRoad) {
             planned.push({ x: pos.x, y: pos.y });
             break;
           }

@@ -44,6 +44,7 @@ declare global {
       extensions?: { x: number, y: number }[];
       towers?: { x: number, y: number }[];
       containers?: { x: number, y: number }[];
+      roads?: { x: number, y: number }[];
     };
   }
 }
