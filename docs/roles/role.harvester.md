@@ -2,6 +2,11 @@
 
 The `role.harvester.ts` module implements static mining to maximize energy throughput.
 
+## Roles Overview
+
+- **Primary Goal**: Extract energy from sources.
+- **Behavior**: Moves to a source assigned or the nearest available with either one harvester or no harvesters, harvests until full, and then brings energy to Spawns/Extensions (in the very beginning) or drops it for Suppliers.
+
 ## Strategy
 - **Source Assignment**: Each harvester should ideally be assigned to a specific source ID stored in `room.memory.sources`.
 - **Load Balance**: Each harvester must be assigned to a source with either one harvester or no harvesters.
