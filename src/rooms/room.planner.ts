@@ -18,6 +18,10 @@ export default class RoomPlanner {
   private static planRoom(room: Room): void {
     if (!room.controller || !room.controller.my) return;
 
+    // Stop planning if there are already active construction sites in the room
+    const constructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
+    if (constructionSites.length > 0) return;
+
     // PRIORITY 1: Extensions (Economic Scaling)
     if (this.planExtensions(room)) return;
 
