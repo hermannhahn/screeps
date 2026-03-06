@@ -1,7 +1,7 @@
 {
   "name": "screeps",
   "version": "1.0.0",
-  "description": "Este repositório contém um script robusto e escalável para o jogo **Screeps**, focado em automação eficiente e auto-suficiência. Ele foi projetado para otimizar o uso de recursos e o progresso da sala.",
+  "description": "This repository contains a robust and scalable script for the game **Screeps**, focused on efficient automation and self-sufficiency. It is designed to optimize resource use and room progress.",
   "main": "dist/main.js",
   "scripts": {
     "deploy": "rm -rf dist && mkdir dist && webpack && expr $(cat .deploy_count) + 1 > .deploy_count && git add . && git commit -m \"Deploy N. $(cat .deploy_count)\" && git push && node deploy.js",

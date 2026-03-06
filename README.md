@@ -1,28 +1,28 @@
-# Screeps Bot - Automação em TypeScript
+# Screeps Bot - Automation in TypeScript
 
-Script de automação para o jogo MMO Screeps, focado em escalabilidade e eficiência.
+Automation script for the MMO game Screeps, focused on scalability and efficiency.
 
-## 🛠️ Instalação e Setup
+## 🛠️ Installation and Setup
 
-### 1. Clonar o Repositório
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/hermannhahn/screeps.git
 cd screeps
 ```
 
-### 2. Instalar Dependências
-Certifique-se de ter o Node.js instalado e execute:
+### 2. Install Dependencies
+Make sure you have Node.js installed and run:
 ```bash
 npm install
 ```
 
-### 3. Configuração do Servidor
-Crie um arquivo `screeps.json` na raiz do projeto baseado no `screeps.json.example`:
+### 3. Server Configuration
+Create a `screeps.json` file in the project root based on `screeps.json.example`:
 ```json
 {
-  "email": "seu-email@exemplo.com",
-  "password": "sua-senha",
-  "hostname": "seu-servidor.com",
+  "email": "your-email@example.com",
+  "password": "your-password",
+  "hostname": "your-server.com",
   "port": 21025,
   "protocol": "http",
   "branch": "default"
@@ -31,15 +31,15 @@ Crie um arquivo `screeps.json` na raiz do projeto baseado no `screeps.json.examp
 
 ## 🚀 Deploy
 
-Para compilar e enviar o código para o servidor, execute:
+To compile and send the code to the server, run:
 ```bash
 npm run deploy
 ```
-Este comando irá:
-1. Limpar e compilar o código via Webpack.
-2. Incrementar a versão do deploy.
-3. Fazer o commit e push para o GitHub.
-4. Enviar o arquivo final (`dist/main.js`) para o servidor configurado.
+This command will:
+1. Clean and compile the code via Webpack.
+2. Increment the deploy version.
+3. Commit and push to GitHub.
+4. Send the final file (`dist/main.js`) to the configured server.
 
-## 📚 Documentação Técnica
-Para entender a lógica detalhada de cada módulo, consulte a [Documentação Técnica na pasta docs](docs/README.md).
+## 📚 Technical Documentation
+To understand the detailed logic of each module, consult the [Technical Documentation in the docs folder](docs/README.md).

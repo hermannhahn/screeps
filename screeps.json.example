@@ -1,20 +1,20 @@
 [
   {
-    "email": "seu-email@exemplo.com",
-    "password": "sua-senha-do-servidor-privado-1",
-    "hostname": "screeps.gohorse.dev",
+    "email": "your-email@example.com",
+    "password": "your-private-server-password-1",
+    "hostname": "screeps.your-server.com",
     "port": 21025,
     "protocol": "http",
     "branch": "default",
-    "serverName": "Meu Servidor Principal"
+    "serverName": "My Primary Server"
   },
   {
-    "email": "outro-email@exemplo.com",
-    "password": "sua-senha-do-servidor-privado-2",
+    "email": "another-email@example.com",
+    "password": "your-private-server-password-2",
     "hostname": "screeps.another-server.com",
     "port": 21025,
     "protocol": "http",
     "branch": "custom-branch",
-    "serverName": "Outro Servidor de Teste"
+    "serverName": "Another Test Server"
   }
 ]

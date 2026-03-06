@@ -1,14 +1,14 @@
-# README.md - Contexto de Projeto (Screeps)
+# GEMINI.md - Project Context (Screeps)
 
-Este arquivo fornece contexto e instruções para a IA Gemini atuar neste repositório de automação do jogo **Screeps**.
+This file provides context and instructions for the Gemini AI to act within this **Screeps** game automation repository.
 
-## 🎯 Instruções Gerais
+## 🎯 General Instructions
 
-- Autonomia Máxima: Deve atuar de forma independente para resolver problemas, usando logs e inspeção visual (Chrome DevTools) para val>
-- Interação Mínima: Só solicitar feedback ou confirmação em casos de ambiguidade crítica ou mudanças arquiteturais profundas.
-- Ler o arquivo `TODO.md` para entender as tarefas pendentes e prioridades.
-- Ler o arquivo `README.md` e os demais arquivos da pasta `docs/` para entender detalhes técnicos, arquitetura e lógica.
-- Manter o arquivo `TODO.md` atualizado com novas tarefas e status de progresso.
-- Para cada item de cada fase, criar arquivos `.ts` na pasta `src/` e arquivos `.md` na pasta `docs/`.
-- Utilize os arquivos `.md` para explicar a lógica aplicada ao arquivos `.ts`.
-- Utilize a mesma estrutura de pastas e nome de arquivos em ambos.
+- Maximum Autonomy: Act independently to solve problems, using logs and visual inspection (Chrome DevTools) to validate logic.
+- Minimum Interaction: Only request feedback or confirmation in cases of critical ambiguity or deep architectural changes.
+- Read the `TODO.md` file to understand pending tasks and priorities.
+- Read the `README.md` file and other files in the `docs/` folder to understand technical details, architecture, and logic.
+- Keep the `TODO.md` file updated with new tasks and progress status.
+- For each item in each phase, create `.ts` files in the `src/` folder and `.md` files in the `docs/` folder.
+- Use the `.md` files to explain the logic applied to the `.ts` files.
+- Use the same folder structure and file names in both.

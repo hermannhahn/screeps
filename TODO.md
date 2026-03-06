@@ -1,27 +1,20 @@
-# TODO List - Screeps Project
+# Screeps Bot - TODO List
 
-## Fase 1 (Concluída ✅)
+## Phase 1 (Completed ✅)
 
-### Preparação Inicial
-- [x] **Rooms**: Criar scanner de sala para armazenar na memória informações pertinentes.
-- [x] **Creeps**: Lógicas gerais aplicadas a todos os creeps.
-- [x] **Roles**: Criar roles iniciais: Harvester, Supplier, Upgrader e Worker (Para reparar e construir).
-- [x] **Spawner**: Criar arquivos iniciais do spawner.
-- [x] **Planner**: Planejador e criador de Construction Sites.
+### Initial Preparation
+- [x] **Rooms**: Create room scanner to store relevant information in memory.
+- [x] **Creeps**: General logic applied to all creeps.
 
-## Fase 2 (Em Progresso 🚀)
+### Logistics and Infrastructure
+- [x] **Static Mining**: Refactor Harvesters to mine and drop (initially completed).
+- [x] **Supplier**: Refactor distribution logic with priority system and fallbacks (initially completed).
+- [x] **Upgrader**: Refactor upgrade logic with collection system and fallbacks (initially completed).
+- [ ] **Containers**: Add logic for the Planner to build containers at sources and the controller.
+- [ ] **Towers**: Implement initial tower logic for defense and basic repairs.
+- [ ] **Road Structures**: Add logic to the Planner to create roads between points of interest (Spawn -> Sources -> Controller).
 
-### Logística e Infraestrutura
-- [x] **Mineração Estática**: Refatorar Harvesters para minerar e dropar (concluído inicialmente).
-- [x] **Supplier**: Refatorar lógica de distribuição com sistema de prioridades e fallbacks (concluído inicialmente).
-- [x] **Upgrader**: Refatorar lógica de upgrade com sistema de coleta e fallbacks (concluído inicialmente).
-- [ ] **Containers**: Adicionar lógica para o Planner construir containers em fontes e no controller.
-- [ ] **Towers**: Implementar a lógica inicial de torres para defesa e reparos básicos.
-- [ ] **Estruturas de Estrada**: Adicionar lógica ao Planner para criar estradas entre pontos de interesse (Spawn -> Sources -> Controller).
-
-## Fase 3 (Planejada)
-
-### Expansão e Defesa
-- [ ] **Scout**: Criar creep de exploração para mapear salas vizinhas.
-- [ ] **Defesa Ativa**: Criar roles de combate básico (Guard/Archer) baseadas na ameaça da sala.
-- [ ] **Mineração Remota**: Estender a economia para salas adjacentes.
+### Expansion and Defense
+- [ ] **Scout**: Create exploration creep to map neighboring rooms.
+- [ ] **Active Defense**: Create basic combat roles (Guard/Archer) based on room threat.
+- [ ] **Remote Mining**: Extend the economy to adjacent rooms.
