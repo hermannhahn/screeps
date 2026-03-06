@@ -18,8 +18,8 @@ export default class CreepLogic {
       creep.say('🔄');
     }
 
-    // Switch to working (⚡) if almost full (>= 90%) or full
-    if (!creep.memory.working && energy >= capacity * 0.9) {
+    // Switch to working (⚡) if almost full (>= 80%) or full
+    if (!creep.memory.working && energy >= capacity * 0.8) {
       creep.memory.working = true;
       creep.memory.targetId = undefined;
       creep.say('⚡');
