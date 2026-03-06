@@ -2,30 +2,44 @@ import CreepLogic from "../creeps/creep.logic";
 
 /**
  * Task: Collect
- * Picks up energy from drops or withdraws from containers.
+ * Persistent energy collection logic.
  */
 export default class TaskCollect {
   public static run(creep: Creep): void {
-    // 1. Priority: Nearest Drops
-    const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-      filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50
-    });
+    let targetId = creep.memory.targetId as Id<Resource | StructureContainer>;
+    let target = Game.getObjectById(targetId);
 
-    if (dropped) {
-      if (creep.pickup(dropped) === ERR_NOT_IN_RANGE) {
-        CreepLogic.moveTo(creep, dropped);
+    // If no persistent target or target is gone/invalid
+    if (!target || (target instanceof StructureContainer && target.store[RESOURCE_ENERGY] === 0)) {
+      creep.memory.targetId = undefined;
+
+      // 1. Find Nearest Drop
+      const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
+        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50
+      });
+
+      if (dropped) {
+        targetId = dropped.id as any;
+        target = dropped as any;
+      } else {
+        // 2. Find Nearest Container
+        const container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+          filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] >= 100
+        });
+
+        if (container) {
+          targetId = container.id as any;
+          target = container as any;
+        }
       }
-      return;
+      
+      if (targetId) creep.memory.targetId = targetId;
     }
 
-    // 2. Priority: Containers (Exit then Source)
-    const container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-      filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] >= 100
-    });
-
-    if (container) {
-      if (creep.withdraw(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-        CreepLogic.moveTo(creep, container);
+    if (target) {
+      const action = (target instanceof Resource) ? creep.pickup(target) : creep.withdraw(target, RESOURCE_ENERGY);
+      if (action === ERR_NOT_IN_RANGE) {
+        CreepLogic.moveTo(creep, target);
       }
     }
   }

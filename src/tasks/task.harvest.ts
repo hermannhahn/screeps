@@ -48,6 +48,8 @@ export default class TaskHarvest {
       if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
         CreepLogic.moveTo(creep, source);
       }
+    } else {
+      creep.memory.targetId = undefined;
     }
   }
 }
