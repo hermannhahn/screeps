@@ -6,7 +6,7 @@ This document explains the behavior of the initial roles used in the bot's early
 
 ### 1. Harvester (`role.harvester.ts`)
 - **Primary Goal**: Extract energy from sources.
-- **Behavior**: Moves to a source assigned or the nearest available, harvests until full, and then brings energy to Spawns/Extensions (in the very beginning) or drops it for Suppliers.
+- **Behavior**: Moves to a source assigned or the nearest available with either one harvester or no harvesters, harvests until full, and then brings energy to Spawns/Extensions (in the very beginning) or drops it for Suppliers.
 
 ### 2. Supplier (`role.supplier.ts`)
 - **Primary Goal**: Logistics and energy distribution.
