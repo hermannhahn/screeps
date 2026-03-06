@@ -8,14 +8,20 @@ export default class CreepLogic {
    * Switches 'working' boolean based on energy levels.
    */
   public static updateState(creep: Creep): void {
-    if (creep.memory.working && creep.store[RESOURCE_ENERGY] === 0) {
+    const energy = creep.store[RESOURCE_ENERGY];
+    const capacity = creep.store.getCapacity();
+
+    // Switch to refill (🔄) if empty
+    if (creep.memory.working && energy === 0) {
       creep.memory.working = false;
-      creep.memory.targetId = undefined; // Clear target when switching to refill
+      creep.memory.targetId = undefined; 
       creep.say('🔄');
     }
-    if (!creep.memory.working && creep.store.getFreeCapacity() === 0) {
+
+    // Switch to working (⚡) if almost full (>= 90%) or full
+    if (!creep.memory.working && energy >= capacity * 0.9) {
       creep.memory.working = true;
-      creep.memory.targetId = undefined; // Clear target when switching to work
+      creep.memory.targetId = undefined;
       creep.say('⚡');
     }
   }
