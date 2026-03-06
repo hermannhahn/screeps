@@ -6,7 +6,9 @@ import CreepLogic from "../creeps/creep.logic";
  */
 export default class TaskDeliver {
   public static run(creep: Creep): void {
-    let targetId = creep.memory.targetId as Id<AnyStoreStructure>;
+    type DeliverableStructure = StructureSpawn | StructureExtension | StructureTower;
+    
+    let targetId = creep.memory.targetId as Id<DeliverableStructure>;
     let target = Game.getObjectById(targetId);
 
     // Clear target if full or gone
@@ -14,7 +16,7 @@ export default class TaskDeliver {
       creep.memory.targetId = undefined;
 
       const newTarget = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-        filter: (s): s is AnyStoreStructure => 
+        filter: (s): s is DeliverableStructure => 
           (s.structureType === STRUCTURE_SPAWN || 
            s.structureType === STRUCTURE_EXTENSION || 
            s.structureType === STRUCTURE_TOWER) && 
