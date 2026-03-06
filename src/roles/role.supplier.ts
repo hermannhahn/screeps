@@ -73,18 +73,15 @@ export default class RoleSupplier {
         else if (target instanceof StructureTower || target instanceof StructureSpawn || 
                  target instanceof StructureExtension || target instanceof StructureContainer ||
                  target instanceof StructureStorage) TaskDeliver.run(creep);
-        else TaskRepair.run(creep);
+        else if (target instanceof Structure) TaskRepair.run(creep);
+        else creep.memory.targetId = undefined; // CLEAR if invalid
       }
     } else {
       // 1. If no targetId, search for energy collection
       if (!creep.memory.targetId) {
-        // Priority 1: Drops
+        // Priority 1: Drops (LESS restrictive)
         const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-          filter: (r) => {
-            if (r.resourceType !== RESOURCE_ENERGY || r.amount < 20) return false;
-            const reserved = this.getEnergyReserved(creep.room, r.id);
-            return r.amount >= (creep.store.getFreeCapacity() + reserved);
-          }
+          filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50
         });
 
         if (dropped) {
@@ -97,22 +94,16 @@ export default class RoleSupplier {
               if (!isUnderAttack && s.structureType === STRUCTURE_CONTAINER && s.pos.findInRange(FIND_SOURCES, 1).length === 0) return false;
               
               const energy = (s as StructureContainer | StructureStorage).store[RESOURCE_ENERGY];
-              if (energy < 50) return false;
-
-              const reserved = this.getEnergyReserved(creep.room, s.id);
-              return energy >= (creep.store.getFreeCapacity() + reserved);
+              return energy >= 50;
             }
           }) as StructureContainer | StructureStorage;
           
           if (collectionTarget) {
             creep.memory.targetId = collectionTarget.id;
           } else {
-            // Priority 3: Manual Harvest (if no harvesters)
-            const harvesters = creep.room.find(FIND_MY_CREEPS, { filter: (c) => c.memory.role === 'harvester' });
-            if (harvesters.length === 0) {
-              const source = creep.pos.findClosestByRange(FIND_SOURCES);
-              if (source) creep.memory.targetId = source.id;
-            }
+            // Priority 3: Manual Harvest (EMERGENCY)
+            const source = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE);
+            if (source) creep.memory.targetId = source.id;
           }
         }
       }
@@ -121,7 +112,8 @@ export default class RoleSupplier {
       if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (target instanceof Source) TaskHarvest.run(creep);
-        else TaskCollect.run(creep);
+        else if (target instanceof Structure || target instanceof Resource || target instanceof Tombstone || target instanceof Ruin) TaskCollect.run(creep);
+        else creep.memory.targetId = undefined; // CLEAR if invalid
       }
     }
   }
