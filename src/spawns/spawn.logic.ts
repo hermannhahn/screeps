@@ -26,27 +26,43 @@ export default class SpawnLogic {
     const extensionCount = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } }).length;
     
     const maxHarvesters = extensionCount >= 5 ? sourceCount : sourceCount * 2;
-    const maxSuppliers = harvesters.length * 2;
+    const maxSuppliers = Math.min(harvesters.length, sourceCount + 1); // Limit suppliers more strictly
     const maxUpgraders = (room.controller?.level || 1) <= 2 ? 2 : 1;
     const maxWorkers = 2;
 
-    // 1. High Priority: Alternating Harvester and Supplier
-    if (harvesters.length < maxHarvesters || suppliers.length < maxSuppliers) {
-      if (harvesters.length <= suppliers.length / 2) {
-        this.spawnCreep(spawn, 'harvester', this.getBody(room, 'harvester'));
-      } else {
-        this.spawnCreep(spawn, 'supplier', this.getBody(room, 'supplier'));
-      }
+    // 1. Critical Priority: Minimum Economy (1 Harvester + 1 Supplier)
+    if (harvesters.length < 1) {
+      this.spawnCreep(spawn, 'harvester', this.getBody(room, 'harvester'));
+      return;
+    }
+    if (suppliers.length < 1) {
+      this.spawnCreep(spawn, 'supplier', this.getBody(room, 'supplier'));
       return;
     }
 
-    // 2. Secondary Priority: Upgraders
+    // 2. Secondary Priority: Core Roles (Upgrader + Worker)
+    if (upgraders.length < 1) {
+      this.spawnCreep(spawn, 'upgrader', this.getBody(room, 'upgrader'));
+      return;
+    }
+    if (workers.length < 1) {
+      this.spawnCreep(spawn, 'worker', this.getBody(room, 'worker'));
+      return;
+    }
+
+    // 3. Tertiary Priority: Filling to Max Limits
+    if (harvesters.length < maxHarvesters) {
+      this.spawnCreep(spawn, 'harvester', this.getBody(room, 'harvester'));
+      return;
+    }
+    if (suppliers.length < maxSuppliers) {
+      this.spawnCreep(spawn, 'supplier', this.getBody(room, 'supplier'));
+      return;
+    }
     if (upgraders.length < maxUpgraders) {
       this.spawnCreep(spawn, 'upgrader', this.getBody(room, 'upgrader'));
       return;
     }
-
-    // 3. Tertiary Priority: Workers
     if (workers.length < maxWorkers) {
       this.spawnCreep(spawn, 'worker', this.getBody(room, 'worker'));
       return;
