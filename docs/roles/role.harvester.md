@@ -15,3 +15,9 @@ The `role.harvester.ts` module implements static mining to maximize energy throu
 
 ## Memory Properties
 - `sourceId`: The ID of the source this creep is assigned to.
+
+Task Modules
+To avoid code duplication, specific actions are encapsulated in the src/tasks/ directory:
+
+task.harvest.ts: Logic to find free source and harvest.
+task.deliver.ts: Default logic to deliver energy.
