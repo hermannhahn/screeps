@@ -10,10 +10,12 @@ export default class CreepLogic {
   public static updateState(creep: Creep): void {
     if (creep.memory.working && creep.store[RESOURCE_ENERGY] === 0) {
       creep.memory.working = false;
+      creep.memory.targetId = undefined; // Clear target when switching to refill
       creep.say('🔄');
     }
     if (!creep.memory.working && creep.store.getFreeCapacity() === 0) {
       creep.memory.working = true;
+      creep.memory.targetId = undefined; // Clear target when switching to work
       creep.say('⚡');
     }
   }
