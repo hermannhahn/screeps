@@ -1,6 +1,7 @@
 import CreepLogic from "../creeps/creep.logic";
 import TaskHarvest from "../tasks/task.harvest";
 import TaskDeliver from "../tasks/task.deliver";
+import ToolUtils from "../tools/tool.utils";
 
 /**
  * Role: Harvester
@@ -53,7 +54,8 @@ export default class RoleHarvester {
         }).length;
         const maxPerSource = extensionCount >= 5 ? 1 : 2;
 
-        const sources = creep.room.find(FIND_SOURCES);
+        // SAFETY: Only consider safe sources (10-block range)
+        const sources = ToolUtils.getSafeSources(creep.room);
         for (const source of sources) {
           const assignedCreeps = creep.room.find(FIND_MY_CREEPS, {
             filter: (c) => c.memory.role === 'harvester' && c.memory.targetId === source.id

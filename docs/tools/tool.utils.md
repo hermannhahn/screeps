@@ -4,12 +4,16 @@ The `tool.utils.ts` module provides lightweight alternatives to `lodash` functio
 
 ## Key Functions
 
-### 1. `getClosestByRange`
-- **Goal**: Find the closest object from an array based on range.
-- **Why**: Native `pos.findClosestByRange` is efficient, but sometimes we need to filter an existing array without re-scanning the room.
+### 1. `isEmpty`
+- **Goal**: Simple array check to replace `_.isEmpty()`.
 
-### 2. `groupBy`
-- (Future) Group objects by a specific property.
+### 2. `minBy`
+- **Goal**: Find object with minimum property value (replaces `_.minBy`).
 
-### 3. `minBy` / `maxBy`
-- (Future) Find an object in an array based on a numeric property (e.g., lowest hits).
+### 3. `isSafe`
+- **Goal**: Checks if a position is safe from enemies (hostile creeps or structures).
+- **Why**: Prevent creeps from entering dangerous areas or placing construction sites near enemies.
+
+### 4. `getSafeSources`
+- **Goal**: Returns a list of sources that are safe from enemies within a 10-block range.
+- **Why**: Used by the Spawner and Harvesters to avoid dangerous sources.

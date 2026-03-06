@@ -1,4 +1,5 @@
 import CreepLogic from "../creeps/creep.logic";
+import ToolUtils from "../tools/tool.utils";
 
 /**
  * Task: Repair
@@ -7,6 +8,12 @@ import CreepLogic from "../creeps/creep.logic";
  */
 export default class TaskRepair {
   public static run(creep: Creep): void {
+    // SAFETY: Do not repair if enemies are nearby (3-block range)
+    if (!ToolUtils.isSafe(creep.pos, 3)) {
+      creep.memory.targetId = undefined;
+      return;
+    }
+
     const targetId = creep.memory.targetId as Id<Structure>;
     const target = Game.getObjectById(targetId);
 

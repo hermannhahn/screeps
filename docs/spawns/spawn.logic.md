@@ -10,10 +10,13 @@ The spawner follows a strict priority list to prevent economic collapse:
 4. **Worker**: Needed for construction and maintenance.
 
 ## Population Limits
-- **Harvester**: Two per source. Once the room has 5+ extensions, this is reduced to one per source.
+- **Harvester**: Two per **safe source** (within a 10-block range of enemies). Once the room has 5+ extensions, this is reduced to one per safe source.
 - **Supplier**: Two per active Harvester.
 - **Upgrader**: Two at RCL 1 and 2; reduced to one per room at higher levels.
 - **Worker**: Fixed at two per room.
+
+## Safety Logic
+The spawner excludes any source with hostile creeps or structures within a **10-block range** when calculating the `maxHarvesters` and `maxSuppliers`. This prevents over-spawning for sources that cannot be safely harvested.
 
 ## High Priority Spawning Sequence
 The spawner alternates between 1 Harvester and 1 Supplier until their respective limits are reached. Only after these roles are stabilized does it proceed to Upgraders and Workers.

@@ -1,3 +1,5 @@
+import ToolUtils from "../tools/tool.utils";
+
 /**
  * Spawner Logic
  * Manages creep population following a strict priority and alternating sequence.
@@ -21,8 +23,8 @@ export default class SpawnLogic {
     const upgraders = creeps.filter(c => c.memory.role === 'upgrader');
     const workers = creeps.filter(c => c.memory.role === 'worker');
 
-    // Population limits
-    const sourceCount = room.memory.sources?.length || 1;
+    // Population limits - SAFETY: Only count safe sources (10-block range)
+    const sourceCount = ToolUtils.getSafeSources(room).length || 1;
     const extensionCount = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } }).length;
     
     const maxHarvesters = extensionCount >= 5 ? sourceCount : sourceCount * 2;

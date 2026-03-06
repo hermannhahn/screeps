@@ -15,6 +15,11 @@ The `room.planner.ts` module is responsible for the automated placement of struc
 ### 3. Containers
 - (Future) Placement at sources for static mining (Harvesters) and near the controller for Upgraders.
 
+## Safety
+
+- **Hostile Detection**: Before placing any `ConstructionSite`, the planner checks for enemies within a **3-block range**.
+- **Prevention**: If a position is deemed unsafe, the site is skipped to avoid wasting energy and risking creeps.
+
 ## Execution Flow
 
 1. Check current RCL.

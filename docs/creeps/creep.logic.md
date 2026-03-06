@@ -8,6 +8,11 @@ The `creep.logic.ts` module handles global behaviors shared by all creeps.
 - **State Management**: Standardizes the transition between "Working" (⚡) and "Refilling" (🔄).
 - **Movement**: Uses path reuse to minimize CPU cost.
 
+## Safety
+
+- **Task Interruption**: All tasks (Collect, Deliver, Build, Repair) are interrupted if hostile creeps or structures are within a **3-block range**.
+- **Self-Preservation**: This prevents creeps from getting too close to danger while performing their duties.
+
 ## Memory Properties
 - `working`: Boolean state.
 - `targetId`: Persistent ID of the current objective.

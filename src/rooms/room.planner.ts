@@ -1,3 +1,5 @@
+import ToolUtils from "../tools/tool.utils";
+
 /**
  * Room Planner Module
  * Plans and persists structure coordinates in Memory for consistent rebuilding.
@@ -43,6 +45,10 @@ export default class RoomPlanner {
   private static placeFromMemory(room: Room, planned: { x: number, y: number }[], type: StructureConstant): boolean {
     for (const coord of planned) {
       const pos = new RoomPosition(coord.x, coord.y, room.name);
+
+      // SAFETY: Do not place CS if enemies are nearby (3-block range)
+      if (!ToolUtils.isSafe(pos, 3)) continue;
+
       const structure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === type);
       const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === type);
       

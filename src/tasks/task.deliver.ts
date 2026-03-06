@@ -1,4 +1,5 @@
 import CreepLogic from "../creeps/creep.logic";
+import ToolUtils from "../tools/tool.utils";
 
 /**
  * Task: Deliver
@@ -6,6 +7,12 @@ import CreepLogic from "../creeps/creep.logic";
  */
 export default class TaskDeliver {
   public static run(creep: Creep): void {
+    // SAFETY: Do not deliver if enemies are nearby (3-block range)
+    if (!ToolUtils.isSafe(creep.pos, 3)) {
+      creep.memory.targetId = undefined;
+      return;
+    }
+
     const targetId = creep.memory.targetId as Id<StructureSpawn | StructureExtension | StructureTower | StructureContainer | StructureStorage>;
     const target = Game.getObjectById(targetId);
 
