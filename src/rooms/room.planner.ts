@@ -24,8 +24,8 @@ export default class RoomPlanner {
     if (!room.memory.planned.towers) room.memory.planned.towers = [];
     if (!room.memory.planned.containers) room.memory.planned.containers = [];
 
-    // Increase cadence: up to 3 constructions at a time
-    if (room.find(FIND_MY_CONSTRUCTION_SITES).length >= 3) return;
+    // Restrict cadence: only one construction at a time
+    if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) return;
 
     // Planning priority
     this.processExtensions(room);
@@ -38,7 +38,7 @@ export default class RoomPlanner {
   }
 
   private static placeFromMemory(room: Room, planned: { x: number, y: number }[], type: StructureConstant): boolean {
-    if (room.find(FIND_MY_CONSTRUCTION_SITES).length >= 3) return false;
+    if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) return false;
     const terrain = room.getTerrain();
     for (const coord of planned) {
       const pos = new RoomPosition(coord.x, coord.y, room.name);
