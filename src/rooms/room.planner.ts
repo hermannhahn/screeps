@@ -43,11 +43,15 @@ export default class RoomPlanner {
    * Helper to place a construction site from memory coordinates.
    */
   private static placeFromMemory(room: Room, planned: { x: number, y: number }[], type: StructureConstant): boolean {
+    const terrain = room.getTerrain();
     for (const coord of planned) {
       const pos = new RoomPosition(coord.x, coord.y, room.name);
 
       // SAFETY: Do not place CS if enemies are nearby (3-block range)
       if (!ToolUtils.isSafe(pos, 3)) continue;
+
+      // TERRAIN CHECK: Avoid walls
+      if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_WALL) continue;
 
       const structure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === type);
       const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === type);
@@ -68,7 +72,7 @@ export default class RoomPlanner {
           console.log(`[Planner] ${room.name}: Re-placed ${type} from Memory at ${pos}`);
           return true;
         } else if (result !== ERR_RCL_NOT_ENOUGH) {
-          console.log(`[Planner] ${room.name}: Critical failure to place ${type} at ${pos}. Error: ${result}`);
+          console.log(`[Planner] ${room.name}: Failure to place ${type} at ${pos}. Error: ${result}`);
         }
       }
     }
