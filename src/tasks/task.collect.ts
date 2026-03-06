@@ -2,48 +2,42 @@ import CreepLogic from "../creeps/creep.logic";
 
 /**
  * Task: Collect
- * Persistent energy collection logic.
+ * Pure execution of energy collection (Drops or Containers).
+ * Does NOT search for new targets.
  */
 export default class TaskCollect {
   public static run(creep: Creep): void {
-    let targetId = creep.memory.targetId as Id<Resource | StructureContainer>;
-    let target = Game.getObjectById(targetId);
+    const targetId = creep.memory.targetId as Id<Resource | StructureContainer>;
+    const target = Game.getObjectById(targetId);
 
-    // Validate current target type
-    const isValidTarget = target && (target instanceof Resource || target instanceof StructureContainer);
-
-    // If no persistent target or target is invalid/empty
-    if (!isValidTarget || (target instanceof StructureContainer && target.store[RESOURCE_ENERGY] === 0)) {
+    // 1. Validation: If target is gone or invalid, clear memory and stop
+    if (!target) {
       creep.memory.targetId = undefined;
-
-      // 1. Find Nearest Drop
-      const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 20
-      });
-
-      if (dropped) {
-        targetId = dropped.id as any;
-        target = dropped as any;
-      } else {
-        // 2. Find Nearest Container
-        const container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-          filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] >= 100
-        });
-
-        if (container) {
-          targetId = container.id as any;
-          target = container as any;
-        }
-      }
-      
-      if (targetId) creep.memory.targetId = targetId;
+      return;
     }
 
-    if (target && (target instanceof Resource || target instanceof StructureContainer)) {
-      const action = (target instanceof Resource) ? creep.pickup(target) : creep.withdraw(target, RESOURCE_ENERGY);
-      if (action === ERR_NOT_IN_RANGE) {
-        CreepLogic.moveTo(creep, target);
+    // 2. Specific Validation: If target is empty, clear memory
+    if (target instanceof Resource) {
+      if (target.amount === 0) {
+        creep.memory.targetId = undefined;
+        return;
       }
+    } else if (target instanceof StructureContainer) {
+      if (target.store[RESOURCE_ENERGY] === 0) {
+        creep.memory.targetId = undefined;
+        return;
+      }
+    }
+
+    // 3. Execution: Only clear targetId on terminal errors (impossible action)
+    const action = (target instanceof Resource) ? creep.pickup(target) : creep.withdraw(target, RESOURCE_ENERGY);
+    
+    if (action === ERR_NOT_IN_RANGE) {
+      CreepLogic.moveTo(creep, target);
+    } else if (action !== OK && action !== ERR_BUSY && action !== ERR_TIRED) {
+      // Terminal errors: ERR_NOT_OWNER, ERR_INVALID_TARGET, ERR_FULL, etc.
+      // Movement errors or "busy" should NOT clear the target.
+      creep.memory.targetId = undefined;
     }
   }
 }

@@ -2,53 +2,28 @@ import CreepLogic from "../creeps/creep.logic";
 
 /**
  * Task: Harvest
- * Finds an available source and harvests energy.
+ * Pure execution of harvesting.
+ * Does NOT search for new sources.
  */
 export default class TaskHarvest {
   public static run(creep: Creep): void {
-    let sourceId = creep.memory.targetId as Id<Source>;
-    const isHarvester = creep.memory.role === 'harvester';
+    const sourceId = creep.memory.targetId as Id<Source>;
+    const source = Game.getObjectById(sourceId);
 
-    // Calculate max allowed creeps per source (2 initially, 1 if 5+ extensions)
-    const extensionCount = creep.room.find(FIND_MY_STRUCTURES, {
-      filter: { structureType: STRUCTURE_EXTENSION }
-    }).length;
-    const maxPerSource = extensionCount >= 5 ? 1 : 2;
-
-    // Harvesters keep their sourceId forever. Other roles can change to the closest free source.
-    if (!sourceId || !isHarvester) {
-      const sources = creep.room.find(FIND_SOURCES);
-      
-      // Sort sources by range for non-harvesters
-      if (!isHarvester) {
-        sources.sort((a, b) => creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b));
-      }
-
-      for (const source of sources) {
-        // Safety check: Avoid sources near enemies (within range 10)
-        const hostiles = source.pos.findInRange(FIND_HOSTILE_CREEPS, 10).length > 0 ||
-                         source.pos.findInRange(FIND_HOSTILE_STRUCTURES, 10).length > 0;
-        
-        if (hostiles) continue;
-
-        const assignedCreeps = creep.room.find(FIND_MY_CREEPS, {
-          filter: (c) => c.memory.targetId === source.id
-        });
-
-        if (assignedCreeps.length < maxPerSource) {
-          sourceId = source.id;
-          creep.memory.targetId = sourceId;
-          break;
-        }
-      }
+    // 1. Validation: If source is gone, or empty, clear memory and stop
+    if (!source || source.energy === 0) {
+      creep.memory.targetId = undefined;
+      return;
     }
 
-    const source = Game.getObjectById(sourceId);
-    if (source) {
-      if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-        CreepLogic.moveTo(creep, source);
-      }
-    } else {
+    // 2. Execution: Only clear targetId on terminal errors (impossible action)
+    const result = creep.harvest(source);
+
+    if (result === ERR_NOT_IN_RANGE) {
+      CreepLogic.moveTo(creep, source);
+    } else if (result !== OK && result !== ERR_BUSY && result !== ERR_TIRED) {
+      // Terminal errors like ERR_NOT_FOUND, ERR_NO_BODYPART, etc.
+      // Movement errors or "busy" should NOT clear the target.
       creep.memory.targetId = undefined;
     }
   }
