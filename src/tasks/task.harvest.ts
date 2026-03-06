@@ -10,16 +10,20 @@ export default class TaskHarvest {
 
     if (!sourceId) {
       const sources = creep.room.find(FIND_SOURCES);
-      // Find source with fewer than 2 harvesters (or 1 if 5+ extensions)
-      const maxMiners = creep.room.find(FIND_MY_STRUCTURES, {
+      
+      // Calculate max allowed creeps per source (2 initially, 1 if 5+ extensions)
+      const extensionCount = creep.room.find(FIND_MY_STRUCTURES, {
         filter: { structureType: STRUCTURE_EXTENSION }
-      }).length >= 5 ? 1 : 2;
+      }).length;
+      const maxPerSource = extensionCount >= 5 ? 1 : 2;
 
       for (const source of sources) {
-        const miners = creep.room.find(FIND_MY_CREEPS, {
-          filter: (c) => c.memory.role === 'harvester' && c.memory.targetId === source.id
+        // Count ANY creep that has this source as its targetId
+        const assignedCreeps = creep.room.find(FIND_MY_CREEPS, {
+          filter: (c) => c.memory.targetId === source.id
         });
-        if (miners.length < maxMiners) {
+
+        if (assignedCreeps.length < maxPerSource) {
           sourceId = source.id;
           creep.memory.targetId = sourceId;
           break;
