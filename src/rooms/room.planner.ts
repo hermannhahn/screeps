@@ -57,12 +57,14 @@ export default class RoomPlanner {
         if (result === OK) {
           console.log(`[Planner] ${room.name}: Re-placed ${type} from Memory at ${pos}`);
           return true;
-        } else if (result === ERR_INVALID_TARGET || result === ERR_RCL_NOT_ENOUGH) {
-           // If blocked by another structure, destroy it (except Spawn)
-           const blocking = pos.lookFor(LOOK_STRUCTURES).filter(s => s.structureType !== type && s.structureType !== STRUCTURE_SPAWN);
-           for (const b of blocking) {
-             console.log(`[Planner] ${room.name}: Destroying blocking ${b.structureType} at ${pos} to place ${type}`);
-             b.destroy();
+        } else {
+           console.log(`[Planner] ${room.name}: Failed to place ${type} at ${pos}. Error: ${result}`);
+           if (result === ERR_INVALID_TARGET || result === ERR_FULL) {
+              const blocking = pos.lookFor(LOOK_STRUCTURES).filter(s => s.structureType !== type && s.structureType !== STRUCTURE_SPAWN);
+              for (const b of blocking) {
+                console.log(`[Planner] ${room.name}: Destroying blocking ${b.structureType} at ${pos} to place ${type}`);
+                b.destroy();
+              }
            }
         }
       }
