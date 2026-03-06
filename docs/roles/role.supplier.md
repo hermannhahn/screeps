@@ -2,6 +2,10 @@
 
 The `role.supplier.ts` module handles the distribution of energy throughout the room.
 
+## Roles Overview
+- **Primary Goal**: Logistics and energy distribution.
+- **Behavior**: Collects energy from Harvesters/Containers and fills Spawns, Extensions, and Towers.
+
 ## Strategy
 - **Energy Collection**: Prioritizes collecting dropped energy near sources (from Harvesters) or from Containers/Storage.
 - **Delivery Priority**:
