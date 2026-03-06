@@ -5,6 +5,7 @@ The `role.supplier.ts` module handles the distribution of energy throughout the 
 ## Roles Overview
 - **Primary Goal**: Logistics and energy distribution.
 - **Behavior**: Collects energy from Harvesters/Containers and fills Spawns, Extensions, and Towers.
+- **Fallback**: 1. Repair, 2. Upgrade, 3. Harvest
 
 ## Strategy
 - **Energy Collection**: Prioritizes collecting dropped energy near sources (from Harvesters) or from Containers/Storage.
@@ -15,3 +16,11 @@ The `role.supplier.ts` module handles the distribution of energy throughout the 
 
 ## Efficiency
 - Suppliers are designed with more `CARRY` and `MOVE` parts to move large amounts of energy quickly.
+
+## Task Modules
+To avoid code duplication, specific actions are encapsulated in the src/tasks/ directory:
+
+`task.collect.ts`: Logic to find and pick up energy.
+`task.repair.ts`: Logic to repair damaged structures.
+`task.upgrade.ts`: Logic to upgrade the controller.
+`task.harvest.ts`: Logic to find free source, save sourceId and harvest.
