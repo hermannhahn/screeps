@@ -1,35 +1,28 @@
 import CreepLogic from "../creeps/creep.logic";
+import TaskCollect from "../tasks/task.collect";
+import TaskUpgrade from "../tasks/task.upgrade";
+import TaskHarvest from "../tasks/task.harvest";
 
 /**
  * Role: Upgrader
- * Controller upgrade logic.
+ * Controller progression with fallbacks.
  */
 export default class RoleUpgrader {
   public static run(creep: Creep): void {
     CreepLogic.updateState(creep);
 
     if (creep.memory.working) {
-      if (creep.room.controller) {
-        if (creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
-          CreepLogic.moveTo(creep, creep.room.controller);
-        }
-      }
+      TaskUpgrade.run(creep);
     } else {
-      // Try to pick up dropped energy first
-      const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 50
+      // Priority: Collect, Fallback: Harvest
+      const dropped = creep.room.find(FIND_DROPPED_RESOURCES, {
+        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50
       });
 
-      if (dropped) {
-        if (creep.pickup(dropped) === ERR_NOT_IN_RANGE) {
-          CreepLogic.moveTo(creep, dropped);
-        }
+      if (dropped.length > 0) {
+        TaskCollect.run(creep);
       } else {
-        // Fallback to harvest if no dropped energy
-        const source = Game.getObjectById(creep.room.memory.sources?.[0] as Id<Source>);
-        if (source && creep.harvest(source) === ERR_NOT_IN_RANGE) {
-          CreepLogic.moveTo(creep, source);
-        }
+        TaskHarvest.run(creep);
       }
     }
   }

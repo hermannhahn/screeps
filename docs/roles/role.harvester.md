@@ -2,27 +2,20 @@
 
 The `role.harvester.ts` module implements static mining to maximize energy throughput.
 
-## Roles Overview
-
+## Overview
 - **Primary Goal**: Extract energy from sources.
-- **Behavior**: Moves to a source assigned or the nearest available with either one harvester or no harvesters, harvests until full, and then brings energy to Spawns/Extensions (in the very beginning) or drops it for Suppliers.
+- **Behavior**: Moves to an assigned source or the nearest available one with fewer than two harvesters. It harvests until full and then delivers energy to Spawns/Extensions (early game) or drops it for Suppliers.
 
 ## Strategy
-- **Source Assignment**: Each harvester should ideally be assigned to a specific source ID stored in `room.memory.sources`.
-- **Load Balance**: Each harvester must be assigned to a source with either one harvester or no harvesters.
-- **Static Positioning**: Once next to a source, the harvester remains there, focused solely on the `harvest` action.
-- **Early Game Delivery**: In the very early stages (RCL 1), harvesters may deliver energy themselves. As soon as Suppliers are available, Harvesters will drop energy on the ground or into a container for collection.
+- **Source Assignment**: Each harvester is assigned to a specific source ID stored in `room.memory.sources`.
+- **Load Balancing**: Harvesters are distributed so that each source has a maximum of two miners (reducing to one after the room has 5+ extensions).
+- **Static Positioning**: Once adjacent to a source, the harvester remains stationary, focusing exclusively on the `harvest` action.
+- **Early Game Delivery**: At RCL 1, harvesters deliver energy themselves. Once Suppliers are active, Harvesters transition to dropping energy or filling containers.
 
 ## Memory Properties
-- `sourceId`: The ID of the source this creep is assigned to.
+- `targetId`: The ID of the source this creep is assigned to.
 
 ## Task Modules
-To avoid code duplication, specific actions are encapsulated in the src/tasks/ directory:
-
-`task.harvest.ts`: Logic to find free source, save sourceId and harvest.
-`task.deliver.ts`: Default logic to deliver energy.
-
-## Tools
-To avoid code duplication, specific actions are encapsulated in the src/tools/ directory:
-
-`tool.example.ts`: Tool description
+To avoid code duplication, specific actions are encapsulated in the `src/tasks/` directory:
+- `task.harvest.ts`: Logic to find a free source, save the `targetId`, and harvest.
+- `task.deliver.ts`: Standard logic to deliver energy to structures.

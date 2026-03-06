@@ -1,30 +1,25 @@
 # Spawner Logic
 
-The `spawn.logic.ts` module is responsible for maintaining the creep population in each room. It evaluates the current number of creeps for each role and decides whether to spawn a new one.
+The `spawn.logic.ts` module maintains the creep population in each room by evaluating role counts and energy availability.
 
 ## Population Management
-
-The spawner follows a priority list to ensure the room's economy doesn't collapse:
-1. **Harvester**: Essential for energy income.
-2. **Supplier**: Necessary for moving energy to the Spawn and Extensions.
+The spawner follows a strict priority list to prevent economic collapse:
+1. **Harvester**: Vital for energy income.
+2. **Supplier**: Necessary for energy distribution.
 3. **Upgrader**: Required for room progression.
 4. **Worker**: Needed for construction and maintenance.
 
-## Total of Population
-
-Harvester: Two per source in the room. After the room has 5 extensions, only one per source.
-Supplier: Two per harvester in the room.
-Upgrader: 2 upgraders for RCL 1 and 2, then 1 upgrader per controller.
-Worker: 2 workers.
+## Population Limits
+- **Harvester**: Two per source. Once the room has 5+ extensions, this is reduced to one per source.
+- **Supplier**: Two per active Harvester.
+- **Upgrader**: Two at RCL 1 and 2; reduced to one per room at higher levels.
+- **Worker**: Fixed at two per room.
 
 ## High Priority Spawning Sequence
-
-Spawn 1 harvester and 1 supplier, repeat until reach the role limit. Only then proceed to the next item on the priority list.
+The spawner alternates between 1 Harvester and 1 Supplier until their respective limits are reached. Only after these roles are stabilized does it proceed to Upgraders and Workers.
 
 ## Body Scaling
-
-As the room develops (more Extensions), the spawner will automatically increase the number of body parts to create more efficient creeps.
+As the room adds Extensions, the spawner automatically scales body parts to create more efficient creeps.
 
 ## Pre-spawning
-
-(Planned) The system will start spawning a replacement creep before the current one dies, ensuring zero downtime in critical roles like Harvesters.
+(Planned) Start spawning a replacement creep shortly before the current one dies to ensure 100% uptime for critical roles.

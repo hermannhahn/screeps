@@ -1,35 +1,51 @@
 import CreepLogic from "../creeps/creep.logic";
+import TaskCollect from "../tasks/task.collect";
+import TaskDeliver from "../tasks/task.deliver";
+import TaskRepair from "../tasks/task.repair";
+import TaskUpgrade from "../tasks/task.upgrade";
+import TaskHarvest from "../tasks/task.harvest";
 
 /**
  * Role: Supplier
- * Logistics logic for energy distribution.
+ * Logistics and energy distribution with fallbacks.
  */
 export default class RoleSupplier {
   public static run(creep: Creep): void {
     CreepLogic.updateState(creep);
 
     if (creep.memory.working) {
-      // Priority: Fill Spawn and Extensions
-      let target = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-        filter: (s) => (s.structureType === STRUCTURE_SPAWN || s.structureType === STRUCTURE_EXTENSION) && 
+      // Primary: Deliver
+      const target = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+        filter: (s) => (s.structureType === STRUCTURE_SPAWN || 
+                        s.structureType === STRUCTURE_EXTENSION || 
+                        s.structureType === STRUCTURE_TOWER) && 
                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
       });
 
       if (target) {
-        if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-          CreepLogic.moveTo(creep, target);
+        TaskDeliver.run(creep);
+      } else {
+        // Fallbacks
+        const repairTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+          filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL
+        });
+
+        if (repairTarget) {
+          TaskRepair.run(creep);
+        } else {
+          TaskUpgrade.run(creep);
         }
       }
     } else {
-      // Find dropped energy or containers
-      const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount > 20
+      // Collect energy, fallback to harvest
+      const dropped = creep.room.find(FIND_DROPPED_RESOURCES, {
+        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50
       });
 
-      if (dropped) {
-        if (creep.pickup(dropped) === ERR_NOT_IN_RANGE) {
-          CreepLogic.moveTo(creep, dropped);
-        }
+      if (dropped.length > 0) {
+        TaskCollect.run(creep);
+      } else {
+        TaskHarvest.run(creep);
       }
     }
   }

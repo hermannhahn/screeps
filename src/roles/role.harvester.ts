@@ -1,22 +1,29 @@
 import CreepLogic from "../creeps/creep.logic";
+import TaskHarvest from "../tasks/task.harvest";
+import TaskDeliver from "../tasks/task.deliver";
 
 /**
  * Role: Harvester
- * Static mining logic.
+ * Static mining and early delivery.
  */
 export default class RoleHarvester {
   public static run(creep: Creep): void {
-    // If we don't have a source assigned, find one from room memory
-    if (!creep.memory.targetId && creep.room.memory.sources) {
-      creep.memory.targetId = creep.room.memory.sources[0]; // Simple assignment for now
-    }
+    CreepLogic.updateState(creep);
 
-    const source = Game.getObjectById(creep.memory.targetId as Id<Source>);
-    
-    if (source) {
-      if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-        CreepLogic.moveTo(creep, source);
+    if (creep.memory.working) {
+      // Harvesters only deliver if the room is at RCL 1 or has no suppliers
+      const suppliers = creep.room.find(FIND_MY_CREEPS, {
+        filter: (c) => c.memory.role === 'supplier'
+      });
+
+      if (creep.room.controller?.level === 1 || suppliers.length === 0) {
+        TaskDeliver.run(creep);
+      } else {
+        // Just drop the energy if we are full and static mining
+        creep.drop(RESOURCE_ENERGY);
       }
+    } else {
+      TaskHarvest.run(creep);
     }
   }
 }
