@@ -18,6 +18,33 @@ export const loop = () => {
   // Run Room Scanner
   RoomScanner.run();
 
+  // TEMP: Global Cleanup of old structures
+  if (Game.time % 100 === 0) {
+    for (const roomName in Game.rooms) {
+      const room = Game.rooms[roomName];
+      if (room.controller && room.controller.my) {
+        const planned = room.memory.planned || {};
+        const allPlannedPos = [
+          ...(planned.roads || []),
+          ...(planned.extensions || []),
+          ...(planned.towers || []),
+          ...(planned.containers || [])
+        ];
+
+        const structures = room.find(FIND_STRUCTURES, {
+          filter: (s) => s.structureType !== STRUCTURE_SPAWN && 
+                         s.structureType !== STRUCTURE_CONTROLLER &&
+                         !allPlannedPos.some(p => p.x === s.pos.x && p.y === s.pos.y)
+        });
+
+        for (const s of structures) {
+          console.log(`[Cleanup] Destroying old ${s.structureType} at ${s.pos}`);
+          s.destroy();
+        }
+      }
+    }
+  }
+
   // Run Room Planner
   RoomPlanner.run();
 
