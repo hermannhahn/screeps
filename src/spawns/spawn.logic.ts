@@ -23,6 +23,10 @@ export default class SpawnLogic {
     const upgraders = creeps.filter(c => c.memory.role === 'upgrader');
     const workers = creeps.filter(c => c.memory.role === 'worker');
 
+    // Emergency check: If no harvesters, spawn one with CURRENT energy
+    const isEmergency = harvesters.length < 1;
+    const energy = isEmergency ? room.energyAvailable : room.energyCapacityAvailable;
+
     // Population limits - SAFETY: Only count safe sources (10-block range)
     const sourceCount = ToolUtils.getSafeSources(room).length || 1;
     const extensionCount = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_EXTENSION } }).length;
@@ -34,39 +38,39 @@ export default class SpawnLogic {
 
     // 1. Critical Priority: Minimum Economy (1 Harvester + 1 Supplier)
     if (harvesters.length < 1) {
-      this.spawnCreep(spawn, 'harvester', this.getBody(room, 'harvester'));
+      this.spawnCreep(spawn, 'harvester', this.getBody(energy, 'harvester'));
       return;
     }
     if (suppliers.length < 1) {
-      this.spawnCreep(spawn, 'supplier', this.getBody(room, 'supplier'));
+      this.spawnCreep(spawn, 'supplier', this.getBody(energy, 'supplier'));
       return;
     }
 
     // 2. Secondary Priority: Core Roles (Upgrader + Worker)
     if (upgraders.length < 1) {
-      this.spawnCreep(spawn, 'upgrader', this.getBody(room, 'upgrader'));
+      this.spawnCreep(spawn, 'upgrader', this.getBody(energy, 'upgrader'));
       return;
     }
     if (workers.length < 1) {
-      this.spawnCreep(spawn, 'worker', this.getBody(room, 'worker'));
+      this.spawnCreep(spawn, 'worker', this.getBody(energy, 'worker'));
       return;
     }
 
     // 3. Tertiary Priority: Filling to Max Limits
     if (harvesters.length < maxHarvesters) {
-      this.spawnCreep(spawn, 'harvester', this.getBody(room, 'harvester'));
+      this.spawnCreep(spawn, 'harvester', this.getBody(energy, 'harvester'));
       return;
     }
     if (suppliers.length < maxSuppliers) {
-      this.spawnCreep(spawn, 'supplier', this.getBody(room, 'supplier'));
+      this.spawnCreep(spawn, 'supplier', this.getBody(energy, 'supplier'));
       return;
     }
     if (upgraders.length < maxUpgraders) {
-      this.spawnCreep(spawn, 'upgrader', this.getBody(room, 'upgrader'));
+      this.spawnCreep(spawn, 'upgrader', this.getBody(energy, 'upgrader'));
       return;
     }
     if (workers.length < maxWorkers) {
-      this.spawnCreep(spawn, 'worker', this.getBody(room, 'worker'));
+      this.spawnCreep(spawn, 'worker', this.getBody(energy, 'worker'));
       return;
     }
   }
@@ -78,23 +82,21 @@ export default class SpawnLogic {
     });
 
     if (result === OK) {
-      console.log(`[Spawner] Spawning new ${role}: ${name}`);
+      console.log(`[Spawner] Spawning new ${role}: ${name} with body: ${body}`);
     }
   }
 
   /**
-   * Generates creep body based on role and room energy capacity.
+   * Generates creep body based on role and given energy level.
    */
-  private static getBody(room: Room, role: string): BodyPartConstant[] {
-    const energy = room.energyCapacityAvailable;
-
+  private static getBody(energy: number, role: string): BodyPartConstant[] {
     if (role === 'supplier') {
-      // One WORK part, remaining CARRY/MOVE
       if (energy >= 300) return [WORK, CARRY, CARRY, MOVE, MOVE];
       return [WORK, CARRY, MOVE];
     }
 
     // Basic body for other roles
+    if (energy >= 800) return [WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE];
     if (energy >= 550) return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
     if (energy >= 400) return [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
     return [WORK, CARRY, MOVE];
