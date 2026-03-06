@@ -2,12 +2,12 @@ import CreepLogic from "../creeps/creep.logic";
 
 /**
  * Task: Deliver
- * Pure execution of energy delivery (Spawns, Extensions, Towers).
+ * Pure execution of energy delivery (Spawns, Extensions, Towers, Containers).
  * Does NOT search for new targets.
  */
 export default class TaskDeliver {
   public static run(creep: Creep): void {
-    const targetId = creep.memory.targetId as Id<StructureSpawn | StructureExtension | StructureTower>;
+    const targetId = creep.memory.targetId as Id<StructureSpawn | StructureExtension | StructureTower | StructureContainer>;
     const target = Game.getObjectById(targetId);
 
     // 1. Validation: If target is gone, invalid, or full, clear memory and stop
@@ -22,8 +22,7 @@ export default class TaskDeliver {
     if (result === ERR_NOT_IN_RANGE) {
       CreepLogic.moveTo(creep, target);
     } else if (result !== OK && result !== ERR_BUSY && result !== ERR_TIRED) {
-      // Terminal errors: ERR_NOT_OWNER, ERR_INVALID_TARGET, ERR_FULL, etc.
-      // Movement errors or "busy" should NOT clear the target.
+      // Terminal errors like ERR_NOT_OWNER, ERR_INVALID_TARGET, etc.
       creep.memory.targetId = undefined;
     }
   }

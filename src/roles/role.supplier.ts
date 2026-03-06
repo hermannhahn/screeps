@@ -8,7 +8,8 @@ import TaskHarvest from "../tasks/task.harvest";
 /**
  * Role: Supplier
  * Logistics logic with strict target persistence.
- * Searches for targets ONLY when memory is empty.
+ * Collects ONLY from Drops and Source Containers.
+ * Delivers to Spawns, Extensions, Towers, and Non-Source Containers.
  */
 export default class RoleSupplier {
   public static run(creep: Creep): void {
@@ -17,24 +18,36 @@ export default class RoleSupplier {
     if (creep.memory.working) {
       // 1. If no targetId, search for delivery targets
       if (!creep.memory.targetId) {
-        const target = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+        // PRIORITY 1: Spawns, Extensions, and Towers
+        const primaryTarget = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
           filter: (s) => (s.structureType === STRUCTURE_SPAWN || 
                           s.structureType === STRUCTURE_EXTENSION || 
                           s.structureType === STRUCTURE_TOWER) && 
                          s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
         });
 
-        if (target) {
-          creep.memory.targetId = target.id;
+        if (primaryTarget) {
+          creep.memory.targetId = primaryTarget.id;
         } else {
-          // Fallback targets: Repair or Upgrade (temporary persistence)
-          const repairTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL
+          // PRIORITY 2: Non-Source Containers (e.g., Controller or Exit containers)
+          const logisticsTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: (s) => s.structureType === STRUCTURE_CONTAINER && 
+                           s.pos.findInRange(FIND_SOURCES, 1).length === 0 && // MUST NOT be near a source
+                           s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
           });
-          if (repairTarget) {
-            creep.memory.targetId = repairTarget.id;
-          } else if (creep.room.controller) {
-            creep.memory.targetId = creep.room.controller.id;
+
+          if (logisticsTarget) {
+            creep.memory.targetId = logisticsTarget.id;
+          } else {
+            // FALLBACK: Repair or Upgrade
+            const repairTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+              filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL
+            });
+            if (repairTarget) {
+              creep.memory.targetId = repairTarget.id;
+            } else if (creep.room.controller) {
+              creep.memory.targetId = creep.room.controller.id;
+            }
           }
         }
       }
@@ -43,13 +56,14 @@ export default class RoleSupplier {
       if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (target instanceof StructureController) TaskUpgrade.run(creep);
-        else if (target instanceof StructureTower || target instanceof StructureSpawn || target instanceof StructureExtension) TaskDeliver.run(creep);
+        else if (target instanceof StructureTower || target instanceof StructureSpawn || 
+                 target instanceof StructureExtension || target instanceof StructureContainer) TaskDeliver.run(creep);
         else TaskRepair.run(creep);
       }
     } else {
-      // 1. If no targetId, search for energy sources
+      // 1. If no targetId, search for energy collection
       if (!creep.memory.targetId) {
-        // Search order: Drops -> Containers -> Harvest (only if no harvesters)
+        // Priority 1: Drops
         const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
           filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 20
         });
@@ -57,13 +71,17 @@ export default class RoleSupplier {
         if (dropped) {
           creep.memory.targetId = dropped.id;
         } else {
-          const container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] >= 50
+          // Priority 2: Source Containers ONLY
+          const sourceContainer = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: (s) => s.structureType === STRUCTURE_CONTAINER && 
+                           s.pos.findInRange(FIND_SOURCES, 1).length > 0 && // MUST be near a source
+                           s.store[RESOURCE_ENERGY] >= 50
           });
-          if (container) {
-            creep.memory.targetId = container.id;
+          
+          if (sourceContainer) {
+            creep.memory.targetId = sourceContainer.id;
           } else {
-            // ONLY harvest if no harvesters are in the room
+            // Priority 3: Manual Harvest (if no harvesters)
             const harvesters = creep.room.find(FIND_MY_CREEPS, { filter: (c) => c.memory.role === 'harvester' });
             if (harvesters.length === 0) {
               const source = creep.pos.findClosestByRange(FIND_SOURCES);
