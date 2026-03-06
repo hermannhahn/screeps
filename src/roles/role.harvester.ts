@@ -4,23 +4,35 @@ import TaskDeliver from "../tasks/task.deliver";
 
 /**
  * Role: Harvester
- * Static mining and early delivery.
+ * Static mining with optimized delivery priority.
  */
 export default class RoleHarvester {
   public static run(creep: Creep): void {
     CreepLogic.updateState(creep);
 
     if (creep.memory.working) {
-      // Harvesters only deliver if the room is at RCL 1 or has no suppliers
       const suppliers = creep.room.find(FIND_MY_CREEPS, {
         filter: (c) => c.memory.role === 'supplier'
       });
 
-      if (creep.room.controller?.level === 1 || suppliers.length === 0) {
+      // Emergency delivery if no suppliers
+      if (suppliers.length === 0) {
         TaskDeliver.run(creep);
       } else {
-        // Just drop the energy if we are full and static mining
-        creep.drop(RESOURCE_ENERGY);
+        // Optimized delivery: Link -> Container -> Drop (all within range 3)
+        const closeStructure = creep.pos.findInRange(FIND_STRUCTURES, 3, {
+          filter: (s) => (s.structureType === STRUCTURE_LINK || s.structureType === STRUCTURE_CONTAINER) &&
+                         s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        })[0];
+
+        if (closeStructure) {
+          if (creep.transfer(closeStructure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+            CreepLogic.moveTo(creep, closeStructure);
+          }
+        } else {
+          // Fallback: Just drop it
+          creep.drop(RESOURCE_ENERGY);
+        }
       }
     } else {
       TaskHarvest.run(creep);

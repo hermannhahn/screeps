@@ -4,13 +4,18 @@ The `role.harvester.ts` module implements static mining to maximize energy throu
 
 ## Overview
 - **Primary Goal**: Extract energy from sources.
-- **Behavior**: Moves to an assigned source or the nearest available one with fewer than two harvesters. It harvests until full and then delivers energy to Spawns/Extensions (early game) or drops it for Suppliers.
+- **Behavior**: Moves to an assigned source and harvests.
+- **Delivery Logic**: 
+    - **No Suppliers**: If no Suppliers are alive, the Harvester delivers energy directly to Spawns and Extensions (early game emergency).
+    - **Suppliers Present**: If at least one Supplier is active, the Harvester becomes strictly static and follows this delivery priority (within a 3-tile range):
+        1. **Links**: Deposit energy into a nearby Link.
+        2. **Containers**: Deposit energy into a nearby Container.
+        3. **Drop**: Drop energy on the ground for Suppliers to collect.
 
 ## Strategy
 - **Source Assignment**: Each harvester is assigned to a specific source ID stored in `room.memory.sources`.
 - **Load Balancing**: Harvesters are distributed so that each source has a maximum of two miners (reducing to one after the room has 5+ extensions).
 - **Static Positioning**: Once adjacent to a source, the harvester remains stationary, focusing exclusively on the `harvest` action.
-- **Early Game Delivery**: At RCL 1, harvesters deliver energy themselves. Once Suppliers are active, Harvesters transition to dropping energy or filling containers.
 
 ## Memory Properties
 - `targetId`: The ID of the source this creep is assigned to.
