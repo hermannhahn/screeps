@@ -67,36 +67,33 @@ export default class RoomPlanner {
 
   private static processExtensions(room: Room): boolean {
     const max = [0, 0, 5, 10, 20, 30, 40, 50, 60][room.controller!.level];
-    const planned = room.memory.planned!.extensions!;
+    if (!room.memory.planned) room.memory.planned = {};
+    if (!room.memory.planned.extensions) room.memory.planned.extensions = [];
+    const planned = room.memory.planned.extensions;
 
     if (planned.length < max) {
       const spawn = room.find(FIND_MY_SPAWNS)[0];
       if (spawn) {
-        // Spiral search pattern starting from radius 2
-        for (let r = 2; r <= 15; r++) {
+        // Dynamic search area to find ANY valid spot
+        for (let r = 2; r <= 20; r++) {
           if (planned.length >= max) break;
-          for (let x = -r; x <= r; x++) {
+          for (let x = spawn.pos.x - r; x <= spawn.pos.x + r; x++) {
             if (planned.length >= max) break;
-            for (let y = -r; y <= r; y++) {
+            for (let y = spawn.pos.y - r; y <= spawn.pos.y + r; y++) {
               if (planned.length >= max) break;
-              if (Math.abs(x) !== r && Math.abs(y) !== r) continue;
-              if ((x + y) % 2 !== 0) continue; // Checkerboard for movement
+              if (x < 2 || x > 47 || y < 2 || y > 47) continue;
+              
+              const pos = new RoomPosition(x, y, room.name);
+              const terrain = room.getTerrain().get(x, y);
+              if (terrain === TERRAIN_MASK_WALL) continue;
 
-              const pos = new RoomPosition(spawn.pos.x + x, spawn.pos.y + y, room.name);
-              
-              // Validate position
-              if (pos.x < 2 || pos.x > 47 || pos.y < 2 || pos.y > 47) continue;
-              const isBlocked = planned.some(p => p.x === pos.x && p.y === pos.y) || 
-                                pos.isEqualTo(spawn.pos) || 
-                                room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_WALL;
-              
-              if (!isBlocked) {
-                // Try to create CS immediately to verify validity
+              const isPlanned = planned.some(p => p.x === x && p.y === y);
+              if (!isPlanned && pos.lookFor(LOOK_STRUCTURES).length === 0) {
                 const res = room.createConstructionSite(pos, STRUCTURE_EXTENSION);
                 if (res === OK) {
-                  planned.push({ x: pos.x, y: pos.y });
-                  console.log(`[Planner] ${room.name}: Placed extension at ${pos}`);
-                  return true; 
+                  planned.push({ x: x, y: y });
+                  console.log(`[Planner] ${room.name}: Success! Placed extension at ${pos}`);
+                  return true;
                 }
               }
             }
