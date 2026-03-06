@@ -1,23 +1,23 @@
 import CreepLogic from "../creeps/creep.logic";
 
 /**
- * Task: Repair
- * Pure execution of structure repairs.
- * Does NOT search for new targets.
+ * Task: Build
+ * Pure execution of construction sites.
+ * Does NOT search for new sites.
  */
-export default class TaskRepair {
+export default class TaskBuild {
   public static run(creep: Creep): void {
-    const targetId = creep.memory.targetId as Id<Structure>;
+    const targetId = creep.memory.targetId as Id<ConstructionSite>;
     const target = Game.getObjectById(targetId);
 
-    // 1. Validation: If target is gone or fully repaired, clear memory and stop
-    if (!target || target.hits === target.hitsMax) {
+    // 1. Validation: If target is gone, clear memory and stop
+    if (!target) {
       creep.memory.targetId = undefined;
       return;
     }
 
     // 2. Execution: Only clear targetId on terminal errors
-    const result = creep.repair(target);
+    const result = creep.build(target);
 
     if (result === ERR_NOT_IN_RANGE) {
       CreepLogic.moveTo(creep, target);
