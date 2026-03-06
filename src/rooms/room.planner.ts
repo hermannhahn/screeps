@@ -1,7 +1,8 @@
 /**
  * Room Planner Module
  * Plans and persists structure coordinates in Memory for consistent rebuilding.
- * Priorities: Diamond Roads -> Extensions -> Towers -> Containers.
+ * Priorities: Diamond Roads -> Extensions -> Towers -> Source Containers -> Source Roads -> 
+ *             Controller Container -> Controller Roads -> Exit Containers.
  */
 export default class RoomPlanner {
   public static run(): void {
@@ -25,174 +26,128 @@ export default class RoomPlanner {
     // Stop early if there are already active construction sites
     if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) return;
 
-    // Orchestrate planning and execution based on priority
+    // Orchestrate planning and execution based on strict priority
     if (this.processDiamondRoads(room)) return;
     if (this.processExtensions(room)) return;
     if (this.processTowers(room)) return;
-    if (this.processContainers(room)) return;
+    if (this.processSourceContainers(room)) return;
+    if (this.processSourceRoads(room)) return;
+    if (this.processControllerContainer(room)) return;
+    if (this.processControllerRoads(room)) return;
+    if (this.processExitContainers(room)) return;
   }
 
   /**
-   * Diamond Roads: Plans roads at radius 1 and 2 around Spawn.
+   * Helper to place a construction site from memory coordinates.
+   */
+  private static placeFromMemory(room: Room, planned: { x: number, y: number }[], type: StructureConstant): boolean {
+    for (const coord of planned) {
+      const pos = new RoomPosition(coord.x, coord.y, room.name);
+      const structure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === type);
+      const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === type);
+      
+      if (!structure && !site) {
+        if (room.createConstructionSite(pos, type) === OK) {
+          console.log(`[Planner] ${room.name}: Re-placed ${type} from Memory at ${pos}`);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Priority 1: Diamond Roads around Spawn.
    */
   private static processDiamondRoads(room: Room): boolean {
     const spawn = room.find(FIND_MY_SPAWNS)[0];
     if (!spawn) return false;
-
     const planned = room.memory.planned!.roads!;
-    
-    // 1. Plan Diamond (Radius 1 and 2)
-    const ranges = [1, 2];
-    for (const r of ranges) {
+
+    // Plan Diamond
+    [1, 2].forEach(r => {
       for (let dx = -r; dx <= r; dx++) {
         for (let dy = -r; dy <= r; dy++) {
           if (Math.abs(dx) + Math.abs(dy) === r) {
-            const pos = new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, room.name);
-            const isPlanned = planned.some(p => p.x === pos.x && p.y === pos.y);
-            const terrain = room.getTerrain().get(pos.x, pos.y);
-            
-            if (!isPlanned && terrain !== TERRAIN_MASK_WALL) {
-              planned.push({ x: pos.x, y: pos.y });
+            if (!planned.some(p => p.x === spawn.pos.x + dx && p.y === spawn.pos.y + dy)) {
+              const terrain = room.getTerrain().get(spawn.pos.x + dx, spawn.pos.y + dy);
+              if (terrain !== TERRAIN_MASK_WALL) planned.push({ x: spawn.pos.x + dx, y: spawn.pos.y + dy });
             }
           }
         }
       }
-    }
+    });
 
-    // 2. Place sites
-    for (const coord of planned) {
-      const pos = new RoomPosition(coord.x, coord.y, room.name);
-      const structure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_ROAD);
-      const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === STRUCTURE_ROAD);
-      
-      if (!structure && !site) {
-        if (room.createConstructionSite(pos, STRUCTURE_ROAD) === OK) {
-          console.log(`[Planner] ${room.name}: Re-placed Diamond Road at ${pos}`);
-          return true;
-        }
-      }
-    }
-    return false;
+    return this.placeFromMemory(room, planned, STRUCTURE_ROAD);
   }
 
   /**
-   * Extensions: Logic for planning and placing.
+   * Priority 2: Extensions.
    */
   private static processExtensions(room: Room): boolean {
-    const rcl = room.controller!.level;
-    const maxExtensions = [0, 0, 5, 10, 20, 30, 40, 50, 60][rcl];
+    const max = [0, 0, 5, 10, 20, 30, 40, 50, 60][room.controller!.level];
     const planned = room.memory.planned!.extensions!;
 
-    // 1. Plan more if memory is not up to date with RCL
-    if (planned.length < maxExtensions) {
+    if (planned.length < max) {
       const spawn = room.find(FIND_MY_SPAWNS)[0];
       if (spawn) {
         for (let x = -5; x <= 5; x++) {
           for (let y = -5; y <= 5; y++) {
-            if (planned.length >= maxExtensions) break;
+            if (planned.length >= max) break;
             const pos = new RoomPosition(spawn.pos.x + x, spawn.pos.y + y, room.name);
-            
-            const isPlanned = planned.some(p => p.x === pos.x && p.y === pos.y);
-            const isSpawn = pos.isEqualTo(spawn.pos);
-            const isRoad = room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y);
-            const terrain = room.getTerrain().get(pos.x, pos.y);
-            
-            if (!isPlanned && !isSpawn && !isRoad && terrain === 0) {
-              planned.push({ x: pos.x, y: pos.y });
-            }
+            const isBlocked = planned.some(p => p.x === pos.x && p.y === pos.y) || 
+                              pos.isEqualTo(spawn.pos) || 
+                              room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y) ||
+                              room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_WALL;
+            if (!isBlocked) planned.push({ x: pos.x, y: pos.y });
           }
         }
       }
     }
-
-    // 2. Place sites based on memory
-    for (let i = 0; i < Math.min(planned.length, maxExtensions); i++) {
-      const coord = planned[i];
-      const pos = new RoomPosition(coord.x, coord.y, room.name);
-      
-      const structure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_EXTENSION);
-      const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === STRUCTURE_EXTENSION);
-      
-      if (!structure && !site) {
-        if (room.createConstructionSite(pos, STRUCTURE_EXTENSION) === OK) {
-          console.log(`[Planner] ${room.name}: Re-placed Extension from Memory at ${pos}`);
-          return true;
-        }
-      }
-    }
-    return false;
+    return this.placeFromMemory(room, planned, STRUCTURE_EXTENSION);
   }
 
   /**
-   * Towers: Logic for planning and placing.
+   * Priority 3: Towers.
    */
   private static processTowers(room: Room): boolean {
-    const rcl = room.controller!.level;
-    if (rcl < 3) return false;
-
-    const maxTowers = [0, 0, 0, 1, 1, 2, 2, 3, 6][rcl];
+    const max = [0, 0, 0, 1, 1, 2, 2, 3, 6][room.controller!.level];
     const planned = room.memory.planned!.towers!;
 
-    if (planned.length < maxTowers) {
+    if (planned.length < max) {
       const spawn = room.find(FIND_MY_SPAWNS)[0];
       if (spawn) {
         for (let x = -3; x <= 3; x++) {
           for (let y = -3; y <= 3; y++) {
-            if (planned.length >= maxTowers) break;
+            if (planned.length >= max) break;
             const pos = new RoomPosition(spawn.pos.x + x, spawn.pos.y + y, room.name);
-            
-            const isPlanned = planned.some(p => p.x === pos.x && p.y === pos.y);
-            const isSpawn = pos.isEqualTo(spawn.pos);
-            const isExtension = room.memory.planned!.extensions!.some(p => p.x === pos.x && p.y === pos.y);
-            const isRoad = room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y);
-            const terrain = room.getTerrain().get(pos.x, pos.y);
-
-            if (!isPlanned && !isSpawn && !isExtension && !isRoad && terrain === 0) {
-              planned.push({ x: pos.x, y: pos.y });
-            }
+            const isBlocked = planned.some(p => p.x === pos.x && p.y === pos.y) || 
+                              pos.isEqualTo(spawn.pos) || 
+                              room.memory.planned!.extensions!.some(p => p.x === pos.x && p.y === pos.y) ||
+                              room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y) ||
+                              room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_WALL;
+            if (!isBlocked) planned.push({ x: pos.x, y: pos.y });
           }
         }
       }
     }
-
-    for (let i = 0; i < Math.min(planned.length, maxTowers); i++) {
-      const coord = planned[i];
-      const pos = new RoomPosition(coord.x, coord.y, room.name);
-      const structure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_TOWER);
-      const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === STRUCTURE_TOWER);
-      
-      if (!structure && !site) {
-        if (room.createConstructionSite(pos, STRUCTURE_TOWER) === OK) {
-          console.log(`[Planner] ${room.name}: Re-placed Tower from Memory at ${pos}`);
-          return true;
-        }
-      }
-    }
-    return false;
+    return this.placeFromMemory(room, planned, STRUCTURE_TOWER);
   }
 
   /**
-   * Containers: Logic for planning and placing.
+   * Priority 4: Source Containers.
    */
-  private static processContainers(room: Room): boolean {
-    if (room.controller!.level < 2) return false;
+  private static processSourceContainers(room: Room): boolean {
     const planned = room.memory.planned!.containers!;
-
-    // 1. Plan Source Containers
     const sources = room.find(FIND_SOURCES);
-    for (const source of sources) {
-      const isAlreadyPlanned = planned.some(p => {
-        const dist = Math.max(Math.abs(p.x - source.pos.x), Math.abs(p.y - source.pos.y));
-        return dist === 1;
-      });
 
-      if (!isAlreadyPlanned) {
-        for (let x = -1; x <= 1; x++) {
-          for (let y = -1; y <= 1; y++) {
-            const pos = new RoomPosition(source.pos.x + x, source.pos.y + y, room.name);
-            const terrain = room.getTerrain().get(pos.x, pos.y);
-            const isRoad = room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y);
-            if (terrain === 0 && !isRoad) {
+    for (const source of sources) {
+      const isPlanned = planned.some(p => Math.max(Math.abs(p.x - source.pos.x), Math.abs(p.y - source.pos.y)) === 1);
+      if (!isPlanned) {
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            const pos = new RoomPosition(source.pos.x + dx, source.pos.y + dy, room.name);
+            if (room.getTerrain().get(pos.x, pos.y) === 0) {
               planned.push({ x: pos.x, y: pos.y });
               break;
             }
@@ -200,41 +155,89 @@ export default class RoomPlanner {
         }
       }
     }
+    // Note: This only places the ones currently in 'containers' array. We filter by proximity to sources.
+    return this.placeFromMemory(room, planned, STRUCTURE_CONTAINER);
+  }
 
-    // 2. Plan Controller Container
+  /**
+   * Priority 5: Source Roads (Source to nearest Diamond Road).
+   */
+  private static processSourceRoads(room: Room): boolean {
+    const spawn = room.find(FIND_MY_SPAWNS)[0];
+    if (!spawn) return false;
+    const plannedRoads = room.memory.planned!.roads!;
+    const containers = room.memory.planned!.containers!;
+
+    for (const source of room.find(FIND_SOURCES)) {
+      // Find the planned container for this source
+      const container = containers.find(c => Math.max(Math.abs(c.x - source.pos.x), Math.abs(c.y - source.pos.y)) === 1);
+      if (container) {
+        const path = room.findPath(new RoomPosition(container.x, container.y, room.name), spawn.pos, { ignoreCreeps: true, ignoreRoads: true });
+        for (const step of path) {
+          if (!plannedRoads.some(p => p.x === step.x && p.y === step.y)) {
+            plannedRoads.push({ x: step.x, y: step.y });
+          }
+        }
+      }
+    }
+    return this.placeFromMemory(room, plannedRoads, STRUCTURE_ROAD);
+  }
+
+  /**
+   * Priority 6: Controller Container.
+   */
+  private static processControllerContainer(room: Room): boolean {
+    if (room.controller!.level < 2) return false;
+    const planned = room.memory.planned!.containers!;
     const controller = room.controller!;
-    const isContPlanned = planned.some(p => {
-      const dist = Math.max(Math.abs(p.x - controller.pos.x), Math.abs(p.y - controller.pos.y));
-      return dist <= 3;
-    });
 
-    if (!isContPlanned) {
-      for (let x = -2; x <= 2; x++) {
-        for (let y = -2; y <= 2; y++) {
-          const pos = new RoomPosition(controller.pos.x + x, controller.pos.y + y, room.name);
-          const terrain = room.getTerrain().get(pos.x, pos.y);
-          const isRoad = room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y);
-          if (terrain === 0 && !isRoad) {
+    const isPlanned = planned.some(p => Math.max(Math.abs(p.x - controller.pos.x), Math.abs(p.y - controller.pos.y)) <= 3);
+    if (!isPlanned) {
+      for (let dx = -2; dx <= 2; dx++) {
+        for (let dy = -2; dy <= 2; dy++) {
+          const pos = new RoomPosition(controller.pos.x + dx, controller.pos.y + dy, room.name);
+          if (room.getTerrain().get(pos.x, pos.y) === 0) {
             planned.push({ x: pos.x, y: pos.y });
             break;
           }
         }
       }
     }
+    return this.placeFromMemory(room, planned, STRUCTURE_CONTAINER);
+  }
 
-    // 3. Place sites
-    for (const coord of planned) {
-      const pos = new RoomPosition(coord.x, coord.y, room.name);
-      const structure = pos.lookFor(LOOK_STRUCTURES).find(s => s.structureType === STRUCTURE_CONTAINER);
-      const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === STRUCTURE_CONTAINER);
-      
-      if (!structure && !site) {
-        if (room.createConstructionSite(pos, STRUCTURE_CONTAINER) === OK) {
-          console.log(`[Planner] ${room.name}: Re-placed Container from Memory at ${pos}`);
-          return true;
+  /**
+   * Priority 7: Controller Roads.
+   */
+  private static processControllerRoads(room: Room): boolean {
+    const spawn = room.find(FIND_MY_SPAWNS)[0];
+    if (!spawn || !room.controller) return false;
+    const plannedRoads = room.memory.planned!.roads!;
+    const containers = room.memory.planned!.containers!;
+
+    const container = containers.find(c => Math.max(Math.abs(c.x - room.controller!.pos.x), Math.abs(c.y - room.controller!.pos.y)) <= 3);
+    if (container) {
+      const path = room.findPath(new RoomPosition(container.x, container.y, room.name), spawn.pos, { ignoreCreeps: true, ignoreRoads: true });
+      for (const step of path) {
+        if (!plannedRoads.some(p => p.x === step.x && p.y === step.y)) {
+          plannedRoads.push({ x: step.x, y: step.y });
         }
       }
     }
-    return false;
+    return this.placeFromMemory(room, plannedRoads, STRUCTURE_ROAD);
+  }
+
+  /**
+   * Priority 8: Exit Containers.
+   */
+  private static processExitContainers(room: Room): boolean {
+    if (room.controller!.level < 3) return false;
+    const planned = room.memory.planned!.containers!;
+    const exits = room.find(FIND_EXIT);
+
+    if (exits.length > 0 && planned.length < 5) { // Arbitrary limit for now
+       // Logic to place near exit if needed
+    }
+    return this.placeFromMemory(room, planned, STRUCTURE_CONTAINER);
   }
 }
