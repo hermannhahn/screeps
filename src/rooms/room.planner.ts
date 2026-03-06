@@ -114,15 +114,20 @@ export default class RoomPlanner {
     if (planned.length < max) {
       const spawn = room.find(FIND_MY_SPAWNS)[0];
       if (spawn) {
-        for (let x = -5; x <= 5; x++) {
-          for (let y = -5; y <= 5; y++) {
-            if (planned.length >= max) break;
-            const pos = new RoomPosition(spawn.pos.x + x, spawn.pos.y + y, room.name);
-            const isBlocked = planned.some(p => p.x === pos.x && p.y === pos.y) || 
-                              pos.isEqualTo(spawn.pos) || 
-                              room.memory.planned!.roads!.some(p => p.x === pos.x && p.y === pos.y) ||
-                              room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_WALL;
-            if (!isBlocked) planned.push({ x: pos.x, y: pos.y });
+        // Wider and checkerboard pattern
+        for (let r = 2; r <= 8; r++) {
+          for (let x = -r; x <= r; x++) {
+            for (let y = -r; y <= r; y++) {
+              if (planned.length >= max) break;
+              if (Math.abs(x) !== r && Math.abs(y) !== r) continue;
+              if ((x + y) % 2 !== 0) continue; // Checkerboard
+
+              const pos = new RoomPosition(spawn.pos.x + x, spawn.pos.y + y, room.name);
+              const isBlocked = planned.some(p => p.x === pos.x && p.y === pos.y) || 
+                                pos.isEqualTo(spawn.pos) || 
+                                room.getTerrain().get(pos.x, pos.y) === TERRAIN_MASK_WALL;
+              if (!isBlocked) planned.push({ x: pos.x, y: pos.y });
+            }
           }
         }
       }
