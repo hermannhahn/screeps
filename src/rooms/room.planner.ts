@@ -26,7 +26,7 @@ export default class RoomPlanner {
     if (!room.memory.planned.containers) room.memory.planned.containers = [];
 
     // Stop if there are too many active construction sites
-    if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 10) return;
+    if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 20) return;
 
     // Orchestrate planning and execution based on strict priority
     this.processDiamondRoads(room);
@@ -114,8 +114,8 @@ export default class RoomPlanner {
     if (planned.length < max) {
       const spawn = room.find(FIND_MY_SPAWNS)[0];
       if (spawn) {
-        // Wider and checkerboard pattern
-        for (let r = 2; r <= 8; r++) {
+        // Wider and checkerboard pattern - Starting further from spawn (radius 5)
+        for (let r = 5; r <= 15; r++) {
           for (let x = -r; x <= r; x++) {
             for (let y = -r; y <= r; y++) {
               if (planned.length >= max) break;
