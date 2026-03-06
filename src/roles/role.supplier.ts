@@ -8,12 +8,13 @@ import TaskHarvest from "../tasks/task.harvest";
 /**
  * Role: Supplier
  * Logistics logic with strict target persistence.
- * Collects ONLY from Drops and Source Containers.
- * Delivers to Spawns, Extensions, Towers, and Non-Source Containers.
+ * Dynamic behavior during attacks.
  */
 export default class RoleSupplier {
   public static run(creep: Creep): void {
     CreepLogic.updateState(creep);
+
+    const isUnderAttack = this.isRoomUnderAttack(creep.room);
 
     if (creep.memory.working) {
       // 1. If no targetId, search for delivery targets
@@ -29,35 +30,41 @@ export default class RoleSupplier {
         if (primaryTarget) {
           creep.memory.targetId = primaryTarget.id;
         } else {
-          // PRIORITY 2: Non-Source Containers (e.g., Controller or Exit containers)
+          // PRIORITY 2: Non-Source Containers
           const logisticsTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: (s) => s.structureType === STRUCTURE_CONTAINER && 
-                           s.pos.findInRange(FIND_SOURCES, 1).length === 0 && // MUST NOT be near a source
+                           s.pos.findInRange(FIND_SOURCES, 1).length === 0 && 
                            s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
           });
 
           if (logisticsTarget) {
             creep.memory.targetId = logisticsTarget.id;
           } else {
-            // FALLBACK: Repair or Upgrade
-            const repairTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-              filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL
-            });
-            if (repairTarget) {
-              creep.memory.targetId = repairTarget.id;
-            } else if (creep.room.controller) {
-              creep.memory.targetId = creep.room.controller.id;
+            // PRIORITY 3: Storage (Last delivery priority)
+            if (creep.room.storage && creep.room.storage.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+              creep.memory.targetId = creep.room.storage.id;
+            } else {
+              // FALLBACK: Repair or Upgrade
+              const repairTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                filter: (s) => s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL
+              });
+              if (repairTarget) {
+                creep.memory.targetId = repairTarget.id;
+              } else if (creep.room.controller) {
+                creep.memory.targetId = creep.room.controller.id;
+              }
             }
           }
         }
       }
 
-      // 2. Execute based on targetId (Task handles validation and clearing)
+      // 2. Execute based on targetId
       if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (target instanceof StructureController) TaskUpgrade.run(creep);
         else if (target instanceof StructureTower || target instanceof StructureSpawn || 
-                 target instanceof StructureExtension || target instanceof StructureContainer) TaskDeliver.run(creep);
+                 target instanceof StructureExtension || target instanceof StructureContainer ||
+                 target instanceof StructureStorage) TaskDeliver.run(creep);
         else TaskRepair.run(creep);
       }
     } else {
@@ -71,15 +78,15 @@ export default class RoleSupplier {
         if (dropped) {
           creep.memory.targetId = dropped.id;
         } else {
-          // Priority 2: Source Containers ONLY
-          const sourceContainer = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (s) => s.structureType === STRUCTURE_CONTAINER && 
-                           s.pos.findInRange(FIND_SOURCES, 1).length > 0 && // MUST be near a source
+          // Priority 2: Source Containers (OR any container/storage if under attack)
+          const collectionTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_STORAGE) && 
+                           (isUnderAttack || (s.structureType === STRUCTURE_CONTAINER && s.pos.findInRange(FIND_SOURCES, 1).length > 0)) &&
                            s.store[RESOURCE_ENERGY] >= 50
           });
           
-          if (sourceContainer) {
-            creep.memory.targetId = sourceContainer.id;
+          if (collectionTarget) {
+            creep.memory.targetId = collectionTarget.id;
           } else {
             // Priority 3: Manual Harvest (if no harvesters)
             const harvesters = creep.room.find(FIND_MY_CREEPS, { filter: (c) => c.memory.role === 'harvester' });
@@ -91,12 +98,31 @@ export default class RoleSupplier {
         }
       }
 
-      // 2. Execute based on targetId (Task handles validation and clearing)
+      // 2. Execute based on targetId
       if (creep.memory.targetId) {
         const target = Game.getObjectById(creep.memory.targetId as Id<any>);
         if (target instanceof Source) TaskHarvest.run(creep);
         else TaskCollect.run(creep);
       }
     }
+  }
+
+  /**
+   * Defines if the room is under actual attack.
+   * Checks for hostiles with offensive body parts.
+   */
+  private static isRoomUnderAttack(room: Room): boolean {
+    const hostiles = room.find(FIND_HOSTILE_CREEPS);
+    if (hostiles.length === 0) return false;
+
+    // Filter for creeps that can actually do damage or heal
+    const actualThreats = hostiles.filter(h => 
+      h.getActiveBodyparts(ATTACK) > 0 || 
+      h.getActiveBodyparts(RANGED_ATTACK) > 0 || 
+      h.getActiveBodyparts(WORK) > 0 ||
+      h.getActiveBodyparts(HEAL) > 0
+    );
+
+    return actualThreats.length > 0;
   }
 }
