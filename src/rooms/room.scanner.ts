@@ -40,5 +40,10 @@ declare global {
     controllerId?: Id<StructureController>;
     mineralId?: Id<Mineral>;
     lastScan?: number;
+    planned?: {
+      extensions?: { x: number, y: number }[];
+      towers?: { x: number, y: number }[];
+      containers?: { x: number, y: number }[];
+    };
   }
 }
