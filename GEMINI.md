@@ -28,13 +28,15 @@ This file provides context and instructions for the Gemini AI to act within this
   4. **Iniciar Jogo**: Selecione o `Spawn` e coloque-o no mapa em uma posição válida para iniciar a execução do código.
 
 ## 📈 Automação e Melhoria Contínua
-- **Monitorar e Melhorar o Script**: Quando solicitado:
-  1. Verifique a simulação periodicamente (ex: a cada 5-10 minutos).
-  2. Analise o progresso da base, estoque de energia e comportamento dos creeps.
-  3. Realize ajustes proativos no código (`src/`) para otimizar a expansão e eficiência.
-  4. Sempre execute a sequência: `git commit` -> `git push` -> `npm run deploy` após cada alteração.
-  5. **CRITICAL**: NUNCA utilize a ferramenta `yield_turn` após um `gemini_sleep` ou comandos em background. Isso causa um loop de "System: Please continue" neste terminal. Apenas pare de responder e aguarde a notificação de término do sleep.
-  6. O objetivo final é um script 100% autônomo e resiliente.
+- **Monitorar e Melhorar o Script**: Quando solicitado para a simulação ou um servidor privado:
+  1. **Verificação Periódica**: Utilize o `gemini_sleep` para monitorar a cada 5-10 minutos.
+  2. **Inspeção Visual**: Use `take_snapshot` e `take_screenshot` (via `chrome-devtools`) para analisar o progresso da base, estoque de energia e comportamento dos creeps.
+  3. **Relatórios por Voz**: Após cada análise ou modificação, emita um relatório curto por voz utilizando o comando `piper`.
+  4. **Ajustes Proativos**: Realize modificações no código (`src/`) para otimizar a expansão, corrigir gargalos ou melhorar a eficiência.
+  5. **Ciclo de Deploy**: Sempre execute a sequência: `git commit` -> `git push` -> `npm run deploy` após cada alteração.
+  6. **Acesso a Servidores Privados**: Utilize o fluxo `npm run ssc` e as URLs `localhost:8080` conforme detalhado na seção correspondente.
+  7. **CRITICAL**: NUNCA utilize a ferramenta `yield_turn` após um `gemini_sleep` ou comandos em background. Apenas aguarde a notificação de término do sleep.
+  8. O objetivo final é um script 100% autônomo e resiliente.
 
 ## 🛡️ Private Servers
 Abaixo estão os dados dos servidores privados para monitoramento e verificações:
