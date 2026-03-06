@@ -29,7 +29,7 @@ export default class SpawnLogic {
     
     const maxHarvesters = extensionCount >= 5 ? sourceCount : sourceCount * 2;
     const maxSuppliers = Math.min(harvesters.length, sourceCount + 1); // Limit suppliers more strictly
-    const maxUpgraders = (room.controller?.level || 1) <= 2 ? 2 : 1;
+    const maxUpgraders = (room.controller?.level || 1) <= 3 ? 2 : 1;
     const maxWorkers = 2;
 
     // 1. Critical Priority: Minimum Economy (1 Harvester + 1 Supplier)

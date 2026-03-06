@@ -12,7 +12,7 @@ The spawner follows a strict priority list to prevent economic collapse:
 ## Population Limits
 - **Harvester**: Two per **safe source** (within a 10-block range of enemies). Once the room has 5+ extensions, this is reduced to one per safe source.
 - **Supplier**: Two per active Harvester.
-- **Upgrader**: Two at RCL 1 and 2; reduced to one per room at higher levels.
+- **Upgrader**: Two until RCL 3; reduced to one per room at higher levels.
 - **Worker**: Fixed at two per room.
 
 ## Safety Logic
