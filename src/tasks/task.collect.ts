@@ -18,7 +18,7 @@ export default class TaskCollect {
 
       // 1. Find Nearest Drop
       const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50
+        filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 20
       });
 
       if (dropped) {

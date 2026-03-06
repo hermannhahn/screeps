@@ -51,21 +51,28 @@ export default class RoleSupplier {
           TaskCollect.run(creep);
         }
       } else {
-        // No target, find one based on priority: Drops -> Containers -> Harvest
+        // No target, find one based on priority: Drops -> Containers -> Harvest (only if no harvesters)
         const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-          filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50
+          filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 20 // Lowered threshold to avoid oscillation
         });
 
         if (dropped) {
           TaskCollect.run(creep);
         } else {
           const container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] >= 100
+            filter: (s) => s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] >= 50
           });
           if (container) {
             TaskCollect.run(creep);
           } else {
-            TaskHarvest.run(creep);
+            // ONLY harvest if there are no Harvesters in the room to avoid competition
+            const harvesters = creep.room.find(FIND_MY_CREEPS, {
+              filter: (c) => c.memory.role === 'harvester'
+            });
+
+            if (harvesters.length === 0) {
+              TaskHarvest.run(creep);
+            }
           }
         }
       }
