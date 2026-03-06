@@ -72,7 +72,11 @@ export default class RoleSupplier {
       if (!creep.memory.targetId) {
         // Priority 1: Drops
         const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
-          filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 20
+          filter: (r) => {
+            if (r.resourceType !== RESOURCE_ENERGY || r.amount < 20) return false;
+            const reserved = this.getEnergyReserved(creep.room, r.id);
+            return r.amount >= (creep.store.getFreeCapacity() + reserved);
+          }
         });
 
         if (dropped) {
@@ -80,10 +84,17 @@ export default class RoleSupplier {
         } else {
           // Priority 2: Source Containers (OR any container/storage if under attack)
           const collectionTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_STORAGE) && 
-                           (isUnderAttack || (s.structureType === STRUCTURE_CONTAINER && s.pos.findInRange(FIND_SOURCES, 1).length > 0)) &&
-                           s.store[RESOURCE_ENERGY] >= 50
-          });
+            filter: (s) => {
+              if (s.structureType !== STRUCTURE_CONTAINER && s.structureType !== STRUCTURE_STORAGE) return false;
+              if (!isUnderAttack && s.structureType === STRUCTURE_CONTAINER && s.pos.findInRange(FIND_SOURCES, 1).length === 0) return false;
+              
+              const energy = (s as StructureContainer | StructureStorage).store[RESOURCE_ENERGY];
+              if (energy < 50) return false;
+
+              const reserved = this.getEnergyReserved(creep.room, s.id);
+              return energy >= (creep.store.getFreeCapacity() + reserved);
+            }
+          }) as StructureContainer | StructureStorage;
           
           if (collectionTarget) {
             creep.memory.targetId = collectionTarget.id;
@@ -105,6 +116,17 @@ export default class RoleSupplier {
         else TaskCollect.run(creep);
       }
     }
+  }
+
+  /**
+   * Calculates the total energy capacity of all creeps currently targeting a specific energy source.
+   */
+  private static getEnergyReserved(room: Room, targetId: Id<any>): number {
+    const targetingCreeps = room.find(FIND_MY_CREEPS, {
+      filter: (c) => !c.memory.working && c.memory.targetId === targetId
+    });
+
+    return targetingCreeps.reduce((sum, c) => sum + c.store.getFreeCapacity(), 0);
   }
 
   /**
