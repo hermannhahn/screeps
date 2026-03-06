@@ -36,7 +36,5 @@ export const loop = () => {
     if (creep.memory.role === 'worker') RoleWorker.run(creep);
   }
 
-  if (Game.time % 10 === 0) {
-    console.log(`Tick: ${Game.time} | CPU: ${Game.cpu.getUsed().toFixed(2)}/${Game.cpu.limit}`);
-  }
+  // No CPU logs to keep the console clean
 };
