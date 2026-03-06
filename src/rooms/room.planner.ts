@@ -8,7 +8,7 @@ import ToolUtils from "../tools/tool.utils";
  */
 export default class RoomPlanner {
   public static run(): void {
-    if (Game.time % 50 !== 0) return;
+    if (Game.time % 20 !== 0) return;
 
     for (const roomName in Game.rooms) {
       this.planRoom(Game.rooms[roomName]);
