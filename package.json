@@ -21,14 +21,12 @@
   },
   "homepage": "https://github.com/hermannhahn/screeps#readme",
   "devDependencies": {
-    "@types/lodash": "^4.17.23",
     "@types/screeps": "^3.3.8",
-    "lodash": "^4.17.23",
     "screeps-api": "^1.16.1",
+    "screeps-steamless-client": "^1.2.1",
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",
     "webpack": "^5.105.2",
-    "webpack-cli": "^6.0.1",
-    "screeps-steamless-client": "^1.2.1"
+    "webpack-cli": "^6.0.1"
   }
 }
