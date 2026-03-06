@@ -3,7 +3,7 @@ import ToolUtils from "../tools/tool.utils";
 /**
  * Room Planner Module
  * Plans and persists structure coordinates in Memory.
- * High-precision, one-at-a-time construction to avoid engine conflicts.
+ * High-precision construction cadence.
  */
 export default class RoomPlanner {
   public static run(): void {
@@ -24,10 +24,10 @@ export default class RoomPlanner {
     if (!room.memory.planned.towers) room.memory.planned.towers = [];
     if (!room.memory.planned.containers) room.memory.planned.containers = [];
 
-    // CRITICAL: Only one construction at a time to prevent ERR_INVALID_TARGET loops
+    // Only one construction at a time to keep everything clean
     if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) return;
 
-    // Execute planning in strict priority order
+    // Planning priority
     if (this.processExtensions(room)) return;
     if (this.processTowers(room)) return;
     if (this.processSourceContainers(room)) return;
@@ -48,7 +48,7 @@ export default class RoomPlanner {
       const site = pos.lookFor(LOOK_CONSTRUCTION_SITES).find(s => s.structureType === type);
       
       if (!structure && !site) {
-        // Destroy anything else blocking
+        // Destroy blocking structures
         const blocking = pos.lookFor(LOOK_STRUCTURES).filter(s => s.structureType !== type && s.structureType !== STRUCTURE_SPAWN);
         if (blocking.length > 0) {
           for (const b of blocking) b.destroy();
@@ -58,7 +58,7 @@ export default class RoomPlanner {
         const result = room.createConstructionSite(pos, type);
         if (result === OK) {
           console.log(`[Planner] ${room.name}: New ${type} site at ${pos}`);
-          return true; // Success! Only one per cycle.
+          return true;
         }
       }
     }
@@ -77,7 +77,7 @@ export default class RoomPlanner {
             for (let y = -r; y <= r; y++) {
               if (planned.length >= max) break;
               if (Math.abs(x) !== r && Math.abs(y) !== r) continue;
-              if ((x + y) % 2 !== 0) continue; // Checkerboard
+              if ((x + y) % 2 !== 0) continue; 
 
               const pos = new RoomPosition(spawn.pos.x + x, spawn.pos.y + y, room.name);
               const isBlocked = planned.some(p => p.x === pos.x && p.y === pos.y) || 
