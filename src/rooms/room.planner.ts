@@ -24,20 +24,21 @@ export default class RoomPlanner {
     if (!room.memory.planned.towers) room.memory.planned.towers = [];
     if (!room.memory.planned.containers) room.memory.planned.containers = [];
 
-    // Only one construction at a time to keep everything clean
-    if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) return;
+    // Increase cadence: up to 3 constructions at a time
+    if (room.find(FIND_MY_CONSTRUCTION_SITES).length >= 3) return;
 
     // Planning priority
-    if (this.processExtensions(room)) return;
-    if (this.processTowers(room)) return;
-    if (this.processSourceContainers(room)) return;
-    if (this.processDiamondRoads(room)) return;
-    if (this.processSourceRoads(room)) return;
-    if (this.processControllerContainer(room)) return;
-    if (this.processControllerRoads(room)) return;
+    this.processExtensions(room);
+    this.processTowers(room);
+    this.processSourceContainers(room);
+    this.processDiamondRoads(room);
+    this.processSourceRoads(room);
+    this.processControllerContainer(room);
+    this.processControllerRoads(room);
   }
 
   private static placeFromMemory(room: Room, planned: { x: number, y: number }[], type: StructureConstant): boolean {
+    if (room.find(FIND_MY_CONSTRUCTION_SITES).length >= 3) return false;
     const terrain = room.getTerrain();
     for (const coord of planned) {
       const pos = new RoomPosition(coord.x, coord.y, room.name);
