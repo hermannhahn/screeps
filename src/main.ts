@@ -1,6 +1,7 @@
 import RoomScanner from "./rooms/room.scanner";
 import RoomPlanner from "./rooms/room.planner";
 import SpawnLogic from "./spawns/spawn.logic";
+import TowerLogic from "./towers/tower.logic";
 import ToolPixel from "./tools/tool.pixel";
 import RoleHarvester from "./roles/role.harvester";
 import RoleSupplier from "./roles/role.supplier";
@@ -20,6 +21,9 @@ export const loop = () => {
 
   // Run Room Planner
   RoomPlanner.run();
+
+  // Run Tower Logic
+  TowerLogic.run();
 
   // Run Spawner
   SpawnLogic.run();
