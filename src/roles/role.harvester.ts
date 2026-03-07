@@ -47,24 +47,29 @@ export default class RoleHarvester {
         TaskDeliver.run(creep);
       }
     } else {
-      // 1. If no targetId, find a free source
+      // 1. If no targetId, find the best source (Load Balancing)
       if (!creep.memory.targetId) {
-        // Limit to 2 per source until we have optimized harvesters
-        const maxPerSource = 2;
-
         // SAFETY: Only consider safe sources (10-block range)
         const sources = ToolUtils.getSafeSources(creep.room);
-        for (const source of sources) {
-          const assignedCreeps = creep.room.find(FIND_MY_CREEPS, {
-            filter: (c) => c.memory.role === 'harvester' && 
-                           c.id !== creep.id &&
-                           (c.memory.targetId === source.id || (c.spawning && c.memory.targetId === source.id))
+        if (sources.length > 0) {
+          // Count harvesters per source
+          const harvesters = creep.room.find(FIND_MY_CREEPS, {
+            filter: (c) => c.memory.role === 'harvester' && c.id !== creep.id
           });
 
-          if (assignedCreeps.length < maxPerSource) {
-            creep.memory.targetId = source.id;
-            break;
+          // Find the source with the minimum number of harvesters assigned
+          let bestSource = sources[0];
+          let minAssigned = Infinity;
+
+          for (const source of sources) {
+            const assignedCount = harvesters.filter(h => h.memory.targetId === source.id || (h.spawning && h.memory.targetId === source.id)).length;
+            if (assignedCount < minAssigned) {
+              minAssigned = assignedCount;
+              bestSource = source;
+            }
           }
+
+          creep.memory.targetId = bestSource.id;
         }
       }
 
