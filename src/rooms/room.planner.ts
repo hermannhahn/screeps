@@ -23,18 +23,20 @@ export default class RoomPlanner {
     if (!room.memory.planned.extensions) room.memory.planned.extensions = [];
     if (!room.memory.planned.towers) room.memory.planned.towers = [];
     if (!room.memory.planned.containers) room.memory.planned.containers = [];
+    if (!room.memory.planned.storage) room.memory.planned.storage = [];
 
-    // Restrict cadence: only one construction at a time
+    // Only one construction at a time to keep everything clean
     if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) return;
 
     // Planning priority
-    this.processExtensions(room);
-    this.processTowers(room);
-    this.processSourceContainers(room);
-    this.processDiamondRoads(room);
-    this.processSourceRoads(room);
-    this.processControllerContainer(room);
-    this.processControllerRoads(room);
+    if (this.processStorage(room)) return;
+    if (this.processExtensions(room)) return;
+    if (this.processTowers(room)) return;
+    if (this.processSourceContainers(room)) return;
+    if (this.processDiamondRoads(room)) return;
+    if (this.processSourceRoads(room)) return;
+    if (this.processControllerContainer(room)) return;
+    if (this.processControllerRoads(room)) return;
   }
 
   private static placeFromMemory(room: Room, planned: { x: number, y: number }[], type: StructureConstant): boolean {
@@ -60,6 +62,31 @@ export default class RoomPlanner {
         if (result === OK) {
           console.log(`[Planner] ${room.name}: New ${type} site at ${pos}`);
           return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Priority 1: Storage (Unlocked at RCL 4).
+   */
+  private static processStorage(room: Room): boolean {
+    if (room.controller!.level < 4) return false;
+    const planned = room.memory.planned!.storage!;
+    if (planned.length > 0) return this.placeFromMemory(room, planned, STRUCTURE_STORAGE);
+
+    const spawn = room.find(FIND_MY_SPAWNS)[0];
+    if (spawn) {
+      // Place storage near spawn but not blocking roads
+      for (let dx = -2; dx <= 2; dx++) {
+        for (let dy = -2; dy <= 2; dy++) {
+          if (Math.abs(dx) < 2 && Math.abs(dy) < 2) continue;
+          const pos = new RoomPosition(spawn.pos.x + dx, spawn.pos.y + dy, room.name);
+          if (room.getTerrain().get(pos.x, pos.y) === 0) {
+            planned.push({ x: pos.x, y: pos.y });
+            return this.placeFromMemory(room, planned, STRUCTURE_STORAGE);
+          }
         }
       }
     }
