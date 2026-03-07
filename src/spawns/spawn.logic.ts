@@ -22,7 +22,7 @@ export default class SpawnLogic {
     const suppliers = creeps.filter(c => c.memory.role === 'supplier');
     const upgraders = creeps.filter(c => c.memory.role === 'upgrader');
     const workers = creeps.filter(c => c.memory.role === 'worker');
-    const scouts = creeps.filter(c => c.memory.role === 'scout');
+    const scouts = _.filter(Game.creeps, c => c.memory.role === 'scout');
 
     // Emergency check: If no harvesters, spawn one with CURRENT energy
     const isEmergency = harvesters.length < 1;
