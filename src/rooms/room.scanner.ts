@@ -45,6 +45,7 @@ declare global {
       towers?: { x: number, y: number }[];
       containers?: { x: number, y: number }[];
       roads?: { x: number, y: number }[];
+      storage?: { x: number, y: number }[];
     };
   }
 }
