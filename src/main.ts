@@ -7,6 +7,7 @@ import RoleHarvester from "./roles/role.harvester";
 import RoleSupplier from "./roles/role.supplier";
 import RoleUpgrader from "./roles/role.upgrader";
 import RoleWorker from "./roles/role.worker";
+import RoleScout from "./roles/role.scout";
 
 export const loop = () => {
   // Clear dead creep memory
@@ -38,6 +39,7 @@ export const loop = () => {
     if (creep.memory.role === 'supplier') RoleSupplier.run(creep);
     if (creep.memory.role === 'upgrader') RoleUpgrader.run(creep);
     if (creep.memory.role === 'worker') RoleWorker.run(creep);
+    if (creep.memory.role === 'scout') RoleScout.run(creep);
   }
 
   // No CPU logs to keep the console clean

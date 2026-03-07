@@ -22,6 +22,7 @@ export default class SpawnLogic {
     const suppliers = creeps.filter(c => c.memory.role === 'supplier');
     const upgraders = creeps.filter(c => c.memory.role === 'upgrader');
     const workers = creeps.filter(c => c.memory.role === 'worker');
+    const scouts = creeps.filter(c => c.memory.role === 'scout');
 
     // Emergency check: If no harvesters, spawn one with CURRENT energy
     const isEmergency = harvesters.length < 1;
@@ -35,6 +36,7 @@ export default class SpawnLogic {
     const maxSuppliers = Math.min(harvesters.length, sourceCount + 1); // Limit suppliers more strictly
     const maxUpgraders = (room.controller?.level || 1) === 1 ? 3 : (room.controller?.level || 1) <= 3 ? 2 : 1;
     const maxWorkers = 2;
+    const maxScouts = (room.controller?.level || 1) >= 2 ? 1 : 0;
 
     // 1. Critical Priority: Minimum Economy (1 Harvester + 1 Supplier)
     if (harvesters.length < 1) {
@@ -46,13 +48,17 @@ export default class SpawnLogic {
       return;
     }
 
-    // 2. Secondary Priority: Core Roles (Upgrader + Worker)
+    // 2. Secondary Priority: Core Roles (Upgrader + Worker + Scout)
     if (upgraders.length < 1) {
       this.spawnCreep(spawn, 'upgrader', this.getBody(energy, 'upgrader'));
       return;
     }
     if (workers.length < 1) {
       this.spawnCreep(spawn, 'worker', this.getBody(energy, 'worker'));
+      return;
+    }
+    if (scouts.length < maxScouts) {
+      this.spawnCreep(spawn, 'scout', [MOVE]);
       return;
     }
 
@@ -90,6 +96,7 @@ export default class SpawnLogic {
    * Generates creep body based on role and given energy level.
    */
   private static getBody(energy: number, role: string): BodyPartConstant[] {
+    if (role === 'scout') return [MOVE];
     if (role === 'supplier') {
       if (energy >= 300) return [WORK, CARRY, CARRY, MOVE, MOVE];
       return [WORK, CARRY, MOVE];
