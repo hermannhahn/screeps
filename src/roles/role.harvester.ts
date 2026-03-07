@@ -49,16 +49,16 @@ export default class RoleHarvester {
     } else {
       // 1. If no targetId, find a free source
       if (!creep.memory.targetId) {
-        const extensionCount = creep.room.find(FIND_MY_STRUCTURES, {
-          filter: { structureType: STRUCTURE_EXTENSION }
-        }).length;
-        const maxPerSource = extensionCount >= 5 ? 1 : 2;
+        // Limit to 2 per source until we have optimized harvesters
+        const maxPerSource = 2;
 
         // SAFETY: Only consider safe sources (10-block range)
         const sources = ToolUtils.getSafeSources(creep.room);
         for (const source of sources) {
           const assignedCreeps = creep.room.find(FIND_MY_CREEPS, {
-            filter: (c) => c.memory.role === 'harvester' && c.memory.targetId === source.id
+            filter: (c) => c.memory.role === 'harvester' && 
+                           c.id !== creep.id &&
+                           (c.memory.targetId === source.id || (c.spawning && c.memory.targetId === source.id))
           });
 
           if (assignedCreeps.length < maxPerSource) {
