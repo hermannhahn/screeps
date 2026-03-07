@@ -38,9 +38,18 @@ export default class RoleSupplier {
                            s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
           });
 
-          if (logisticsTarget) {
+          // PRIORITY 2.5: Controller Container/Link (CRITICAL for growth)
+          const controllerTarget = creep.room.controller ? creep.room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
+            filter: (s) => (s.structureType === STRUCTURE_CONTAINER || s.structureType === STRUCTURE_LINK) && 
+                           s.store.getFreeCapacity(RESOURCE_ENERGY) > 100
+          })[0] : null;
+
+          if (controllerTarget) {
+            creep.memory.targetId = controllerTarget.id;
+          } else if (logisticsTarget) {
             creep.memory.targetId = logisticsTarget.id;
           } else {
+
             // PRIORITY 3: Storage (Last delivery priority)
             if (creep.room.storage && creep.room.storage.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
               creep.memory.targetId = creep.room.storage.id;
