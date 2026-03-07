@@ -79,31 +79,54 @@ export default class RoleSupplier {
     } else {
       // 1. If no targetId, search for energy collection
       if (!creep.memory.targetId) {
-        // Priority 1: Drops (LESS restrictive)
+        // Priority 1: Drops, Tombstones, Ruins
         const dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
           filter: (r) => r.resourceType === RESOURCE_ENERGY && r.amount >= 50
         });
-
         if (dropped) {
           creep.memory.targetId = dropped.id;
         } else {
-          // Priority 2: Source Containers (OR any container/storage if under attack)
-          const collectionTarget = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (s) => {
-              if (s.structureType !== STRUCTURE_CONTAINER && s.structureType !== STRUCTURE_STORAGE) return false;
-              if (!isUnderAttack && s.structureType === STRUCTURE_CONTAINER && s.pos.findInRange(FIND_SOURCES, 1).length === 0) return false;
-              
-              const energy = (s as StructureContainer | StructureStorage).store[RESOURCE_ENERGY];
-              return energy >= 50;
-            }
-          }) as StructureContainer | StructureStorage;
-          
-          if (collectionTarget) {
-            creep.memory.targetId = collectionTarget.id;
+          const tombstone = creep.pos.findClosestByRange(FIND_TOMBSTONES, {
+            filter: (t) => t.store[RESOURCE_ENERGY] >= 50
+          });
+          if (tombstone) {
+            creep.memory.targetId = tombstone.id;
           } else {
-            // Priority 3: Manual Harvest (EMERGENCY)
-            const source = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE);
-            if (source) creep.memory.targetId = source.id;
+            const ruin = creep.pos.findClosestByRange(FIND_RUINS, {
+              filter: (r) => r.store[RESOURCE_ENERGY] >= 50
+            });
+            if (ruin) {
+              creep.memory.targetId = ruin.id;
+            } else {
+              // Priority 2: Source Containers
+              const container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                filter: (s) => {
+                  if (s.structureType !== STRUCTURE_CONTAINER && s.structureType !== STRUCTURE_STORAGE) return false;
+                  if (!isUnderAttack && s.structureType === STRUCTURE_CONTAINER && s.pos.findInRange(FIND_SOURCES, 1).length === 0) return false;
+                  const energy = (s as StructureContainer | StructureStorage).store[RESOURCE_ENERGY];
+                  return energy >= 50;
+                }
+              });
+              if (container) {
+                creep.memory.targetId = container.id;
+              } else {
+                // Priority 3: Storage (Withdraw only if high priority targets need energy)
+                const needsEnergy = creep.room.find(FIND_MY_STRUCTURES, {
+                  filter: (s) => (s.structureType === STRUCTURE_SPAWN || 
+                                  s.structureType === STRUCTURE_EXTENSION || 
+                                  s.structureType === STRUCTURE_TOWER) && 
+                                 s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                }).length > 0;
+
+                if (needsEnergy && creep.room.storage && creep.room.storage.store[RESOURCE_ENERGY] >= 100) {
+                  creep.memory.targetId = creep.room.storage.id;
+                } else {
+                  // Priority 4: Manual Harvest (EMERGENCY)
+                  const source = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE);
+                  if (source) creep.memory.targetId = source.id;
+                }
+              }
+            }
           }
         }
       }

@@ -10,8 +10,8 @@ export default class RoomScanner {
   }
 
   private static scan(room: Room): void {
-    if (!room.memory.sources || !room.memory.controllerId || room.memory.lastScan === undefined || Game.time % 500 === 0) {
-      console.log(`[Scanner] Scanning room: ${room.name}`);
+    if (room.memory.lastScan === undefined || Game.time % 500 === 0) {
+      console.log(`[Scanner] ${room.name}: Scanning...`);
       
       // Store Sources
       const sources = room.find(FIND_SOURCES);
