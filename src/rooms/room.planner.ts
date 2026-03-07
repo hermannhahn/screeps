@@ -195,14 +195,16 @@ export default class RoomPlanner {
     const planned = room.memory.planned!.containers!;
     const controller = room.controller!;
 
-    const isPlanned = planned.some(p => Math.max(Math.abs(p.x - controller.pos.x), Math.abs(p.y - controller.pos.y)) <= 3);
+    // Search for a position exactly 1 block away from the controller
+    const isPlanned = planned.some(p => Math.max(Math.abs(p.x - controller.pos.x), Math.abs(p.y - controller.pos.y)) === 1);
     if (!isPlanned) {
-      for (let dx = -2; dx <= 2; dx++) {
-        for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
           const pos = new RoomPosition(controller.pos.x + dx, controller.pos.y + dy, room.name);
           if (room.getTerrain().get(pos.x, pos.y) === 0) {
             planned.push({ x: pos.x, y: pos.y });
-            break;
+            return this.placeFromMemory(room, planned, STRUCTURE_CONTAINER);
           }
         }
       }
