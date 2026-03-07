@@ -8,7 +8,7 @@ import CreepLogic from "../creeps/creep.logic";
 export default class RoleScout {
   public static run(creep: Creep): void {
     // 0. Global Population Control: If too many scouts, suicide the excess
-    const scouts = _.filter(Game.creeps, c => c.memory.role === 'scout');
+    const scouts = Object.values(Game.creeps).filter(c => c.memory.role === 'scout');
     const maxScouts = 1; // Match SpawnLogic limit
     if (scouts.length > maxScouts) {
        // Only suicide if this is one of the "newest" scouts or just random
